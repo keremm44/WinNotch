@@ -75,6 +75,11 @@ public partial class DropZoneView : UserControl
 
     public void SetExpanded(bool expanded)
     {
+        // Restore the held-item presentation after a cancelled incoming drag,
+        // because ShowDropTarget temporarily replaces the visible text.
+        if (HasItems)
+            RenderShelf();
+
         ActionButtons.Visibility = expanded && HasItems
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -99,7 +104,10 @@ public partial class DropZoneView : UserControl
     {
         if (_items.Length == 0)
         {
-            ShowDropTarget();
+            FileIcon.Text = "+";
+            DropTargetText.Text = "Dosyayı buraya bırak";
+            FileSummaryText.Text = "WinNotch burada tutacak";
+            RemoveButton.Visibility = Visibility.Collapsed;
             return;
         }
 
