@@ -70,6 +70,9 @@ public static class Constants
     /// <summary>Clipboard flash animation duration.</summary>
     public const int ClipboardFlashDurationMs = 1500;
 
+    /// <summary>How long to show drop result actions before auto-dismissing.</summary>
+    public const int DropResultDisplayDurationMs = 3000;
+
     // ═══════════════════════════════════════════════════════════════
     // HISTORY
     // ═══════════════════════════════════════════════════════════════

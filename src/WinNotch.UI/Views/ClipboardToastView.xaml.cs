@@ -8,6 +8,7 @@
 
 using System.Windows;
 using System.Windows.Controls;
+using WinNotch.Common;
 using WinNotch.Core.Services;
 
 using UserControl = System.Windows.Controls.UserControl;
@@ -28,11 +29,22 @@ public partial class ClipboardToastView : UserControl
     /// <summary>
     /// Sets a text clipboard notification for display.
     /// </summary>
-    public void SetNotification(ClipboardNotification notification)
+    public void SetNotification(ClipboardNotification notification, ClipboardContentType contentType = ClipboardContentType.Unknown)
     {
         Dispatcher.Invoke(() =>
         {
-            StatusIcon.Text = "📋";
+            // WHY: Use contextual icons based on content classification.
+            // Deterministic, cheap prefix/suffix checks — no regex, no AI.
+            StatusIcon.Text = contentType switch
+            {
+                ClipboardContentType.Url => "🔗",
+                ClipboardContentType.FilePath => "📁",
+                ClipboardContentType.Color => "🎨",
+                ClipboardContentType.Email => "📧",
+                ClipboardContentType.Phone => "📞",
+                _ => "📋"
+            };
+
             PreviewText.Text = notification.PreviewText ?? "Panoya kopyalandı ✓";
             ImagePreviewBorder.Visibility = Visibility.Collapsed;
             PreviewText.Visibility = Visibility.Visible;

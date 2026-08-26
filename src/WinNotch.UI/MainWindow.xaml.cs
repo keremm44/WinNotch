@@ -54,6 +54,8 @@ public partial class MainWindow : Window
     private NotchState _currentState = NotchState.Idle;
     private ModuleSettings _settings = new();
     private DateTime _lastInteraction = DateTime.MinValue;
+    private readonly NotchStateMachine _stateMachine = new();
+    private System.Windows.Threading.DispatcherTimer? _stateReturnTimer;
 
     /// <summary>
     /// Exposes settings to the tray app for module toggling.
@@ -569,7 +571,8 @@ public partial class MainWindow : Window
     {
         _isDragging = false;
         _dragDropService?.HandleFileDrop(e);
-        TransitionToState(NotchState.Idle);
+        // Don't transition here — OnFilesDropped handles the state transition
+        // to DropResult with proper priority and timeout.
         e.Handled = true;
     }
 
@@ -592,18 +595,21 @@ public partial class MainWindow : Window
     /// WHY: Central state machine prevents conflicting animations.
     /// Each state has a clear visual configuration and behavior set.
     /// </summary>
-    private void TransitionToState(NotchState newState)
+    /// <summary>
+    /// Central state transition through the state machine.
+    /// Handles priorities, coalescing, and timeout scheduling.
+    /// </summary>
+    private void TransitionToState(NotchState newState, StatePriority priority = StatePriority.None, TimeSpan? timeout = null, NotchState? returnState = null)
     {
-        if (newState == _currentState) return;
+        var result = _stateMachine.TryTransition(newState, priority, timeout, returnState);
+        if (!result.ShouldApply) return;
 
-        var oldState = _currentState;
-        _currentState = newState;
+        _currentState = result.State;
+        UpdateContentVisibility(result.State);
+        ApplyDimensions(result.State);
 
-        // Update content visibility
-        UpdateContentVisibility(newState);
-
-        // Trigger animation (implemented in Phase 7 - NotchAnimator)
-        AnimateTransition(oldState, newState);
+        // Schedule auto-return if timeout specified
+        ScheduleReturn(result.Timeout, result.ReturnState);
     }
 
     /// <summary>
@@ -614,7 +620,7 @@ public partial class MainWindow : Window
         IdleContent.Visibility = (state == NotchState.Idle || state == NotchState.Hover)
             ? Visibility.Visible : Visibility.Collapsed;
 
-        DropZoneView.Visibility = state == NotchState.DragActive
+        DropZoneView.Visibility = (state == NotchState.DragActive || state == NotchState.DropResult)
             ? Visibility.Visible : Visibility.Collapsed;
 
         MediaWidgetView.Visibility = state == NotchState.MediaActive
@@ -628,36 +634,46 @@ public partial class MainWindow : Window
     /// Triggers the appropriate animation for a state transition.
     /// Stub — will be fully implemented in Phase 7.
     /// </summary>
-    private void AnimateTransition(NotchState from, NotchState to)
+    /// <summary>
+    /// Applies dimensions from the state machine's dimension map.
+    /// </summary>
+    private void ApplyDimensions(NotchState state)
     {
-        // Animation logic will be implemented in NotchAnimator (Phase 7)
-        // For now, just update dimensions directly
-        switch (to)
-        {
-            case NotchState.Idle:
-                Width = Constants.NotchIdleWidth;
-                Height = Constants.NotchIdleHeight;
-                break;
-            case NotchState.Hover:
-                Width = Constants.NotchIdleWidth + 20;
-                Height = Constants.NotchIdleHeight + 8;
-                break;
-            case NotchState.DragActive:
-                Width = Constants.NotchExpandedWidth;
-                Height = Constants.NotchExpandedHeight;
-                break;
-            case NotchState.MediaActive:
-                Width = Constants.NotchMediaWidth;
-                Height = Constants.NotchMediaHeight;
-                break;
-            case NotchState.ClipboardNotify:
-            case NotchState.ScreenshotNotify:
-                Width = Constants.NotchExpandedWidth;
-                Height = 60;
-                break;
-        }
+        var (w, h) = StateDimensions.GetDimensions(state);
+        Width = w;
+        Height = h;
+        UpdateWindowRegion(w, h);
+    }
 
-        UpdateWindowRegion(Width, Height);
+    /// <summary>
+    /// Schedules an automatic return to a previous state after a timeout.
+    /// Uses a single reusable timer — no allocation per transition.
+    /// </summary>
+    private void ScheduleReturn(TimeSpan? timeout, NotchState? returnState)
+    {
+        // Cancel any pending return
+        _stateReturnTimer?.Stop();
+        _stateReturnTimer = null;
+
+        if (timeout == null) return;
+
+        _stateReturnTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = timeout.Value
+        };
+        _stateReturnTimer.Tick += (_, _) =>
+        {
+            _stateReturnTimer.Stop();
+            _stateReturnTimer = null;
+
+            bool mediaActive = _mediaSessionService != null &&
+                               _currentState != NotchState.MediaActive; // will check properly
+            var returnResult = _stateMachine.ReturnToBest(mediaActive: false);
+            _currentState = returnResult.State;
+            UpdateContentVisibility(returnResult.State);
+            ApplyDimensions(returnResult.State);
+        };
+        _stateReturnTimer.Start();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -692,21 +708,14 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            ClipboardToastView.SetNotification(e);
-            TransitionToState(NotchState.ClipboardNotify);
+            // Classify content for contextual display
+            var contentType = ClipboardClassifier.Classify(e.PreviewText);
+            ClipboardToastView.SetNotification(e, contentType);
 
-            // Auto-return to idle after flash duration
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs)
-            };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                if (_currentState == NotchState.ClipboardNotify)
-                    TransitionToState(NotchState.Idle);
-            };
-            timer.Start();
+            TransitionToState(
+                NotchState.ClipboardNotify,
+                StatePriority.Clipboard,
+                TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs));
         });
     }
 
@@ -715,19 +724,11 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() =>
         {
             ClipboardToastView.SetImageNotification(e);
-            TransitionToState(NotchState.ClipboardNotify);
 
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs)
-            };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                if (_currentState == NotchState.ClipboardNotify)
-                    TransitionToState(NotchState.Idle);
-            };
-            timer.Start();
+            TransitionToState(
+                NotchState.ClipboardNotify,
+                StatePriority.Clipboard,
+                TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs));
         });
     }
 
@@ -736,6 +737,13 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() =>
         {
             DropZoneView.SetDroppedPaths(e.DroppedPaths);
+
+            // Transition to DropResult — shows the drop actions briefly
+            // before auto-returning to idle (or media if active).
+            TransitionToState(
+                NotchState.DropResult,
+                StatePriority.DropResult,
+                TimeSpan.FromMilliseconds(Constants.DropResultDisplayDurationMs));
         });
     }
 
@@ -748,6 +756,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            // Only return to idle if still in DragActive (not if we transitioned to DropResult)
             if (_currentState == NotchState.DragActive)
                 TransitionToState(NotchState.Idle);
         });

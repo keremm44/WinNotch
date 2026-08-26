@@ -49,5 +49,11 @@ public enum NotchState
     /// Window pin operation in progress or pin badge showing.
     /// Module D active.
     /// </summary>
-    WindowPinned
+    WindowPinned,
+
+    /// <summary>
+    /// File was dropped, showing contextual actions (copy path, open folder, terminal).
+    /// Auto-dismisses after a brief display.
+    /// </summary>
+    DropResult
 }
