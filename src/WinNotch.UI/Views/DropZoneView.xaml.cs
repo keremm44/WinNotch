@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,6 +10,11 @@ using WinNotch.Core.Interop;
 using UserControl = System.Windows.Controls.UserControl;
 using Point = System.Windows.Point;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfClipboard = System.Windows.Clipboard;
+using WpfDataObject = System.Windows.DataObject;
+using WpfDataFormats = System.Windows.DataFormats;
+using WpfDragDrop = System.Windows.DragDrop;
+using WpfDragDropEffects = System.Windows.DragDropEffects;
 
 namespace WinNotch.UI.Views;
 
@@ -135,7 +141,7 @@ public partial class DropZoneView : UserControl
 
     private static string GetExtensionLabel(string path)
     {
-        string ext = System.IO.Path.GetExtension(path).TrimStart('.');
+        string ext = Path.GetExtension(path).TrimStart('.');
         if (string.IsNullOrWhiteSpace(ext)) return "F";
         return ext.Length <= 3 ? ext.ToUpperInvariant() : ext[..3].ToUpperInvariant();
     }
@@ -153,7 +159,7 @@ public partial class DropZoneView : UserControl
         {
             var files = new StringCollection();
             files.AddRange(validPaths);
-            Clipboard.SetFileDropList(files);
+            WpfClipboard.SetFileDropList(files);
             ShowActionFeedback("Copied · Ctrl+V to paste");
         }
         catch (Exception ex)
@@ -214,7 +220,7 @@ public partial class DropZoneView : UserControl
         if (_items.Length == 0) return;
         try
         {
-            Clipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
+            WpfClipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
             ShowActionFeedback("Path copied");
         }
         catch (Exception ex)
@@ -230,7 +236,7 @@ public partial class DropZoneView : UserControl
 
         string dir = item.IsDirectory
             ? item.SourcePath
-            : System.IO.Path.GetDirectoryName(item.SourcePath) ?? item.SourcePath;
+            : Path.GetDirectoryName(item.SourcePath) ?? item.SourcePath;
 
         if (!Directory.Exists(dir))
         {
@@ -278,8 +284,8 @@ public partial class DropZoneView : UserControl
         DragOutStarted?.Invoke(this, EventArgs.Empty);
         try
         {
-            var data = new DataObject(DataFormats.FileDrop, validPaths);
-            DragDrop.DoDragDrop(DragHandle, data, DragDropEffects.Copy);
+            var data = new WpfDataObject(WpfDataFormats.FileDrop, validPaths);
+            WpfDragDrop.DoDragDrop(DragHandle, data, WpfDragDropEffects.Copy);
         }
         catch (Exception ex)
         {
