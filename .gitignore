@@ -1,0 +1,65 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+## Build
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.sln.docstates
+*.sln.ide/
+.idea/
+*.DotSettings.user
+
+## Rider
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## User-specific
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+
+## Publish
+publish/
+
+## Crash logs
+crash.log
+
+## Temp
+*.tmp
+*.temp

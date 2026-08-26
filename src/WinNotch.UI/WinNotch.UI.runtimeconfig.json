@@ -1,0 +1,17 @@
+{
+  "runtimeOptions": {
+    "tfm": "net8.0",
+    "configProperties": {
+      "System.GC.Server": false,
+      "System.GC.Concurrent": true,
+      "System.GC.NoAffinitize": true,
+      "System.GC.HeapHardLimit": 15728640
+    },
+    "frameworks": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "8.0.0"
+      }
+    ]
+  }
+}
