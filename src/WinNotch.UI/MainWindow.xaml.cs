@@ -29,6 +29,8 @@ public partial class MainWindow : Window
     private PowerMonitorService? _powerMonitorService;
 
     private bool _isDragging;
+    private bool _isDraggingOut;
+    private bool _hasActiveMediaSession;
     private bool _initialized;
     private bool _manuallyHidden;
     private NotchState _currentState = NotchState.Idle;
@@ -46,6 +48,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DropZoneView.ShelfCleared += OnShelfCleared;
+        DropZoneView.DragOutStarted += OnShelfDragOutStarted;
+        DropZoneView.DragOutCompleted += OnShelfDragOutCompleted;
         SourceInitialized += MainWindow_SourceInitialized;
     }
 
@@ -268,8 +272,8 @@ public partial class MainWindow : Window
             _dragDropService.DragEntered -= OnDragEntered;
             _dragDropService.DragLeft -= OnDragLeft;
             _dragDropService = null;
-            DropZoneView.SetDroppedPaths(Array.Empty<string>());
-            TransitionToState(NotchState.Idle, force: true);
+            DropZoneView.ResetShelf(notify: false);
+            TransitionToState(GetPersistentState(), force: true);
         }
 
         if (!_settings.ModuleC_Media && _mediaSessionService != null)
@@ -277,6 +281,7 @@ public partial class MainWindow : Window
             _mediaSessionService.SessionChanged -= OnMediaSessionChanged;
             _mediaSessionService.Dispose();
             _mediaSessionService = null;
+            _hasActiveMediaSession = false;
             if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
                 TransitionToState(GetPersistentState(), force: true);
         }
@@ -298,7 +303,7 @@ public partial class MainWindow : Window
 
     private void RootGrid_MouseEnter(object sender, MouseEventArgs e)
     {
-        if (_isDragging) return;
+        if (_isDragging || _isDraggingOut) return;
 
         if (_currentState == NotchState.Idle)
             TransitionToState(NotchState.Hover);
@@ -310,18 +315,25 @@ public partial class MainWindow : Window
 
     private void RootGrid_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (_isDragging) return;
+        if (_isDragging || _isDraggingOut) return;
 
         if (_currentState == NotchState.Hover)
             TransitionToState(NotchState.Idle, force: true);
         else if (_currentState == NotchState.ShelfExpanded)
             TransitionToState(NotchState.ShelfOccupied, force: true);
         else if (_currentState == NotchState.MediaActive)
-            TransitionToState(DropZoneView.HasItems ? NotchState.ShelfOccupied : NotchState.MediaAmbient, force: true);
+            TransitionToState(GetPersistentState(), force: true);
     }
 
     private void RootGrid_DragEnter(object sender, DragEventArgs e)
     {
+        if (_isDraggingOut)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
 
         _isDragging = true;
@@ -333,6 +345,12 @@ public partial class MainWindow : Window
 
     private void RootGrid_DragLeave(object sender, DragEventArgs e)
     {
+        if (_isDraggingOut)
+        {
+            e.Handled = true;
+            return;
+        }
+
         _isDragging = false;
         _dragDropService?.NotifyDragLeave();
         TransitionToState(GetPersistentState(), force: true);
@@ -341,6 +359,13 @@ public partial class MainWindow : Window
 
     private void RootGrid_DragOver(object sender, DragEventArgs e)
     {
+        if (_isDraggingOut)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
             ? DragDropEffects.Copy
             : DragDropEffects.None;
@@ -349,6 +374,13 @@ public partial class MainWindow : Window
 
     private void RootGrid_Drop(object sender, DragEventArgs e)
     {
+        if (_isDraggingOut)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
         _isDragging = false;
         _dragDropService?.HandleFileDrop(e);
         e.Handled = true;
@@ -444,7 +476,7 @@ public partial class MainWindow : Window
     {
         if (DropZoneView.HasItems)
             return NotchState.ShelfOccupied;
-        if (_mediaSessionService != null && _currentState is NotchState.MediaActive or NotchState.MediaAmbient)
+        if (_hasActiveMediaSession)
             return NotchState.MediaAmbient;
         return NotchState.Idle;
     }
@@ -517,7 +549,7 @@ public partial class MainWindow : Window
 
     private void OnDragEntered(object? sender, EventArgs e)
     {
-        // RootGrid_DragEnter owns the visual transition so it can preserve shelf state reliably.
+        // RootGrid_DragEnter owns the visual transition.
     }
 
     private void OnDragLeft(object? sender, EventArgs e)
@@ -526,24 +558,49 @@ public partial class MainWindow : Window
     }
 
     private void OnShelfCleared(object? sender, EventArgs e)
-        => Dispatcher.Invoke(() => TransitionToState(NotchState.Idle, force: true));
+        => Dispatcher.Invoke(() => TransitionToState(GetPersistentState(), force: true));
+
+    private void OnShelfDragOutStarted(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _isDraggingOut = true;
+            _isDragging = false;
+            TransitionToState(NotchState.ShelfDraggingOut, force: true);
+        });
+    }
+
+    private void OnShelfDragOutCompleted(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _isDraggingOut = false;
+            TransitionToState(GetPersistentState(), force: true);
+        });
+    }
 
     private void OnMediaSessionChanged(object? sender, MediaSessionChangedEventArgs e)
     {
         Dispatcher.Invoke(() =>
         {
-            if (e.Session.HasSession)
+            _hasActiveMediaSession = e.Session.HasSession;
+
+            if (_hasActiveMediaSession)
             {
                 MediaWidgetView.SetSessionInfo(e.Session);
-                if (!DropZoneView.HasItems)
+                if (!DropZoneView.HasItems && !_isDraggingOut)
                 {
                     var decision = _attentionPolicy.ClassifyMediaChange(true);
-                    TransitionToState(decision.TargetState, decision.Priority, decision.Duration, NotchState.MediaAmbient);
+                    TransitionToState(
+                        decision.TargetState,
+                        decision.Priority,
+                        decision.Duration,
+                        NotchState.MediaAmbient);
                 }
             }
-            else if (!DropZoneView.HasItems && _currentState is NotchState.MediaActive or NotchState.MediaAmbient)
+            else if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
             {
-                TransitionToState(NotchState.Idle, force: true);
+                TransitionToState(GetPersistentState(), force: true);
             }
         });
     }
@@ -597,6 +654,8 @@ public partial class MainWindow : Window
     {
         _stateReturnTimer?.Stop();
         DropZoneView.ShelfCleared -= OnShelfCleared;
+        DropZoneView.DragOutStarted -= OnShelfDragOutStarted;
+        DropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
 
         _windowPinService?.UnpinAll();
         _windowHookManager?.Dispose();
