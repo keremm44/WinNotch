@@ -77,13 +77,30 @@ public class StateMachineTests
     }
 
     [Fact]
-    public void ForceTransition_OverridesPriority()
+    public void ForceTransition_OverridesPriority_AndUsesDestinationPriority()
     {
         var sm = new NotchStateMachine();
         sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
+
         var result = sm.ForceTransition(NotchState.Idle);
+
         Assert.True(result.ShouldApply);
         Assert.Equal(NotchState.Idle, sm.CurrentState);
+        Assert.Equal(StatePriority.None, sm.CurrentPriority);
+    }
+
+    [Fact]
+    public void ForceTransition_ToShelf_DoesNotPoisonFutureClipboardPriority()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
+        sm.ForceTransition(NotchState.ShelfOccupied);
+
+        Assert.Equal(StatePriority.Shelf, sm.CurrentPriority);
+
+        var clipboard = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
+        Assert.True(clipboard.ShouldApply);
+        Assert.Equal(NotchState.ClipboardNotify, sm.CurrentState);
     }
 
     [Fact]
