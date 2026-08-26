@@ -46,6 +46,12 @@ internal static partial class User32
     /// <summary>Hit test result: Client area (click is handled).</summary>
     public const int HTCLIENT = 1;
 
+    /// <summary>Window message: Mouse activate — determines focus behavior on click.</summary>
+    public const int WM_MOUSEACTIVATE = 0x0021;
+
+    /// <summary>Mouse activate result: Do not activate the window.</summary>
+    public const int MA_NOACTIVATE = 3;
+
     // ═══════════════════════════════════════════════════════════════
     // WINDOW POSITIONING
     // ═══════════════════════════════════════════════════════════════
@@ -137,6 +143,9 @@ internal static partial class User32
     public static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     public const int GWL_EXSTYLE = -20;
+
+    /// <summary>GetWindowLong index: Window style flags (WS_).</summary>
+    public const int GWL_STYLE = -16;
 
     /// <summary>
     /// Sets extended window style and forces frame update.

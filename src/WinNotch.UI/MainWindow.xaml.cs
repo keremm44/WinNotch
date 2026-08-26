@@ -55,7 +55,15 @@ public partial class MainWindow : Window
     private ModuleSettings _settings = new();
     private DateTime _lastInteraction = DateTime.MinValue;
     private readonly NotchStateMachine _stateMachine = new();
+    private readonly AttentionPolicy _attentionPolicy = new();
     private System.Windows.Threading.DispatcherTimer? _stateReturnTimer;
+
+    // Track current state dimensions for center recalculation
+    private double _currentWidth = Constants.NotchIdleWidth;
+    private double _currentHeight = Constants.NotchIdleHeight;
+    // Track whether we are manually hidden (tray hide, fullscreen, etc.)
+    private bool _manuallyHidden;
+    private DateTime _lastNotificationTime = DateTime.MinValue;
 
     /// <summary>
     /// Exposes settings to the tray app for module toggling.
@@ -263,14 +271,13 @@ public partial class MainWindow : Window
             var point = new User32.POINT { X = x, Y = y };
             User32.ScreenToClient(_hWnd, ref point);
 
-            // WHY: Use Constants instead of ActualWidth for hit-testing.
-            // ActualWidth may be stale during animations. Use the known idle
-            // dimensions plus a generous padding for better UX.
-            double hitWidth = Math.Max(NotchBorder.ActualWidth, Constants.NotchIdleWidth);
-            double hitHeight = Math.Max(NotchBorder.ActualHeight, Constants.NotchIdleHeight);
+            // WHY: Use tracked state dimensions, not ActualWidth/ActualHeight.
+            // ActualWidth may be stale during transitions. The HWND region
+            // matches the state dimensions, so hit-test must match too.
+            double hitWidth = _currentWidth;
+            double hitHeight = _currentHeight;
 
-            // Add padding for better UX
-            const int padding = 5;
+            int padding = Constants.HitTestPadding;
 
             if (point.X >= -padding && point.X <= hitWidth + padding &&
                 point.Y >= -padding && point.Y <= hitHeight + padding)
@@ -283,6 +290,15 @@ public partial class MainWindow : Window
                 handled = true;
                 return new IntPtr(User32.HTTRANSPARENT);
             }
+        }
+
+        // WHY WM_MOUSEACTIVATE: Prevents WinNotch from stealing focus when clicked.
+        // Without this, clicking the notch activates it and steals focus from
+        // the user's current application (VS Code, browser, etc.).
+        if (msg == User32.WM_MOUSEACTIVATE)
+        {
+            handled = true;
+            return new IntPtr(User32.MA_NOACTIVATE);
         }
 
         return IntPtr.Zero;
@@ -476,7 +492,7 @@ public partial class MainWindow : Window
         // return to idle
         if (_currentState == NotchState.ClipboardNotify && !_settings.ModuleB_Clipboard)
             TransitionToState(NotchState.Idle);
-        if (_currentState == NotchState.MediaActive && !_settings.ModuleC_Media)
+        if ((_currentState == NotchState.MediaActive || _currentState == NotchState.MediaAmbient) && !_settings.ModuleC_Media)
             TransitionToState(NotchState.Idle);
     }
 
@@ -503,23 +519,38 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Mouse enters the notch — expand slightly for visual feedback.
+    /// Hover on media ambient → expand to full controls.
     /// </summary>
     private void RootGrid_MouseEnter(object sender, MouseEventArgs e)
     {
-        if (_currentState == NotchState.Idle && !_isDragging)
+        if (_isDragging) return;
+
+        if (_currentState == NotchState.Idle)
         {
             TransitionToState(NotchState.Hover);
+        }
+        else if (_currentState == NotchState.MediaAmbient)
+        {
+            // Hover on ambient media → expand to full controls
+            _stateReturnTimer?.Stop();
+            _stateReturnTimer = null;
+            TransitionToState(NotchState.MediaActive);
         }
     }
 
     /// <summary>
-    /// Mouse leaves the notch — contract back to idle.
+    /// Mouse leaves the notch — contract back to idle or ambient.
     /// </summary>
     private void RootGrid_MouseLeave(object sender, MouseEventArgs e)
     {
         if (_currentState == NotchState.Hover)
         {
             TransitionToState(NotchState.Idle);
+        }
+        else if (_currentState == NotchState.MediaActive && _mediaSessionService != null)
+        {
+            // Leave full media → collapse back to ambient indicator
+            TransitionToState(NotchState.MediaAmbient);
         }
     }
 
@@ -617,7 +648,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void UpdateContentVisibility(NotchState state)
     {
-        IdleContent.Visibility = (state == NotchState.Idle || state == NotchState.Hover)
+        IdleContent.Visibility = (state == NotchState.Idle || state == NotchState.Hover || state == NotchState.MediaAmbient)
             ? Visibility.Visible : Visibility.Collapsed;
 
         DropZoneView.Visibility = (state == NotchState.DragActive || state == NotchState.DropResult)
@@ -636,13 +667,55 @@ public partial class MainWindow : Window
     /// </summary>
     /// <summary>
     /// Applies dimensions from the state machine's dimension map.
+    /// Recalculates center position so expansion stays centered on screen.
+    /// Updates HWND size, window region, and positions at top-center.
     /// </summary>
     private void ApplyDimensions(NotchState state)
     {
         var (w, h) = StateDimensions.GetDimensions(state);
+
+        // Only update if dimensions actually changed
+        if (Math.Abs(w - _currentWidth) < 1 && Math.Abs(h - _currentHeight) < 1)
+            return;
+
+        _currentWidth = w;
+        _currentHeight = h;
+
         Width = w;
         Height = h;
         UpdateWindowRegion(w, h);
+
+        // Recalculate center position on current monitor
+        // WHY: When expanding from 100→320, center must stay at same X.
+        // Without this, expansion shifts rightward.
+        RecenterOnMonitor(w, h);
+    }
+
+    /// <summary>
+    /// Recenters the notch at the top-center of the target monitor.
+    /// Called whenever the window dimensions change to keep the center point stable.
+    /// Uses physical pixels via Win32 to avoid DPI confusion.
+    /// </summary>
+    private void RecenterOnMonitor(double width, double height)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        int targetIndex = Math.Clamp(_settings.TargetMonitorIndex, 0, screens.Length - 1);
+        var screen = screens[targetIndex];
+
+        int screenWidth = screen.Bounds.Width;
+        int notchWidth = (int)width;
+        int notchHeight = (int)height;
+
+        int x = screen.Bounds.Left + (screenWidth - notchWidth) / 2;
+        int y = screen.Bounds.Top;
+
+        User32.SetWindowPos(
+            _hWnd,
+            User32.HWND_TOPMOST,
+            x, y, notchWidth, notchHeight,
+            User32.SWP_NOACTIVATE | User32.SWP_NOZORDER | 0x0002); // SWP_SHOWWINDOW=0x0040, SWP_FRAMECHANGED=0x0020
     }
 
     /// <summary>
@@ -686,18 +759,27 @@ public partial class MainWindow : Window
         // WHY: Skip initial events to avoid hiding on startup
         if (!_initialized) return;
 
+        // Visibility mode check: if user set AlwaysShow, never suppress
+        if (_settings.VisibilityMode == "AlwaysShow") return;
+        if (_settings.VisibilityMode == "Hidden") return;
+
+        // Don't hide if it's our own window, Explorer shell, or system UI
+        if (e.ClassName == "Shell_TrayWnd" || e.ClassName == "WorkerW" ||
+            e.ClassName == "Shell_SecondaryTrayWnd") return;
+
         bool isFullscreen = WindowHookManager.IsWindowFullscreen(e.WindowHandle);
+        bool isMaximized = WindowHookManager.IsWindowMaximized(e.WindowHandle);
 
         Dispatcher.Invoke(() =>
         {
-            // Don't hide if it's our own window or Explorer
-            if (e.ClassName == "Shell_TrayWnd" || e.ClassName == "WorkerW") return;
-
-            if (isFullscreen && Visibility == Visibility.Visible)
+            // Distinguish maximized (browser, VS Code) from TRUE fullscreen (game, video)
+            // Maximised: has title bar, occupies work area → keep notch visible
+            // True fullscreen: occupies entire monitor, no title bar → suppress
+            if (isFullscreen && !isMaximized && Visibility == Visibility.Visible)
             {
                 Visibility = Visibility.Hidden;
             }
-            else if (!isFullscreen && Visibility == Visibility.Hidden)
+            else if (!isFullscreen && Visibility == Visibility.Hidden && !_manuallyHidden)
             {
                 Visibility = Visibility.Visible;
             }
@@ -708,14 +790,23 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            // Classify content for contextual display
+            // Classify content and decide attention level
             var contentType = ClipboardClassifier.Classify(e.PreviewText);
+            var decision = _attentionPolicy.ClassifyClipboard(contentType, e.PreviewText);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[WinNotch] Clipboard: {contentType} → {decision.Level} ({decision.Reason})");
+
+            // SILENT events: no visual change at all
+            if (decision.Level == AttentionLevel.Silent || decision.Suppressed)
+                return;
+
             ClipboardToastView.SetNotification(e, contentType);
 
             TransitionToState(
-                NotchState.ClipboardNotify,
-                StatePriority.Clipboard,
-                TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs));
+                decision.TargetState,
+                decision.Priority,
+                decision.Duration);
         });
     }
 
@@ -723,12 +814,19 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            // Clipboard images are usually screenshots (Win+Shift+S)
+            // or copy from image editors. Always actionable.
+            var decision = _attentionPolicy.ClassifyScreenshot();
+
+            if (decision.Suppressed)
+                return;
+
             ClipboardToastView.SetImageNotification(e);
 
             TransitionToState(
-                NotchState.ClipboardNotify,
-                StatePriority.Clipboard,
-                TimeSpan.FromMilliseconds(Constants.ClipboardFlashDurationMs));
+                decision.TargetState,
+                decision.Priority,
+                decision.Duration);
         });
     }
 
@@ -769,11 +867,19 @@ public partial class MainWindow : Window
             if (e.Session.HasSession)
             {
                 MediaWidgetView.SetSessionInfo(e.Session);
-                TransitionToState(NotchState.MediaActive);
+
+                // Media starts → show ambient indicator (tiny, not 350×80)
+                // Full controls only on hover. This saves screen space.
+                var decision = _attentionPolicy.ClassifyMediaChange(true);
+                TransitionToState(
+                    decision.TargetState,
+                    decision.Priority,
+                    decision.Duration);
             }
             else
             {
-                if (_currentState == NotchState.MediaActive)
+                // Media stopped → return to idle
+                if (_currentState == NotchState.MediaActive || _currentState == NotchState.MediaAmbient)
                     TransitionToState(NotchState.Idle);
             }
         });
@@ -823,6 +929,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void HideNotchTemporarily()
     {
+        _manuallyHidden = true;
         Visibility = Visibility.Hidden;
 
         var timer = new System.Windows.Threading.DispatcherTimer
@@ -832,6 +939,7 @@ public partial class MainWindow : Window
         timer.Tick += (_, _) =>
         {
             timer.Stop();
+            _manuallyHidden = false;
             Visibility = Visibility.Visible;
         };
         timer.Start();

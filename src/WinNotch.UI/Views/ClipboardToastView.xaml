@@ -10,39 +10,36 @@
         Auto-dismisses after 1.5 seconds.
     -->
 
-    <Grid Margin="12,6">
+    <Grid Margin="8,4">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <!-- Status icon -->
         <TextBlock Grid.Column="0"
                    x:Name="StatusIcon"
                    Text="📋"
-                   FontSize="18"
+                   FontSize="14"
                    VerticalAlignment="Center"
-                   Margin="0,0,8,0"/>
+                   Margin="0,0,6,0"/>
 
         <!-- Content preview -->
         <StackPanel Grid.Column="1"
                     VerticalAlignment="Center">
-
-            <!-- Text preview -->
             <TextBlock x:Name="PreviewText"
                        Text="Panoya kopyalandı ✓"
                        Foreground="#CCFFFFFF"
-                       FontSize="11"
+                       FontSize="10"
                        TextTrimming="CharacterEllipsis"
-                       MaxWidth="280"/>
+                       MaxWidth="180"/>
 
             <!-- Image thumbnail preview -->
             <Border x:Name="ImagePreviewBorder"
-                    Width="48" Height="48"
+                    Width="32" Height="32"
                     CornerRadius="4"
                     ClipToBounds="True"
-                    Margin="0,4,0,0"
+                    Margin="0,3,0,0"
                     Visibility="Collapsed">
                 <Border.Background>
                     <SolidColorBrush Color="#FF333333"/>
@@ -54,12 +51,13 @@
         </StackPanel>
 
         <!-- Timestamp -->
-        <TextBlock Grid.Column="2"
+        <TextBlock Grid.Column="1"
                    x:Name="TimestampText"
                    Text="şimdi"
                    Foreground="#66FFFFFF"
-                   FontSize="9"
+                   FontSize="8"
+                   HorizontalAlignment="Right"
                    VerticalAlignment="Center"
-                   Margin="8,0,0,0"/>
+                   Margin="0,0,0,0"/>
     </Grid>
 </UserControl>

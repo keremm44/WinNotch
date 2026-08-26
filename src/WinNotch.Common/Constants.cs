@@ -11,29 +11,54 @@ namespace WinNotch.Common;
 public static class Constants
 {
     // ═══════════════════════════════════════════════════════════════
-    // WINDOW GEOMETRY
+    // WINDOW GEOMETRY — Content-driven dimensions
+    // WHY: Each state gets the minimum practical size.
+    // Idle must be nearly invisible. Expanded only when useful.
     // ═══════════════════════════════════════════════════════════════
-    
-    /// <summary>Idle notch width in pixels. Small footprint on screen.</summary>
-    public const double NotchIdleWidth = 130;
-    
-    /// <summary>Idle notch height in pixels.</summary>
-    public const double NotchIdleHeight = 28;
-    
+
+    /// <summary>Idle notch width — minimal, nearly invisible.</summary>
+    public const double NotchIdleWidth = 100;
+
+    /// <summary>Idle notch height — minimal.</summary>
+    public const double NotchIdleHeight = 22;
+
     /// <summary>Corner radius for rounded-rect region clipping.</summary>
-    public const double NotchCornerRadius = 14;
-    
-    /// <summary>Expanded width when hovering or dragging files.</summary>
-    public const double NotchExpandedWidth = 400;
-    
-    /// <summary>Expanded height when hovering.</summary>
-    public const double NotchExpandedHeight = 120;
-    
-    /// <summary>Media widget expanded width.</summary>
-    public const double NotchMediaWidth = 350;
-    
-    /// <summary>Media widget expanded height.</summary>
-    public const double NotchMediaHeight = 80;
+    public const double NotchCornerRadius = 11;
+
+    /// <summary>Hover state — slightly larger for visual feedback.</summary>
+    public const double NotchHoverWidth = 118;
+    public const double NotchHoverHeight = 28;
+
+    /// <summary>Clipboard notification — compact, only for actionable content.</summary>
+    public const double NotchClipboardWidth = 220;
+    public const double NotchClipboardHeight = 36;
+
+    /// <summary>Screenshot notification — slightly wider for actions.</summary>
+    public const double NotchScreenshotWidth = 260;
+    public const double NotchScreenshotHeight = 40;
+
+    /// <summary>Drop target — focused on current item, no history.</summary>
+    public const double NotchDropTargetWidth = 280;
+    public const double NotchDropTargetHeight = 60;
+
+    /// <summary>Drop result — compact actions row.</summary>
+    public const double NotchDropResultWidth = 320;
+    public const double NotchDropResultHeight = 72;
+
+    /// <summary>Media ambient — tiny indicator when media playing.</summary>
+    public const double NotchMediaAmbientWidth = 120;
+    public const double NotchMediaAmbientHeight = 28;
+
+    /// <summary>Media expanded — full controls on hover.</summary>
+    public const double NotchMediaExpandedWidth = 300;
+    public const double NotchMediaExpandedHeight = 64;
+
+    /// <summary>Window pinned — small badge.</summary>
+    public const double NotchPinnedWidth = 130;
+    public const double NotchPinnedHeight = 28;
+
+    /// <summary>Hit-test padding outside visible area.</summary>
+    public const int HitTestPadding = 4;
 
     // ═══════════════════════════════════════════════════════════════
     // COLORS
@@ -67,11 +92,23 @@ public static class Constants
     /// <summary>Contraction animation duration.</summary>
     public const int ContractDurationMs = 200;
     
-    /// <summary>Clipboard flash animation duration.</summary>
-    public const int ClipboardFlashDurationMs = 1500;
+    /// <summary>Clipboard notification duration — short, only for actionable content.</summary>
+    public const int ClipboardFlashDurationMs = 2000;
+
+    /// <summary>Screenshot notification duration.</summary>
+    public const int ScreenshotFlashDurationMs = 2500;
 
     /// <summary>How long to show drop result actions before auto-dismissing.</summary>
     public const int DropResultDisplayDurationMs = 3000;
+
+    /// <summary>Media ambient display duration before collapsing (track change flash).</summary>
+    public const int MediaAmbientFlashDurationMs = 4000;
+
+    /// <summary>Attention budget: max visual interruptions per minute.</summary>
+    public const int MaxAttentionEventsPerMinute = 5;
+
+    /// <summary>Attention budget: minimum interval between visual notifications.</summary>
+    public const int MinNotificationIntervalMs = 3000;
 
     // ═══════════════════════════════════════════════════════════════
     // HISTORY

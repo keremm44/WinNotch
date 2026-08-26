@@ -189,13 +189,15 @@ public class StateMachineTests
     // ═══════════════════════════════════════════════════════════════
 
     [Theory]
-    [InlineData(NotchState.Idle, 130, 28)]
-    [InlineData(NotchState.Hover, 150, 36)]
-    [InlineData(NotchState.DragActive, 400, 120)]
-    [InlineData(NotchState.DropResult, 400, 120)]
-    [InlineData(NotchState.MediaActive, 350, 80)]
-    [InlineData(NotchState.ClipboardNotify, 400, 60)]
-    [InlineData(NotchState.ScreenshotNotify, 400, 60)]
+    [InlineData(NotchState.Idle, 100, 22)]
+    [InlineData(NotchState.Hover, 118, 28)]
+    [InlineData(NotchState.DragActive, 280, 60)]
+    [InlineData(NotchState.DropResult, 320, 72)]
+    [InlineData(NotchState.MediaActive, 300, 64)]
+    [InlineData(NotchState.MediaAmbient, 120, 28)]
+    [InlineData(NotchState.ClipboardNotify, 220, 36)]
+    [InlineData(NotchState.ScreenshotNotify, 260, 40)]
+    [InlineData(NotchState.WindowPinned, 130, 28)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
         var (w, h) = StateDimensions.GetDimensions(state);

@@ -213,20 +213,22 @@ public sealed class NotchStateMachine
 
 /// <summary>
 /// Maps NotchState to visual dimensions.
-/// Used by the UI to determine width/height for each state.
+/// Content-driven: each state gets the MINIMUM practical size.
+/// Idle must be nearly invisible. Expanded only when useful.
 /// </summary>
 public static class StateDimensions
 {
     public static (double Width, double Height) GetDimensions(NotchState state) => state switch
     {
         NotchState.Idle => (Constants.NotchIdleWidth, Constants.NotchIdleHeight),
-        NotchState.Hover => (Constants.NotchIdleWidth + 20, Constants.NotchIdleHeight + 8),
-        NotchState.DragActive => (Constants.NotchExpandedWidth, Constants.NotchExpandedHeight),
-        NotchState.DropResult => (Constants.NotchExpandedWidth, Constants.NotchExpandedHeight),
-        NotchState.MediaActive => (Constants.NotchMediaWidth, Constants.NotchMediaHeight),
-        NotchState.ClipboardNotify => (Constants.NotchExpandedWidth, 60),
-        NotchState.ScreenshotNotify => (Constants.NotchExpandedWidth, 60),
-        NotchState.WindowPinned => (Constants.NotchIdleWidth + 40, Constants.NotchIdleHeight + 8),
+        NotchState.Hover => (Constants.NotchHoverWidth, Constants.NotchHoverHeight),
+        NotchState.DragActive => (Constants.NotchDropTargetWidth, Constants.NotchDropTargetHeight),
+        NotchState.DropResult => (Constants.NotchDropResultWidth, Constants.NotchDropResultHeight),
+        NotchState.MediaActive => (Constants.NotchMediaExpandedWidth, Constants.NotchMediaExpandedHeight),
+        NotchState.MediaAmbient => (Constants.NotchMediaAmbientWidth, Constants.NotchMediaAmbientHeight),
+        NotchState.ClipboardNotify => (Constants.NotchClipboardWidth, Constants.NotchClipboardHeight),
+        NotchState.ScreenshotNotify => (Constants.NotchScreenshotWidth, Constants.NotchScreenshotHeight),
+        NotchState.WindowPinned => (Constants.NotchPinnedWidth, Constants.NotchPinnedHeight),
         _ => (Constants.NotchIdleWidth, Constants.NotchIdleHeight)
     };
 }

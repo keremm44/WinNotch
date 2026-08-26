@@ -9,24 +9,23 @@
         Provides contextual actions: copy path, open folder, open terminal.
     -->
 
-    <Grid Margin="12,6">
+    <Grid Margin="8,4">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Row 0: File info summary -->
+        <!-- Row 0: File info summary — compact -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock x:Name="FileIcon" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBlock x:Name="FileIcon" Text="📁" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock x:Name="DropTargetText"
                            Text="Dosyaları buraya bırakın"
                            Foreground="#CCFFFFFF"
-                           FontSize="11"
+                           FontSize="10"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis"
-                           MaxWidth="320"/>
+                           MaxWidth="220"/>
                 <TextBlock x:Name="FileSummaryText"
                            Text=""
                            Foreground="#80FFFFFF"
@@ -39,23 +38,23 @@
         <StackPanel x:Name="ActionButtons"
                     Grid.Row="1"
                     Orientation="Horizontal"
-                    Margin="0,6,0,0"
+                    Margin="0,4,0,0"
                     Visibility="Collapsed">
             <Button x:Name="CopyPathButton"
-                    Content="📋 Yolu Kopyala"
+                    Content="📋 Copy"
                     FontSize="9"
-                    Padding="8,3"
-                    Margin="0,0,4,0"
+                    Padding="6,2"
+                    Margin="0,0,3,0"
                     Background="#33FFFFFF"
                     Foreground="#FFFFFFFF"
                     BorderThickness="0"
                     Cursor="Hand"
                     Click="CopyPathButton_Click"/>
             <Button x:Name="OpenFolderButton"
-                    Content="📂 Klasörü Aç"
+                    Content="📂 Folder"
                     FontSize="9"
-                    Padding="8,3"
-                    Margin="0,0,4,0"
+                    Padding="6,2"
+                    Margin="0,0,3,0"
                     Background="#33FFFFFF"
                     Foreground="#FFFFFFFF"
                     BorderThickness="0"
@@ -64,31 +63,12 @@
             <Button x:Name="TerminalButton"
                     Content="💻 Terminal"
                     FontSize="9"
-                    Padding="8,3"
+                    Padding="6,2"
                     Background="#33FFFFFF"
                     Foreground="#FFFFFFFF"
                     BorderThickness="0"
                     Cursor="Hand"
                     Click="TerminalButton_Click"/>
         </StackPanel>
-
-        <!-- Row 2: History list (last 5) -->
-        <ItemsControl x:Name="HistoryList"
-                      Grid.Row="2"
-                      MaxHeight="60"
-                      Margin="0,4,0,0">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding DisplayPath}"
-                               Foreground="#80FFFFFF"
-                               FontSize="9"
-                               TextTrimming="CharacterEllipsis"
-                               MaxWidth="320"
-                               Cursor="Hand"
-                               MouseLeftButtonUp="HistoryItem_Click"
-                               Tag="{Binding FilePath}"/>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
     </Grid>
 </UserControl>

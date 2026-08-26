@@ -33,4 +33,20 @@ public sealed class ModuleSettings
 
     /// <summary>Enable diagnostics overlay in debug mode.</summary>
     public bool DiagnosticsEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Visibility mode for fullscreen suppression.
+    /// Auto = suppress in fullscreen apps (default).
+    /// AlwaysShow = never suppress.
+    /// Hidden = manually hidden until restored.
+    /// </summary>
+    public string VisibilityMode { get; set; } = "Auto";
+
+    /// <summary>
+    /// Reaction level: Quiet, Balanced, Active.
+    /// Quiet = only direct interactions and screenshots.
+    /// Balanced = interactions + useful clipboard types (default).
+    /// Active = more clipboard/media feedback.
+    /// </summary>
+    public string ReactionLevel { get; set; } = "Balanced";
 }

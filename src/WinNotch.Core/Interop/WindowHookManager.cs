@@ -106,7 +106,8 @@ public sealed class WindowHookManager : IDisposable
     }
 
     /// <summary>
-    /// Checks if a window is in fullscreen mode by comparing its bounds to screen bounds.
+    /// Checks if a window is in TRUE fullscreen mode (borderless, occupies entire monitor).
+    /// Distinguishes from maximized windows which have title bars and respect work area.
     /// </summary>
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
@@ -124,10 +125,19 @@ public sealed class WindowHookManager : IDisposable
                     if (GetMonitorInfo(hMonitor, ref mi))
                     {
                         var bounds = mi.rcMonitor;
-                        return frameRect.Left <= bounds.Left &&
+                        bool coversFullMonitor = frameRect.Left <= bounds.Left &&
                                frameRect.Top <= bounds.Top &&
                                frameRect.Right >= bounds.Right &&
                                frameRect.Bottom >= bounds.Bottom;
+
+                        // Additional check: true fullscreen usually has no title bar
+                        // WS_CAPTION = 0x00C00000, WS_BORDER = 0x00800000
+                        int style = GetWindowLong(hWnd, GWL_STYLE);
+                        bool hasTitleBar = (style & 0x00C00000) != 0;
+
+                        // Covers full monitor AND has no title bar → true fullscreen
+                        // Covers full monitor BUT has title bar → maximized (keep visible)
+                        return coversFullMonitor && !hasTitleBar;
                     }
                 }
             }
@@ -138,6 +148,23 @@ public sealed class WindowHookManager : IDisposable
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Checks if a window is maximized (has title bar, occupies work area).
+    /// This is NOT the same as fullscreen — maximized windows should NOT trigger suppression.
+    /// </summary>
+    public static bool IsWindowMaximized(IntPtr hWnd)
+    {
+        try
+        {
+            int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
+            return (style & 0x01000000) != 0; // WS_MAXIMIZE
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

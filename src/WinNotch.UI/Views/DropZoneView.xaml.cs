@@ -11,11 +11,9 @@
 // PERFORMANCE: Only visible during active drag/drop.
 // Zero cost when hidden (Collapsed = no layout/render passes).
 
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
@@ -29,13 +27,11 @@ namespace WinNotch.UI.Views;
 /// </summary>
 public partial class DropZoneView : UserControl
 {
-    private readonly ObservableCollection<HistoryEntry> _history = new();
     private string[] _currentPaths = Array.Empty<string>();
 
     public DropZoneView()
     {
         InitializeComponent();
-        HistoryList.ItemsSource = _history;
     }
 
     /// <summary>
@@ -102,24 +98,6 @@ public partial class DropZoneView : UserControl
 
         // Show action buttons
         ActionButtons.Visibility = Visibility.Visible;
-
-        // Update history
-        foreach (var path in paths.Take(Constants.MaxHistoryEntries))
-        {
-            string name = System.IO.Path.GetFileName(path) ?? path;
-            bool isDir = System.IO.Directory.Exists(path);
-
-            _history.Insert(0, new HistoryEntry
-            {
-                FilePath = path,
-                DisplayPath = $"  {(isDir ? "📁" : "📄")} {name}"
-            });
-
-            while (_history.Count > Constants.MaxHistoryEntries)
-            {
-                _history.RemoveAt(_history.Count - 1);
-            }
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -206,26 +184,7 @@ public partial class DropZoneView : UserControl
         }
     }
 
-    /// <summary>
-    /// Handles click on a history item — opens in Explorer.
-    /// </summary>
-    private void HistoryItem_Click(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is FrameworkElement element && element.Tag is string filePath)
-        {
-            try
-            {
-                if (System.IO.Directory.Exists(filePath))
-                    Shell32.OpenFolder(filePath);
-                else
-                    Shell32.OpenFileInExplorer(filePath);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DropZoneView] Error opening path: {ex.Message}");
-            }
-        }
-    }
+
 
     // ═══════════════════════════════════════════════════════════════
     // HELPERS
@@ -266,12 +225,4 @@ public partial class DropZoneView : UserControl
         };
     }
 
-    /// <summary>
-    /// Inner model for history entries.
-    /// </summary>
-    private sealed class HistoryEntry
-    {
-        public string FilePath { get; init; } = string.Empty;
-        public string DisplayPath { get; init; } = string.Empty;
-    }
 }

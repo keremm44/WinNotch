@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:WinNotch.UI.Views"
         Title="WinNotch"
-        Width="130" Height="28"
+        Width="100" Height="22"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -43,9 +43,9 @@
         <!-- Main Notch Container with animation support -->
         <Border x:Name="NotchBorder"
                 Background="#FF000000"
-                CornerRadius="14"
+                CornerRadius="11"
                 ClipToBounds="True"
-                Width="130" Height="28"
+                Width="100" Height="22"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top">
 
@@ -64,17 +64,11 @@
                             VerticalAlignment="Center"
                             Opacity="1">
 
-                    <!-- Minimal notch indicator icon -->
-                    <TextBlock Text="✦"
-                               Foreground="#99FFFFFF"
-                               FontSize="11"
-                               VerticalAlignment="Center"
-                               Margin="0,0,4,0"/>
-                    <TextBlock Text="WinNotch"
-                               Foreground="#CCFFFFFF"
+                    <!-- Minimal notch indicator — just a subtle mark, no text branding -->
+                    <TextBlock Text="•"
+                               Foreground="#66FFFFFF"
                                FontSize="10"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"/>
+                               VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Drop Zone Content (Module A) -->
@@ -95,8 +89,8 @@
         <Border x:Name="ThemeBorder"
                 BorderBrush="#FF404040"
                 BorderThickness="1"
-                CornerRadius="14"
-                Width="130" Height="28"
+                CornerRadius="11"
+                Width="100" Height="22"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
                 IsHitTestVisible="False"

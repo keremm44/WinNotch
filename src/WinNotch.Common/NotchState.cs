@@ -55,5 +55,11 @@ public enum NotchState
     /// File was dropped, showing contextual actions (copy path, open folder, terminal).
     /// Auto-dismisses after a brief display.
     /// </summary>
-    DropResult
+    DropResult,
+
+    /// <summary>
+    /// Media is playing but notch is collapsed to minimal ambient indicator.
+    /// Hover expands to MediaExpanded.
+    /// </summary>
+    MediaAmbient
 }
