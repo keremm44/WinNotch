@@ -1,18 +1,6 @@
 // WinNotch.Core/Services/MediaSessionService.cs
-// WHY: Uses Windows.Media.Control (WinRT) for SMTC integration.
-// This is the modern, supported way to interact with media sessions.
-// No COM interop hacks or polling — pure event-driven.
-//
-// The GlobalSystemMediaTransportControlsSessionManager provides:
-// - Current session (album art, title, artist)
-// - Play/Pause/Next/Previous controls
-// - Session change events (new media starts/stops)
-//
-// PERFORMANCE NOTE: Only active when media is playing. When no session
-// exists, we unsubscribe all events. Zero idle cost.
-//
-// NOTE: Requires Windows 10 1809+ (build 17763).
-// The WinRT APIs are accessible via .NET 8's built-in WinRT support.
+// Event-driven SMTC integration. Album artwork is decoded only to the size
+// needed by the tiny WinNotch surface so large source images do not stay decoded.
 
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -22,9 +10,6 @@ using System.Windows.Media.Imaging;
 
 namespace WinNotch.Core.Services;
 
-/// <summary>
-/// Data model for current media session info.
-/// </summary>
 public sealed class MediaSessionInfo
 {
     public string Title { get; init; } = string.Empty;
@@ -35,49 +20,42 @@ public sealed class MediaSessionInfo
     public bool HasSession { get; init; }
 }
 
-/// <summary>
-/// Event args for media session changes.
-/// </summary>
 public sealed class MediaSessionChangedEventArgs : EventArgs
 {
     public MediaSessionInfo Session { get; init; } = new() { HasSession = false };
 }
 
-/// <summary>
-/// High-level media session service using WinRT SMTC APIs.
-/// Provides album art, playback controls, and session state.
-/// </summary>
 public sealed class MediaSessionService : IDisposable
 {
+    // The UI renders artwork at a few dozen pixels. 96 px gives enough headroom
+    // for DPI scaling without decoding arbitrary 1000+ px album covers.
+    private const int AlbumArtDecodeWidth = 96;
+
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
     private GlobalSystemMediaTransportControlsSession? _currentSession;
     private bool _disposed;
+    private long _updateVersion;
 
-    /// <summary>
-    /// Fired when the media session changes (new song, playback state, etc.).
-    /// </summary>
     public event EventHandler<MediaSessionChangedEventArgs>? SessionChanged;
 
-    /// <summary>
-    /// Initializes the SMTC session manager.
-    /// </summary>
     public async Task InitializeAsync()
     {
         try
         {
             _sessionManager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            if (_disposed)
+            {
+                _sessionManager = null;
+                return;
+            }
+
             _sessionManager.CurrentSessionChanged += OnCurrentSessionChanged;
 
-            // WHY GetCurrentSession(): The WinRT projection exposes this as a method, not a property.
             var session = _sessionManager.GetCurrentSession();
             if (session != null)
-            {
                 AttachSession(session);
-            }
             else
-            {
                 NotifyNoSession();
-            }
         }
         catch (Exception ex)
         {
@@ -87,10 +65,8 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Handles session manager's CurrentSessionChanged event.
-    /// </summary>
-    private void OnCurrentSessionChanged(GlobalSystemMediaTransportControlsSessionManager sender,
+    private void OnCurrentSessionChanged(
+        GlobalSystemMediaTransportControlsSessionManager sender,
         CurrentSessionChangedEventArgs args)
     {
         if (_disposed) return;
@@ -107,26 +83,21 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Attaches event handlers to a new media session.
-    /// </summary>
     private void AttachSession(GlobalSystemMediaTransportControlsSession session)
     {
-        DetachSession(); // Detach from previous session first
+        DetachSession();
 
         _currentSession = session;
         _currentSession.MediaPropertiesChanged += OnSessionPropertyChanged;
         _currentSession.PlaybackInfoChanged += OnPlaybackInfoChanged;
-
-        // Get initial state
-        _ = UpdateSessionInfoAsync();
+        _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
     }
 
-    /// <summary>
-    /// Detaches event handlers from the current session.
-    /// </summary>
     private void DetachSession()
     {
+        // Invalidate async work belonging to the old session before detaching it.
+        Interlocked.Increment(ref _updateVersion);
+
         if (_currentSession != null)
         {
             _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
@@ -135,34 +106,45 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    private void OnSessionPropertyChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
+    private void OnSessionPropertyChanged(
+        GlobalSystemMediaTransportControlsSession sender,
+        MediaPropertiesChangedEventArgs args)
     {
-        _ = UpdateSessionInfoAsync();
+        if (_disposed || !ReferenceEquals(sender, _currentSession)) return;
+        _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
     }
 
-    private void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args)
+    private void OnPlaybackInfoChanged(
+        GlobalSystemMediaTransportControlsSession sender,
+        PlaybackInfoChangedEventArgs args)
     {
-        _ = UpdateSessionInfoAsync();
+        if (_disposed || !ReferenceEquals(sender, _currentSession)) return;
+        _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
     }
 
-    /// <summary>
-    /// Reads current session state and fires SessionChanged event.
-    /// </summary>
-    private async Task UpdateSessionInfoAsync()
+    private async Task UpdateSessionInfoAsync(
+        GlobalSystemMediaTransportControlsSession session,
+        long version)
     {
-        if (_disposed || _currentSession == null) return;
+        if (_disposed) return;
 
         try
         {
-            var mediaProperties = await _currentSession.TryGetMediaPropertiesAsync();
-            var playbackInfo = _currentSession.GetPlaybackInfo();
+            var mediaProperties = await session.TryGetMediaPropertiesAsync();
+            if (_disposed || version != Volatile.Read(ref _updateVersion) ||
+                !ReferenceEquals(session, _currentSession))
+                return;
 
-            // Read album art
+            var playbackInfo = session.GetPlaybackInfo();
+
             BitmapSource? albumArt = null;
             if (mediaProperties.Thumbnail != null)
-            {
                 albumArt = await ReadThumbnailAsync(mediaProperties.Thumbnail);
-            }
+
+            // A newer metadata/playback event may have completed while artwork decoded.
+            if (_disposed || version != Volatile.Read(ref _updateVersion) ||
+                !ReferenceEquals(session, _currentSession))
+                return;
 
             var info = new MediaSessionInfo
             {
@@ -170,7 +152,8 @@ public sealed class MediaSessionService : IDisposable
                 Artist = mediaProperties.Artist ?? "Unknown",
                 AlbumTitle = mediaProperties.AlbumTitle ?? "Unknown",
                 AlbumArt = albumArt,
-                IsPlaying = playbackInfo.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
+                IsPlaying = playbackInfo.PlaybackStatus ==
+                    GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
                 HasSession = true
             };
 
@@ -183,10 +166,6 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Reads a WinRT IRandomAccessStreamReference and converts to BitmapSource.
-    /// WHY: AsStreamForRead() is from System.Runtime.InteropServices.WindowsRuntime.
-    /// </summary>
     private static async Task<BitmapSource?> ReadThumbnailAsync(IRandomAccessStreamReference streamRef)
     {
         try
@@ -196,8 +175,9 @@ public sealed class MediaSessionService : IDisposable
             bitmap.BeginInit();
             bitmap.StreamSource = stream.AsStream();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.DecodePixelWidth = AlbumArtDecodeWidth;
             bitmap.EndInit();
-            bitmap.Freeze(); // Freeze for cross-thread access
+            bitmap.Freeze();
             return bitmap;
         }
         catch
@@ -206,9 +186,6 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Sends play/pause toggle command to current session.
-    /// </summary>
     public void TogglePlayPause()
     {
         if (_currentSession == null) return;
@@ -217,13 +194,9 @@ public sealed class MediaSessionService : IDisposable
         {
             var playbackInfo = _currentSession.GetPlaybackInfo();
             if (playbackInfo.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
-            {
                 _ = _currentSession.TryPauseAsync().AsTask();
-            }
             else
-            {
                 _ = _currentSession.TryPlayAsync().AsTask();
-            }
         }
         catch (Exception ex)
         {
@@ -232,29 +205,21 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Skips to next track.
-    /// </summary>
     public void NextTrack()
     {
         if (_currentSession != null)
             _ = _currentSession.TrySkipNextAsync().AsTask();
     }
 
-    /// <summary>
-    /// Skips to previous track.
-    /// </summary>
     public void PreviousTrack()
     {
         if (_currentSession != null)
             _ = _currentSession.TrySkipPreviousAsync().AsTask();
     }
 
-    /// <summary>
-    /// Fires a "no session" event.
-    /// </summary>
     private void NotifyNoSession()
     {
+        if (_disposed) return;
         SessionChanged?.Invoke(this, new MediaSessionChangedEventArgs
         {
             Session = new MediaSessionInfo { HasSession = false }
@@ -265,6 +230,7 @@ public sealed class MediaSessionService : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        Interlocked.Increment(ref _updateVersion);
 
         DetachSession();
 
@@ -274,5 +240,6 @@ public sealed class MediaSessionService : IDisposable
             _sessionManager = null;
         }
 
+        SessionChanged = null;
     }
 }
