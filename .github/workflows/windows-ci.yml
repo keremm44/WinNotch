@@ -42,31 +42,59 @@ jobs:
             exit 0
           }
 
-          $process = Start-Process $exe -PassThru
-          Start-Sleep -Seconds 5
-          $process.Refresh()
+          function Measure-WinNotch([string]$label) {
+            $process = Start-Process $exe -PassThru
+            Start-Sleep -Seconds 5
+            $process.Refresh()
 
-          if ($process.HasExited) {
-            Write-Host "PERF_SMOKE: WinNotch exited during startup; no stable idle measurement available on this runner."
-            exit 0
+            if ($process.HasExited) {
+              Write-Host "PERF_SMOKE $label ProcessExitedDuringStartup=true"
+              return
+            }
+
+            $logicalCpus = [Environment]::ProcessorCount
+            $cpuStart = $process.TotalProcessorTime.TotalMilliseconds
+            Start-Sleep -Seconds 5
+            $process.Refresh()
+            $cpuEnd = $process.TotalProcessorTime.TotalMilliseconds
+
+            $workingSetMb = [Math]::Round($process.WorkingSet64 / 1MB, 2)
+            $privateMb = [Math]::Round($process.PrivateMemorySize64 / 1MB, 2)
+            $cpuPercent = [Math]::Round((($cpuEnd - $cpuStart) / (5000 * $logicalCpus)) * 100, 3)
+            $threadCount = $process.Threads.Count
+            $handleCount = $process.HandleCount
+
+            Write-Host "PERF_SMOKE $label WorkingSetMB=$workingSetMb"
+            Write-Host "PERF_SMOKE $label PrivateMemoryMB=$privateMb"
+            Write-Host "PERF_SMOKE $label IdleCpuPercent=$cpuPercent"
+            Write-Host "PERF_SMOKE $label Threads=$threadCount"
+            Write-Host "PERF_SMOKE $label Handles=$handleCount"
+
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
           }
 
-          $logicalCpus = [Environment]::ProcessorCount
-          $cpuStart = $process.TotalProcessorTime.TotalMilliseconds
-          Start-Sleep -Seconds 5
-          $process.Refresh()
-          $cpuEnd = $process.TotalProcessorTime.TotalMilliseconds
+          $settingsDir = Join-Path $env:LOCALAPPDATA "WinNotch"
+          $settingsPath = Join-Path $settingsDir "settings.json"
+          New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+          Remove-Item $settingsPath -Force -ErrorAction SilentlyContinue
 
-          $workingSetMb = [Math]::Round($process.WorkingSet64 / 1MB, 2)
-          $privateMb = [Math]::Round($process.PrivateMemorySize64 / 1MB, 2)
-          $cpuPercent = [Math]::Round((($cpuEnd - $cpuStart) / (5000 * $logicalCpus)) * 100, 3)
-          $threadCount = $process.Threads.Count
-          $handleCount = $process.HandleCount
+          # Scenario 1: clean install defaults (all modules enabled).
+          Measure-WinNotch "DefaultModules"
 
-          Write-Host "PERF_SMOKE WorkingSetMB=$workingSetMb"
-          Write-Host "PERF_SMOKE PrivateMemoryMB=$privateMb"
-          Write-Host "PERF_SMOKE IdleCpuPercent=$cpuPercent"
-          Write-Host "PERF_SMOKE Threads=$threadCount"
-          Write-Host "PERF_SMOKE Handles=$handleCount"
+          # Scenario 2: same binary with optional modules disabled.
+          $minimalSettings = @{
+            ModuleA_DragDrop = $false
+            ModuleB_Clipboard = $false
+            ModuleC_Media = $false
+            ModuleD_WindowPin = $false
+            ModuleE_Screenshot = $false
+            TargetMonitorIndex = 0
+            AutoStart = $false
+            DiagnosticsEnabled = $false
+            VisibilityMode = "Auto"
+            ReactionLevel = "Balanced"
+          } | ConvertTo-Json -Compress
+          Set-Content -Path $settingsPath -Value $minimalSettings -Encoding UTF8
 
-          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Measure-WinNotch "AllOptionalModulesOff"
