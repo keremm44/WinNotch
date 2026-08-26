@@ -20,6 +20,8 @@ public partial class DropZoneView : UserControl
     private Point _dragStart;
 
     public event EventHandler? ShelfCleared;
+    public event EventHandler? DragOutStarted;
+    public event EventHandler? DragOutCompleted;
 
     public bool HasItems => _items.Length > 0;
     public IReadOnlyList<HeldItem> Items => _items;
@@ -29,17 +31,46 @@ public partial class DropZoneView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>
+    /// Adds dropped paths to the existing shelf instead of replacing it.
+    /// Duplicate paths are ignored and the shelf remains bounded.
+    /// </summary>
     public void SetDroppedPaths(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0) return;
 
-        _items = paths
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Take(Constants.MaxShelfItems)
-            .Select(HeldItem.FromPath)
-            .ToArray();
+        var seen = new HashSet<string>(
+            _items.Select(i => i.SourcePath),
+            StringComparer.OrdinalIgnoreCase);
 
+        var merged = new List<HeldItem>(_items.Length + paths.Count);
+        merged.AddRange(_items);
+
+        foreach (string path in paths)
+        {
+            if (merged.Count >= Constants.MaxShelfItems)
+                break;
+            if (string.IsNullOrWhiteSpace(path) || !seen.Add(path))
+                continue;
+
+            merged.Add(HeldItem.FromPath(path));
+        }
+
+        _items = merged.ToArray();
         RenderShelf();
+    }
+
+    /// <summary>
+    /// Clears internal shelf state. notify=false is used for module lifecycle cleanup.
+    /// </summary>
+    public void ResetShelf(bool notify = false)
+    {
+        _items = Array.Empty<HeldItem>();
+        RenderShelf();
+        ActionButtons.Visibility = Visibility.Collapsed;
+
+        if (notify)
+            ShelfCleared?.Invoke(this, EventArgs.Empty);
     }
 
     public void SetExpanded(bool expanded)
@@ -57,7 +88,9 @@ public partial class DropZoneView : UserControl
     {
         FileIcon.Text = "+";
         DropTargetText.Text = "Dosyayı buraya bırak";
-        FileSummaryText.Text = "WinNotch burada tutacak";
+        FileSummaryText.Text = HasItems
+            ? $"{_items.Length} öğeye eklenecek"
+            : "WinNotch burada tutacak";
         ActionButtons.Visibility = Visibility.Collapsed;
         RemoveButton.Visibility = Visibility.Collapsed;
     }
@@ -106,8 +139,6 @@ public partial class DropZoneView : UserControl
         return ext.Length <= 3 ? ext.ToUpperInvariant() : ext[..3].ToUpperInvariant();
     }
 
-    // Put the actual files on the Windows clipboard, not their path text.
-    // Explorer and other shell targets can then use Ctrl+V normally.
     private void CopyFilesButton_Click(object sender, RoutedEventArgs e)
     {
         string[] validPaths = GetValidPaths();
@@ -152,7 +183,6 @@ public partial class DropZoneView : UserControl
         }
     }
 
-    // Secondary developer actions live behind ••• so transfer remains the primary workflow.
     private void MoreButton_Click(object sender, RoutedEventArgs e)
     {
         if (_items.Length == 0) return;
@@ -168,22 +198,15 @@ public partial class DropZoneView : UserControl
         menu.Items.Add(terminal);
 
         var clear = new MenuItem { Header = "Remove from shelf" };
-        clear.Click += (_, _) => ClearShelf();
+        clear.Click += (_, _) => ResetShelf(notify: true);
         menu.Items.Add(clear);
 
         menu.PlacementTarget = MoreButton;
         menu.IsOpen = true;
     }
 
-    private void RemoveButton_Click(object sender, RoutedEventArgs e) => ClearShelf();
-
-    private void ClearShelf()
-    {
-        _items = Array.Empty<HeldItem>();
-        RenderShelf();
-        ActionButtons.Visibility = Visibility.Collapsed;
-        ShelfCleared?.Invoke(this, EventArgs.Empty);
-    }
+    private void RemoveButton_Click(object sender, RoutedEventArgs e)
+        => ResetShelf(notify: true);
 
     private void CopyPathsAsText()
     {
@@ -251,6 +274,7 @@ public partial class DropZoneView : UserControl
             return;
         }
 
+        DragOutStarted?.Invoke(this, EventArgs.Empty);
         try
         {
             var data = new DataObject(DataFormats.FileDrop, validPaths);
@@ -259,6 +283,10 @@ public partial class DropZoneView : UserControl
         catch (Exception ex)
         {
             Debug.WriteLine($"[FileShelf] Drag-out failed: {ex.Message}");
+        }
+        finally
+        {
+            DragOutCompleted?.Invoke(this, EventArgs.Empty);
         }
     }
 
