@@ -5,53 +5,90 @@
 
     <!--
         Drop Zone View (Module A)
-        Shows when files are dragged over the notch.
-        Displays file paths and history.
+        Shows when files are dragged over or dropped on the notch.
+        Provides contextual actions: copy path, open folder, open terminal.
     -->
 
     <Grid Margin="12,6">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <!-- Drop indicator icon -->
-        <TextBlock Grid.Column="0"
-                   Text="📁"
-                   FontSize="20"
-                   VerticalAlignment="Center"
-                   Margin="0,0,8,0"/>
-
-        <!-- File info panel -->
-        <StackPanel Grid.Column="1"
-                    VerticalAlignment="Center">
-
-            <!-- Current drop target -->
-            <TextBlock x:Name="DropTargetText"
-                       Text="Dosyaları buraya bırakın"
-                       Foreground="#CCFFFFFF"
-                       FontSize="11"
-                       FontWeight="SemiBold"
-                       TextTrimming="CharacterEllipsis"
-                       MaxWidth="300"/>
-
-            <!-- History list (last 5) -->
-            <ItemsControl x:Name="HistoryList"
-                          MaxHeight="60"
-                          Margin="0,4,0,0">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding DisplayPath}"
-                                   Foreground="#80FFFFFF"
-                                   FontSize="9"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="280"
-                                   Cursor="Hand"
-                                   MouseLeftButtonUp="HistoryItem_Click"
-                                   Tag="{Binding FilePath}"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <!-- Row 0: File info summary -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock x:Name="FileIcon" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="DropTargetText"
+                           Text="Dosyaları buraya bırakın"
+                           Foreground="#CCFFFFFF"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="320"/>
+                <TextBlock x:Name="FileSummaryText"
+                           Text=""
+                           Foreground="#80FFFFFF"
+                           FontSize="9"
+                           Margin="0,1,0,0"/>
+            </StackPanel>
         </StackPanel>
+
+        <!-- Row 1: Action buttons (visible after drop) -->
+        <StackPanel x:Name="ActionButtons"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    Margin="0,6,0,0"
+                    Visibility="Collapsed">
+            <Button x:Name="CopyPathButton"
+                    Content="📋 Yolu Kopyala"
+                    FontSize="9"
+                    Padding="8,3"
+                    Margin="0,0,4,0"
+                    Background="#33FFFFFF"
+                    Foreground="#FFFFFFFF"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="CopyPathButton_Click"/>
+            <Button x:Name="OpenFolderButton"
+                    Content="📂 Klasörü Aç"
+                    FontSize="9"
+                    Padding="8,3"
+                    Margin="0,0,4,0"
+                    Background="#33FFFFFF"
+                    Foreground="#FFFFFFFF"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="OpenFolderButton_Click"/>
+            <Button x:Name="TerminalButton"
+                    Content="💻 Terminal"
+                    FontSize="9"
+                    Padding="8,3"
+                    Background="#33FFFFFF"
+                    Foreground="#FFFFFFFF"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="TerminalButton_Click"/>
+        </StackPanel>
+
+        <!-- Row 2: History list (last 5) -->
+        <ItemsControl x:Name="HistoryList"
+                      Grid.Row="2"
+                      MaxHeight="60"
+                      Margin="0,4,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding DisplayPath}"
+                               Foreground="#80FFFFFF"
+                               FontSize="9"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="320"
+                               Cursor="Hand"
+                               MouseLeftButtonUp="HistoryItem_Click"
+                               Tag="{Binding FilePath}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </UserControl>
