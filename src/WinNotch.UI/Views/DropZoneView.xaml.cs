@@ -1,19 +1,8 @@
-// WinNotch.UI/Views/DropZoneView.xaml.cs
-// WHY: Makes file drop actually useful.
-// Instead of just showing a path, provides actionable buttons:
-// - Copy path: copies full path to clipboard
-// - Open folder: opens Explorer at the file/folder location
-// - Open terminal: opens cmd/pwsh at the file's parent directory
-//
-// For multi-file drops, shows count + total size.
-// Actions operate on the FIRST dropped file (most intuitive).
-//
-// PERFORMANCE: Only visible during active drag/drop.
-// Zero cost when hidden (Collapsed = no layout/render passes).
-
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
@@ -22,207 +11,289 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace WinNotch.UI.Views;
 
 /// <summary>
-/// Interaction logic for DropZoneView.xaml.
-/// Displays dropped files with contextual actions.
+/// Persistent lightweight file shelf.
+/// Holds metadata only; file contents are never loaded into WinNotch memory.
 /// </summary>
 public partial class DropZoneView : UserControl
 {
-    private string[] _currentPaths = Array.Empty<string>();
+    private HeldItem[] _items = Array.Empty<HeldItem>();
+    private Point _dragStart;
+
+    public event EventHandler? ShelfCleared;
+
+    public bool HasItems => _items.Length > 0;
+    public IReadOnlyList<HeldItem> Items => _items;
 
     public DropZoneView()
     {
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Sets the dropped paths for display and shows action buttons.
-    /// </summary>
     public void SetDroppedPaths(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0) return;
 
-        _currentPaths = paths.ToArray();
+        _items = paths
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Take(Constants.MaxShelfItems)
+            .Select(HeldItem.FromPath)
+            .ToArray();
 
-        // Show file info
-        if (paths.Count == 1)
-        {
-            string name = System.IO.Path.GetFileName(paths[0]) ?? paths[0];
-            bool isDir = System.IO.Directory.Exists(paths[0]);
-            FileIcon.Text = isDir ? "📁" : "📄";
-            DropTargetText.Text = name;
-
-            // Show file size for single files
-            if (!isDir)
-            {
-                try
-                {
-                    var fi = new System.IO.FileInfo(paths[0]);
-                    FileSummaryText.Text = FormatSize(fi.Length);
-                }
-                catch
-                {
-                    FileSummaryText.Text = paths[0];
-                }
-            }
-            else
-            {
-                FileSummaryText.Text = paths[0];
-            }
-        }
-        else
-        {
-            // Multiple files
-            FileIcon.Text = "📦";
-            DropTargetText.Text = $"{paths.Count} dosya";
-
-            // Calculate total size
-            long totalSize = 0;
-            int fileCount = 0;
-            foreach (var path in paths)
-            {
-                try
-                {
-                    if (System.IO.File.Exists(path))
-                    {
-                        totalSize += new System.IO.FileInfo(path).Length;
-                        fileCount++;
-                    }
-                }
-                catch { }
-            }
-
-            FileSummaryText.Text = fileCount > 0
-                ? $"{FormatSize(totalSize)} • {paths.Count} öğe"
-                : $"{paths.Count} öğe";
-        }
-
-        // Show action buttons
-        ActionButtons.Visibility = Visibility.Visible;
+        RenderShelf();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ACTIONS
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Copy the full path(s) to clipboard.
-    /// For single file: copies full path.
-    /// For multiple files: copies all paths, one per line.
-    /// </summary>
-    private void CopyPathButton_Click(object sender, RoutedEventArgs e)
+    public void SetExpanded(bool expanded)
     {
-        if (_currentPaths.Length == 0) return;
+        ActionButtons.Visibility = expanded && HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        RemoveButton.Visibility = HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    public void ShowDropTarget()
+    {
+        FileIcon.Text = "+";
+        DropTargetText.Text = "Dosyayı buraya bırak";
+        FileSummaryText.Text = "WinNotch burada tutacak";
+        ActionButtons.Visibility = Visibility.Collapsed;
+        RemoveButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void RenderShelf()
+    {
+        if (_items.Length == 0)
+        {
+            ShowDropTarget();
+            return;
+        }
+
+        RemoveButton.Visibility = Visibility.Visible;
+
+        if (_items.Length == 1)
+        {
+            HeldItem item = _items[0];
+            FileIcon.Text = item.IsDirectory ? "D" : GetExtensionLabel(item.SourcePath);
+            DropTargetText.Text = item.DisplayName;
+            FileSummaryText.Text = item.Exists
+                ? FormatSummary(item)
+                : "Source unavailable";
+            return;
+        }
+
+        FileIcon.Text = _items.Length.ToString();
+        DropTargetText.Text = $"{_items.Length} items";
+
+        long knownBytes = _items.Where(i => i.SizeBytes.HasValue).Sum(i => i.SizeBytes!.Value);
+        FileSummaryText.Text = knownBytes > 0
+            ? $"{FormatSize(knownBytes)} · drag out or copy"
+            : "drag out or copy";
+    }
+
+    private static string FormatSummary(HeldItem item)
+    {
+        if (item.IsDirectory) return "folder · drag out or copy";
+        if (item.SizeBytes is long size) return $"{FormatSize(size)} · drag out or copy";
+        return "drag out or copy";
+    }
+
+    private static string GetExtensionLabel(string path)
+    {
+        string ext = System.IO.Path.GetExtension(path).TrimStart('.');
+        if (string.IsNullOrWhiteSpace(ext)) return "F";
+        return ext.Length <= 3 ? ext.ToUpperInvariant() : ext[..3].ToUpperInvariant();
+    }
+
+    // Put the actual files on the Windows clipboard, not their path text.
+    // Explorer and other shell targets can then use Ctrl+V normally.
+    private void CopyFilesButton_Click(object sender, RoutedEventArgs e)
+    {
+        string[] validPaths = GetValidPaths();
+        if (validPaths.Length == 0)
+        {
+            ShowActionFeedback("Source unavailable");
+            return;
+        }
 
         try
         {
-            string text = _currentPaths.Length == 1
-                ? _currentPaths[0]
-                : string.Join(Environment.NewLine, _currentPaths);
-
-            System.Windows.Clipboard.SetText(text);
-            ShowActionFeedback("✓ Kopyalandı");
+            var files = new StringCollection();
+            files.AddRange(validPaths);
+            Clipboard.SetFileDropList(files);
+            ShowActionFeedback("Copied · Ctrl+V to paste");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Copy failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] File clipboard copy failed: {ex.Message}");
+            ShowActionFeedback("Copy failed");
         }
     }
 
-    /// <summary>
-    /// Open the folder containing the first dropped file in Explorer.
-    /// For folders: opens the folder itself.
-    /// </summary>
     private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentPaths.Length == 0) return;
+        HeldItem? item = _items.FirstOrDefault();
+        if (item == null) return;
 
         try
         {
-            string path = _currentPaths[0];
-            if (System.IO.Directory.Exists(path))
-            {
-                Shell32.OpenFolder(path);
-            }
+            if (Directory.Exists(item.SourcePath))
+                Shell32.OpenFolder(item.SourcePath);
+            else if (File.Exists(item.SourcePath))
+                Shell32.OpenFileInExplorer(item.SourcePath);
             else
-            {
-                Shell32.OpenFileInExplorer(path);
-            }
+                ShowActionFeedback("Source unavailable");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Open folder failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] Open failed: {ex.Message}");
+            ShowActionFeedback("Open failed");
         }
     }
 
-    /// <summary>
-    /// Open a terminal (cmd) at the parent directory of the first dropped file.
-    /// For folders: opens terminal inside the folder.
-    /// </summary>
-    private void TerminalButton_Click(object sender, RoutedEventArgs e)
+    // Secondary developer actions live behind ••• so transfer remains the primary workflow.
+    private void MoreButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentPaths.Length == 0) return;
+        if (_items.Length == 0) return;
+
+        var menu = new ContextMenu();
+
+        var copyPath = new MenuItem { Header = "Copy path" };
+        copyPath.Click += (_, _) => CopyPathsAsText();
+        menu.Items.Add(copyPath);
+
+        var terminal = new MenuItem { Header = "Open terminal here" };
+        terminal.Click += (_, _) => OpenTerminalAtFirstItem();
+        menu.Items.Add(terminal);
+
+        var clear = new MenuItem { Header = "Remove from shelf" };
+        clear.Click += (_, _) => ClearShelf();
+        menu.Items.Add(clear);
+
+        menu.PlacementTarget = MoreButton;
+        menu.IsOpen = true;
+    }
+
+    private void RemoveButton_Click(object sender, RoutedEventArgs e) => ClearShelf();
+
+    private void ClearShelf()
+    {
+        _items = Array.Empty<HeldItem>();
+        RenderShelf();
+        ActionButtons.Visibility = Visibility.Collapsed;
+        ShelfCleared?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void CopyPathsAsText()
+    {
+        if (_items.Length == 0) return;
+        try
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
+            ShowActionFeedback("Path copied");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[FileShelf] Path copy failed: {ex.Message}");
+        }
+    }
+
+    private void OpenTerminalAtFirstItem()
+    {
+        HeldItem? item = _items.FirstOrDefault();
+        if (item == null) return;
+
+        string dir = item.IsDirectory
+            ? item.SourcePath
+            : System.IO.Path.GetDirectoryName(item.SourcePath) ?? item.SourcePath;
+
+        if (!Directory.Exists(dir))
+        {
+            ShowActionFeedback("Source unavailable");
+            return;
+        }
 
         try
         {
-            string path = _currentPaths[0];
-            string dir = System.IO.Directory.Exists(path)
-                ? path
-                : System.IO.Path.GetDirectoryName(path) ?? path;
-
-            // Open cmd.exe at the directory
-            var psi = new ProcessStartInfo
+            Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 WorkingDirectory = dir,
                 UseShellExecute = false
-            };
-            Process.Start(psi);
+            });
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Open terminal failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] Terminal failed: {ex.Message}");
         }
     }
 
+    private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(this);
+    }
 
+    private void DragHandle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _items.Length == 0)
+            return;
 
-    // ═══════════════════════════════════════════════════════════════
-    // HELPERS
-    // ═══════════════════════════════════════════════════════════════
+        Point now = e.GetPosition(this);
+        if (Math.Abs(now.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(now.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
 
-    /// <summary>
-    /// Shows brief feedback text on the summary line.
-    /// </summary>
+        string[] validPaths = GetValidPaths();
+        if (validPaths.Length == 0)
+        {
+            ShowActionFeedback("Source unavailable");
+            return;
+        }
+
+        try
+        {
+            var data = new DataObject(DataFormats.FileDrop, validPaths);
+            DragDrop.DoDragDrop(DragHandle, data, DragDropEffects.Copy);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[FileShelf] Drag-out failed: {ex.Message}");
+        }
+    }
+
+    private string[] GetValidPaths() => _items
+        .Where(i => i.Exists)
+        .Select(i => i.SourcePath)
+        .ToArray();
+
     private void ShowActionFeedback(string text)
     {
         string original = FileSummaryText.Text;
         FileSummaryText.Text = text;
 
-        // Restore after 1.5 seconds
         var timer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(1500)
+            Interval = TimeSpan.FromMilliseconds(1200)
         };
-        timer.Tick += (_, _) =>
+
+        EventHandler? handler = null;
+        handler = (_, _) =>
         {
             timer.Stop();
-            FileSummaryText.Text = original;
+            if (handler != null) timer.Tick -= handler;
+            if (HasItems) FileSummaryText.Text = original;
         };
+
+        timer.Tick += handler;
         timer.Start();
     }
 
-    /// <summary>
-    /// Formats byte count to human-readable string.
-    /// </summary>
-    private static string FormatSize(long bytes)
+    private static string FormatSize(long bytes) => bytes switch
     {
-        return bytes switch
-        {
-            < 1024 => $"{bytes} B",
-            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-            < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
-            _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
-        };
-    }
-
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+    };
 }
