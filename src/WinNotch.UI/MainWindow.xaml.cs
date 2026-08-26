@@ -22,6 +22,13 @@ using WinNotch.Common;
 using WinNotch.Core.Interop;
 using WinNotch.Core.Services;
 
+// Disambiguate WPF vs WinForms types
+using DragEventArgs = System.Windows.DragEventArgs;
+using DragDropEffects = System.Windows.DragDropEffects;
+using DataFormats = System.Windows.DataFormats;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Application = System.Windows.Application;
+
 namespace WinNotch.UI;
 
 /// <summary>
@@ -229,6 +236,16 @@ public partial class MainWindow : Window
     /// </summary>
     private IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // WHY: Forward WM_CLIPBOARDUPDATE to ClipboardListener.
+        // Without this, AddClipboardFormatListener registers our HWND but the
+        // clipboard events are silently lost. This was the root cause of Module B failure.
+        if (msg == ClipboardListener.WM_CLIPBOARDUPDATE)
+        {
+            _clipboardService?.OnClipboardUpdate();
+            handled = true;
+            return IntPtr.Zero;
+        }
+
         if (msg == User32.WM_NCHITTEST)
         {
             // Get mouse position in screen coordinates
@@ -239,23 +256,23 @@ public partial class MainWindow : Window
             var point = new User32.POINT { X = x, Y = y };
             User32.ScreenToClient(_hWnd, ref point);
 
-            // Check if mouse is within the notch bounds
-            double actualWidth = NotchBorder.ActualWidth;
-            double actualHeight = NotchBorder.ActualHeight;
+            // WHY: Use Constants instead of ActualWidth for hit-testing.
+            // ActualWidth may be stale during animations. Use the known idle
+            // dimensions plus a generous padding for better UX.
+            double hitWidth = Math.Max(NotchBorder.ActualWidth, Constants.NotchIdleWidth);
+            double hitHeight = Math.Max(NotchBorder.ActualHeight, Constants.NotchIdleHeight);
 
-            // Add a small padding for better UX (5px)
+            // Add padding for better UX
             const int padding = 5;
 
-            if (point.X >= -padding && point.X <= actualWidth + padding &&
-                point.Y >= -padding && point.Y <= actualHeight + padding)
+            if (point.X >= -padding && point.X <= hitWidth + padding &&
+                point.Y >= -padding && point.Y <= hitHeight + padding)
             {
-                // Mouse is inside the notch — handle clicks
                 handled = true;
                 return new IntPtr(User32.HTCLIENT);
             }
             else
             {
-                // Mouse is outside — pass through to whatever is behind
                 handled = true;
                 return new IntPtr(User32.HTTRANSPARENT);
             }

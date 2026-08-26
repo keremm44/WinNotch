@@ -143,8 +143,5 @@ public sealed partial class PowerMonitorService : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
-
-    ~PowerMonitorService() => Dispose();
 }

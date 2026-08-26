@@ -13,6 +13,8 @@ using System.Windows.Input;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
+using UserControl = System.Windows.Controls.UserControl;
+
 namespace WinNotch.UI.Views;
 
 /// <summary>

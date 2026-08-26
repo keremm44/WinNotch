@@ -12,6 +12,7 @@
 // - Detect pin-eligible windows → Module D (Window Pinner)
 
 using System.Runtime.InteropServices;
+using static WinNotch.Core.Interop.User32;
 
 namespace WinNotch.Core.Interop;
 
@@ -115,16 +116,19 @@ public sealed class WindowHookManager : IDisposable
             if (DwmApi.DwmGetWindowAttribute(hWnd, DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
                 out DwmApi.RECT frameRect, (uint)Marshal.SizeOf<DwmApi.RECT>()))
             {
-                // Get the screen bounds
-                var screen = System.Windows.Forms.Screen.FromHandle(hWnd);
-                if (screen != null)
+                // Get monitor bounds via Win32 GetMonitorInfo (avoids WinForms dependency)
+                IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+                if (hMonitor != IntPtr.Zero)
                 {
-                    var bounds = screen.Bounds;
-                    // Window covers the entire screen
-                    return frameRect.Left <= bounds.Left &&
-                           frameRect.Top <= bounds.Top &&
-                           frameRect.Right >= bounds.Right &&
-                           frameRect.Bottom >= bounds.Bottom;
+                    var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+                    if (GetMonitorInfo(hMonitor, ref mi))
+                    {
+                        var bounds = mi.rcMonitor;
+                        return frameRect.Left <= bounds.Left &&
+                               frameRect.Top <= bounds.Top &&
+                               frameRect.Right >= bounds.Right &&
+                               frameRect.Bottom >= bounds.Bottom;
+                    }
                 }
             }
         }

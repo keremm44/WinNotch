@@ -227,4 +227,24 @@ internal static partial class User32
     {
         public int X, Y;
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MONITOR APIs (replace System.Windows.Forms.Screen dependency)
+    // ═══════════════════════════════════════════════════════════════
+
+    [LibraryImport(DllName)]
+    public static partial IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
 }

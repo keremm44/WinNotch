@@ -274,8 +274,5 @@ public sealed class MediaSessionService : IDisposable
             _sessionManager = null;
         }
 
-        GC.SuppressFinalize(this);
     }
-
-    ~MediaSessionService() => Dispose();
 }

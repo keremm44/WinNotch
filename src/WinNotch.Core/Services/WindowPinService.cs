@@ -168,8 +168,5 @@ public sealed class WindowPinService : IDisposable
         if (_disposed) return;
         _disposed = true;
         UnpinAll();
-        GC.SuppressFinalize(this);
     }
-
-    ~WindowPinService() => Dispose();
 }

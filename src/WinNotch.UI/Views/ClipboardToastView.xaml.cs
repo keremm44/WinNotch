@@ -10,6 +10,8 @@ using System.Windows;
 using System.Windows.Controls;
 using WinNotch.Core.Services;
 
+using UserControl = System.Windows.Controls.UserControl;
+
 namespace WinNotch.UI.Views;
 
 /// <summary>

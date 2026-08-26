@@ -12,6 +12,8 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using WinNotch.Core.Services;
 
+using UserControl = System.Windows.Controls.UserControl;
+
 namespace WinNotch.UI.Views;
 
 /// <summary>

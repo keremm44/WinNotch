@@ -48,6 +48,13 @@ public sealed class ClipboardService : IDisposable
     public bool Start(IntPtr hWnd) => _listener.StartListening(hWnd);
 
     /// <summary>
+    /// Called by MainWindow WndProc when WM_CLIPBOARDUPDATE arrives.
+    /// WHY: The native ClipboardListener registers our HWND but Windows sends
+    /// the message to WndProc, not to the listener directly. We must forward it.
+    /// </summary>
+    public void OnClipboardUpdate() => _listener.OnClipboardUpdate();
+
+    /// <summary>
     /// Handles native clipboard change events.
     /// </summary>
     private void OnClipboardChanged(object? sender, ClipboardChangedEventArgs e)
@@ -129,10 +136,7 @@ public sealed class ClipboardService : IDisposable
         _disposed = true;
         _listener.ClipboardChanged -= OnClipboardChanged;
         _listener.Dispose();
-        GC.SuppressFinalize(this);
     }
-
-    ~ClipboardService() => Dispose();
 }
 
 /// <summary>
