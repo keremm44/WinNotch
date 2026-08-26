@@ -65,7 +65,8 @@ public sealed class NotchStateMachine
             State = newState,
             ShouldApply = true,
             Timeout = timeout,
-            ReturnState = returnState ?? DetermineReturnState(newState)
+            ReturnState = returnState ?? DetermineReturnState(newState),
+            Force = force
         };
     }
 
@@ -73,7 +74,12 @@ public sealed class NotchStateMachine
         NotchState newState,
         TimeSpan? timeout = null,
         NotchState? returnState = null)
-        => TryTransition(newState, StatePriority.DropResult, timeout, returnState, force: true);
+        => TryTransition(
+            newState,
+            PriorityFor(newState),
+            timeout,
+            returnState,
+            force: true);
 
     public StateTransition ReturnTo(NotchState state)
     {
