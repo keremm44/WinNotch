@@ -61,6 +61,17 @@ public partial class MainWindow : Window
     public ModuleSettings Settings => _settings;
 
     /// <summary>
+    /// Injects settings loaded from disk. Must be called before Show().
+    /// WHY: Settings are loaded in App.OnStartup from SettingsStore.Load().
+    /// MainWindow needs them before InitializeServices() to decide which
+    /// modules to create.
+    /// </summary>
+    public void SetSettings(ModuleSettings settings)
+    {
+        _settings = settings;
+    }
+
+    /// <summary>
     /// Exposes services for diagnostics panel.
     /// </summary>
     public MediaSessionService? MediaService => _mediaSessionService;

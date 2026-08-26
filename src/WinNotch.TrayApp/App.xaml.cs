@@ -33,7 +33,7 @@ public partial class App : Application
     private TrayIconManager? _trayIcon;
     private MainWindow? _mainWindow;
     private SettingsWindow? _settingsWindow;
-    private ModuleSettings _settings = new();
+    private ModuleSettings _settings = null!; // Loaded from disk in OnStartup
 
     /// <summary>
     /// Application startup — single instance check and initialization.
@@ -43,6 +43,14 @@ public partial class App : Application
         try
         {
             Debug.WriteLine("[WinNotch] OnStartup starting...");
+
+            // ═══════════════════════════════════════════════════════════
+            // STEP 0: Load settings from disk
+            // WHY: Must load BEFORE creating MainWindow so module flags
+            // are available for service initialization.
+            // ═══════════════════════════════════════════════════════════
+            _settings = SettingsStore.Load();
+            Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}");
 
             // ═══════════════════════════════════════════════════════════
             // STEP 1: Single Instance Enforcement
@@ -63,6 +71,7 @@ public partial class App : Application
             // ═══════════════════════════════════════════════════════════
             Debug.WriteLine("[WinNotch] Creating MainWindow...");
             _mainWindow = new MainWindow();
+            _mainWindow.SetSettings(_settings);
             Debug.WriteLine("[WinNotch] Showing MainWindow...");
             _mainWindow.Show();
             Debug.WriteLine("[WinNotch] MainWindow shown.");
@@ -101,8 +110,8 @@ public partial class App : Application
     /// </summary>
     private void OnExit(object sender, ExitEventArgs e)
     {
-        // Unpin all windows (Module D cleanup)
-        _mainWindow?.Settings?.GetType(); // Access to ensure not null
+        // Save settings one final time
+        SettingsStore.Save(_settings);
 
         // Dispose tray icon
         _trayIcon?.Dispose();
@@ -132,11 +141,12 @@ public partial class App : Application
     {
         _settings = settings;
 
+        // Persist to disk immediately
+        SettingsStore.Save(_settings);
+
         // Update main window settings
         if (_mainWindow != null)
         {
-            // Settings are shared by reference, so the main window
-            // already has the updated values.
             // Reposition if monitor changed
             _mainWindow.PositionOnTargetMonitor();
         }
