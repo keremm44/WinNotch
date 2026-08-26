@@ -13,7 +13,4 @@
     <ProjectReference Include="..\WinNotch.Common\WinNotch.Common.csproj" />
     <ProjectReference Include="..\WinNotch.Core\WinNotch.Core.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-  </ItemGroup>
 </Project>
