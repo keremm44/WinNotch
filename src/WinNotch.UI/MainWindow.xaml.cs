@@ -361,24 +361,38 @@ public partial class MainWindow : Window
     // SERVICE INITIALIZATION
     // ═══════════════════════════════════════════════════════════════
 
+    // ═══════════════════════════════════════════════════════════════
+    // SERVICE INITIALIZATION & LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════
+
     /// <summary>
-    /// Initializes only the enabled modules' services.
-    /// WHY: Disabled modules consume ZERO resources — no event subscriptions,
-    /// no Win32 hooks, no memory allocations.
+    /// Initializes always-on services and module services.
+    /// Called once at startup from MainWindow_Loaded.
     /// </summary>
     private void InitializeServices()
     {
-        // Window Hook Manager (always active — for fullscreen detection)
+        // Always-on services (not affected by module toggles)
         _windowHookManager = new WindowHookManager();
         _windowHookManager.ForegroundWindowChanged += OnForegroundWindowChanged;
         _windowHookManager.StartTracking();
 
-        // Power Monitor (always active — for adaptive power mode)
         _powerMonitorService = new PowerMonitorService();
         _powerMonitorService.Initialize();
 
-        // Module B: Clipboard Service
-        if (_settings.ModuleB_Clipboard)
+        // Module services
+        InitializeModuleServices();
+    }
+
+    /// <summary>
+    /// Creates services for currently enabled modules only.
+    /// Each service subscribes to its events and starts listening.
+    /// Disabled modules have NO service instance, NO event handlers,
+    /// NO Win32 hooks — truly zero cost.
+    /// </summary>
+    private void InitializeModuleServices()
+    {
+        // Module B: Clipboard
+        if (_settings.ModuleB_Clipboard && _clipboardService == null)
         {
             _clipboardService = new ClipboardService();
             _clipboardService.NotificationRequested += OnClipboardNotification;
@@ -386,8 +400,8 @@ public partial class MainWindow : Window
             _clipboardService.Start(_hWnd);
         }
 
-        // Module A: Drag & Drop Service
-        if (_settings.ModuleA_DragDrop)
+        // Module A: Drag & Drop
+        if (_settings.ModuleA_DragDrop && _dragDropService == null)
         {
             _dragDropService = new DragDropService();
             _dragDropService.FilesDropped += OnFilesDropped;
@@ -395,20 +409,90 @@ public partial class MainWindow : Window
             _dragDropService.DragLeft += OnDragLeft;
         }
 
-        // Module C: Media Session Service
-        if (_settings.ModuleC_Media)
+        // Module C: Media
+        if (_settings.ModuleC_Media && _mediaSessionService == null)
         {
             _mediaSessionService = new MediaSessionService();
             _mediaSessionService.SessionChanged += OnMediaSessionChanged;
-            _ = _mediaSessionService.InitializeAsync(); // Fire and forget — async init
+            _ = _mediaSessionService.InitializeAsync();
         }
 
-        // Module D: Window Pin Service
-        if (_settings.ModuleD_WindowPin)
+        // Module D: Window Pin
+        if (_settings.ModuleD_WindowPin && _windowPinService == null)
         {
             _windowPinService = new WindowPinService();
             _windowPinService.WindowPinChanged += OnWindowPinChanged;
         }
+    }
+
+    /// <summary>
+    /// Disposes services for disabled modules and resets to idle state.
+    /// WHY: When a module is toggled off, its service must be fully destroyed:
+    /// - Win32 hooks removed (clipboard listener unregistered)
+    /// - Event handlers unsubscribed
+    /// - WinRT session manager released (media)
+    /// - Memory freed
+    /// This is the key to "disabled module = zero cost".
+    /// </summary>
+    private void DisposeDisabledModuleServices()
+    {
+        // Module B: Clipboard — dispose if now disabled
+        if (!_settings.ModuleB_Clipboard && _clipboardService != null)
+        {
+            _clipboardService.NotificationRequested -= OnClipboardNotification;
+            _clipboardService.ImageNotificationRequested -= OnClipboardImageNotification;
+            _clipboardService.Dispose();
+            _clipboardService = null;
+        }
+
+        // Module A: Drag & Drop — dispose if now disabled
+        if (!_settings.ModuleA_DragDrop && _dragDropService != null)
+        {
+            _dragDropService.FilesDropped -= OnFilesDropped;
+            _dragDropService.DragEntered -= OnDragEntered;
+            _dragDropService.DragLeft -= OnDragLeft;
+            _dragDropService = null; // DragDropService has no Dispose, just null it
+        }
+
+        // Module C: Media — dispose if now disabled
+        if (!_settings.ModuleC_Media && _mediaSessionService != null)
+        {
+            _mediaSessionService.SessionChanged -= OnMediaSessionChanged;
+            _mediaSessionService.Dispose();
+            _mediaSessionService = null;
+        }
+
+        // Module D: Window Pin — dispose if now disabled
+        if (!_settings.ModuleD_WindowPin && _windowPinService != null)
+        {
+            _windowPinService.WindowPinChanged -= OnWindowPinChanged;
+            _windowPinService.Dispose(); // Also unpins all windows
+            _windowPinService = null;
+        }
+
+        // If we're in a module-specific state and that module was disabled,
+        // return to idle
+        if (_currentState == NotchState.ClipboardNotify && !_settings.ModuleB_Clipboard)
+            TransitionToState(NotchState.Idle);
+        if (_currentState == NotchState.MediaActive && !_settings.ModuleC_Media)
+            TransitionToState(NotchState.Idle);
+    }
+
+    /// <summary>
+    /// Called when settings change (from tray menu or settings window).
+    /// Disposes disabled modules, creates newly enabled modules.
+    /// This is the core module lifecycle mechanism.
+    /// </summary>
+    public void OnSettingsChanged()
+    {
+        // 1. Dispose services for modules that were just disabled
+        DisposeDisabledModuleServices();
+
+        // 2. Create services for modules that were just enabled
+        InitializeModuleServices();
+
+        // 3. Reposition if monitor changed
+        PositionOnTargetMonitor();
     }
 
     // ═══════════════════════════════════════════════════════════════

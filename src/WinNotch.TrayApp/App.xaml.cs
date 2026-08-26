@@ -144,12 +144,8 @@ public partial class App : Application
         // Persist to disk immediately
         SettingsStore.Save(_settings);
 
-        // Update main window settings
-        if (_mainWindow != null)
-        {
-            // Reposition if monitor changed
-            _mainWindow.PositionOnTargetMonitor();
-        }
+        // Notify MainWindow to recreate/destroy module services
+        _mainWindow?.OnSettingsChanged();
     }
 
     // ═══════════════════════════════════════════════════════════════
