@@ -7,6 +7,8 @@ using WinNotch.Common;
 using WinNotch.Core.Interop;
 
 using UserControl = System.Windows.Controls.UserControl;
+using Point = System.Windows.Point;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace WinNotch.UI.Views;
 
@@ -31,10 +33,6 @@ public partial class DropZoneView : UserControl
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Adds dropped paths to the existing shelf instead of replacing it.
-    /// Duplicate paths are ignored and the shelf remains bounded.
-    /// </summary>
     public void SetDroppedPaths(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0) return;
@@ -60,9 +58,6 @@ public partial class DropZoneView : UserControl
         RenderShelf();
     }
 
-    /// <summary>
-    /// Clears internal shelf state. notify=false is used for module lifecycle cleanup.
-    /// </summary>
     public void ResetShelf(bool notify = false)
     {
         _items = Array.Empty<HeldItem>();
@@ -75,8 +70,6 @@ public partial class DropZoneView : UserControl
 
     public void SetExpanded(bool expanded)
     {
-        // Restore the held-item presentation after a cancelled incoming drag,
-        // because ShowDropTarget temporarily replaces the visible text.
         if (HasItems)
             RenderShelf();
 
