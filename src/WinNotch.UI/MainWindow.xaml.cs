@@ -161,7 +161,22 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(() =>
         {
             ApplyExtendedStyles();
-            PositionOnTargetMonitor();
+
+            // WHY: Position AFTER WPF has completed its first layout pass.
+            // Before this, Width/Height in DIPs haven't been fully applied.
+            var (w, h) = StateDimensions.GetDimensions(_currentState);
+            _currentWidth = w;
+            _currentHeight = h;
+            Width = w;
+            Height = h;
+            UpdateWindowRegion(w, h);
+
+            // WHY use WPF DIP values directly: WPF's HWND physical size equals the
+            // DIP Width/Height value (it doesn't multiply by DPI factor).
+            // Screen.AllScreens.Bounds returns physical pixels. The centering formula
+            // needs the notch width in the SAME coordinate space as the screen bounds.
+            // Since WPF HWND = DIP size (not physical), we pass DIP values directly.
+            RecenterOnMonitor(w, h);
         }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
@@ -301,6 +316,18 @@ public partial class MainWindow : Window
             return new IntPtr(User32.MA_NOACTIVATE);
         }
 
+        // WHY WM_DISPLAYCHANGE: Windows sends this when resolution changes,
+        // monitor is connected/disconnected, or DPI scaling changes.
+        // We must reposition the notch to stay centered on the correct monitor.
+        if (msg == User32.WM_DISPLAYCHANGE)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                ApplyDimensions(_currentState);
+                System.Diagnostics.Debug.WriteLine("[WinNotch] Display changed — repositioned.");
+            }, System.Windows.Threading.DispatcherPriority.Background);
+        }
+
         return IntPtr.Zero;
     }
 
@@ -320,9 +347,18 @@ public partial class MainWindow : Window
         // Using SetWindowPos with physical pixel coordinates avoids DPI confusion.
 
         var screens = System.Windows.Forms.Screen.AllScreens;
-        int targetIndex = Math.Clamp(_settings.TargetMonitorIndex, 0, screens.Length - 1);
-        var screen = screens[targetIndex];
 
+        // Handle monitor disconnection: if target monitor index is out of range,
+        // fall back to the primary monitor (index 0).
+        int targetIndex = Math.Clamp(_settings.TargetMonitorIndex, 0, screens.Length - 1);
+        if (_settings.TargetMonitorIndex >= screens.Length)
+        {
+            _settings.TargetMonitorIndex = 0;
+            System.Diagnostics.Debug.WriteLine(
+                $"[WinNotch] Target monitor {_settings.TargetMonitorIndex} unavailable, fell back to primary.");
+        }
+
+        var screen = screens[targetIndex];
         int screenWidth = screen.Bounds.Width;
         int notchWidth = (int)Constants.NotchIdleWidth;
 
@@ -332,12 +368,16 @@ public partial class MainWindow : Window
 
         if (_hWnd != IntPtr.Zero)
         {
-            // Use Win32 SetWindowPos for pixel-accurate positioning
+            // WHY: Only set POSITION via SetWindowPos (physical pixels).
+            // Do NOT set size here — WPF manages size through Width/Height
+            // in device-independent pixels (DIPs). At 125% DPI, setting
+            // physical pixel size via SetWindowPos gets overwritten by WPF's
+            // DPI-aware layout pass, causing incorrect dimensions.
             User32.SetWindowPos(
                 _hWnd,
                 User32.HWND_TOPMOST,
-                x, y, notchWidth, (int)Constants.NotchIdleHeight,
-                User32.SWP_SHOWWINDOW | User32.SWP_NOACTIVATE);
+                x, y, 0, 0,
+                User32.SWP_SHOWWINDOW | User32.SWP_NOACTIVATE | User32.SWP_NOSIZE);
         }
         else
         {
@@ -700,22 +740,32 @@ public partial class MainWindow : Window
     {
         if (_hWnd == IntPtr.Zero) return;
 
+        // WHY: Read the ACTUAL HWND bounds first.
+        // WPF's DPI-aware window chrome adds an internal border/offset that
+        // varies with DPI scaling. Instead of guessing the offset, we read
+        // the current HWND position and calculate the correct center based
+        // on the ACTUAL physical pixel width of the window.
+        User32.RECT currentRect;
+        User32.GetWindowRect(_hWnd, out currentRect);
+        int currentW = currentRect.Right - currentRect.Left;
+
+        // Use the actual physical width if available, otherwise fallback to DIP
+        int notchWidth = currentW > 0 ? currentW : (int)width;
+
         var screens = System.Windows.Forms.Screen.AllScreens;
         int targetIndex = Math.Clamp(_settings.TargetMonitorIndex, 0, screens.Length - 1);
         var screen = screens[targetIndex];
 
         int screenWidth = screen.Bounds.Width;
-        int notchWidth = (int)width;
-        int notchHeight = (int)height;
-
         int x = screen.Bounds.Left + (screenWidth - notchWidth) / 2;
         int y = screen.Bounds.Top;
 
+        // Only set POSITION — let WPF manage size through Width/Height.
         User32.SetWindowPos(
             _hWnd,
             User32.HWND_TOPMOST,
-            x, y, notchWidth, notchHeight,
-            User32.SWP_NOACTIVATE | User32.SWP_NOZORDER | 0x0002); // SWP_SHOWWINDOW=0x0040, SWP_FRAMECHANGED=0x0020
+            x, y, 0, 0,
+            User32.SWP_NOACTIVATE | 0x0040 | User32.SWP_NOSIZE);
     }
 
     /// <summary>

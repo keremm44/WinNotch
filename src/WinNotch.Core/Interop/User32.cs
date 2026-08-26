@@ -49,6 +49,9 @@ internal static partial class User32
     /// <summary>Window message: Mouse activate — determines focus behavior on click.</summary>
     public const int WM_MOUSEACTIVATE = 0x0021;
 
+    /// <summary>Window message: Display change (resolution, monitor connect/disconnect, DPI change).</summary>
+    public const int WM_DISPLAYCHANGE = 0x007E;
+
     /// <summary>Mouse activate result: Do not activate the window.</summary>
     public const int MA_NOACTIVATE = 3;
 

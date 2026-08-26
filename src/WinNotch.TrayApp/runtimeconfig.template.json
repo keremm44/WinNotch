@@ -1,0 +1,6 @@
+{
+  "configProperties": {
+    "System.Windows.Forms.ApplicationConfiguration.Windows.DpiAwareness": "PerMonitorV2",
+    "System.Windows.Forms.ApplicationConfiguration.Windows.EnableDpiIndependentMessageLocalization": true
+  }
+}

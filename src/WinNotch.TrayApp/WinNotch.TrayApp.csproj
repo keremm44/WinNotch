@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>WinNotch.TrayApp</RootNamespace>
     <AssemblyName>WinNotch</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\WinNotch.Common\WinNotch.Common.csproj" />
