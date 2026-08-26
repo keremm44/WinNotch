@@ -31,3 +31,6 @@ jobs:
 
       - name: Test Release
         run: dotnet test tests/WinNotch.Tests/WinNotch.Tests.csproj -c Release --no-build --verbosity normal
+
+      # Keep this workflow attached to the shelf-hardening branch so every
+      # stabilization pass is validated on a real Windows runner before merge.
