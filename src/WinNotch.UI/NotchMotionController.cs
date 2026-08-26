@@ -27,7 +27,7 @@ internal sealed class NotchMotionController : IDisposable
     {
         _window = window;
         _syncNativeGeometry = syncNativeGeometry;
-        _timer = new DispatcherTimer(DispatcherPriority.Render, window.Dispatcher)
+        _timer = new DispatcherTimer(DispatcherPriority.Render)
         {
             Interval = TimeSpan.FromMilliseconds(16)
         };
