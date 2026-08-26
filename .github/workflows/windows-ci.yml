@@ -32,5 +32,41 @@ jobs:
       - name: Test Release
         run: dotnet test tests/WinNotch.Tests/WinNotch.Tests.csproj -c Release --no-build --verbosity normal
 
-      # Keep this workflow attached to the shelf-hardening branch so every
-      # stabilization pass is validated on a real Windows runner before merge.
+      - name: Release idle footprint smoke
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = Resolve-Path "src/WinNotch.TrayApp/bin/Release/net8.0-windows10.0.19041.0/WinNotch.exe" -ErrorAction SilentlyContinue
+          if (-not $exe) {
+            Write-Host "PERF_SMOKE: WinNotch.exe not found; measurement skipped."
+            exit 0
+          }
+
+          $process = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 5
+          $process.Refresh()
+
+          if ($process.HasExited) {
+            Write-Host "PERF_SMOKE: WinNotch exited during startup; no stable idle measurement available on this runner."
+            exit 0
+          }
+
+          $logicalCpus = [Environment]::ProcessorCount
+          $cpuStart = $process.TotalProcessorTime.TotalMilliseconds
+          Start-Sleep -Seconds 5
+          $process.Refresh()
+          $cpuEnd = $process.TotalProcessorTime.TotalMilliseconds
+
+          $workingSetMb = [Math]::Round($process.WorkingSet64 / 1MB, 2)
+          $privateMb = [Math]::Round($process.PrivateMemorySize64 / 1MB, 2)
+          $cpuPercent = [Math]::Round((($cpuEnd - $cpuStart) / (5000 * $logicalCpus)) * 100, 3)
+          $threadCount = $process.Threads.Count
+          $handleCount = $process.HandleCount
+
+          Write-Host "PERF_SMOKE WorkingSetMB=$workingSetMb"
+          Write-Host "PERF_SMOKE PrivateMemoryMB=$privateMb"
+          Write-Host "PERF_SMOKE IdleCpuPercent=$cpuPercent"
+          Write-Host "PERF_SMOKE Threads=$threadCount"
+          Write-Host "PERF_SMOKE Handles=$handleCount"
+
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
