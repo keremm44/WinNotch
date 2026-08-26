@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private MediaSessionService? _mediaSessionService;
     private WindowPinService? _windowPinService;
     private PowerMonitorService? _powerMonitorService;
+    private readonly NotchMotionController _motionController;
 
     private bool _isDragging;
     private bool _isDraggingOut;
@@ -40,6 +41,8 @@ public partial class MainWindow : Window
     private System.Windows.Threading.DispatcherTimer? _stateReturnTimer;
     private double _currentWidth = Constants.NotchIdleWidth;
     private double _currentHeight = Constants.NotchIdleHeight;
+    private int _hitWidthPx = (int)Constants.NotchIdleWidth;
+    private int _hitHeightPx = (int)Constants.NotchIdleHeight;
 
     public ModuleSettings Settings => _settings;
     public MediaSessionService? MediaService => _mediaSessionService;
@@ -47,6 +50,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _motionController = new NotchMotionController(this, SyncNativeGeometry);
         DropZoneView.ShelfCleared += OnShelfCleared;
         DropZoneView.DragOutStarted += OnShelfDragOutStarted;
         DropZoneView.DragOutCompleted += OnShelfDragOutCompleted;
@@ -112,6 +116,22 @@ public partial class MainWindow : Window
             User32.SetWindowRgn(_hWnd, hRgn, true);
     }
 
+    private void SyncNativeGeometry()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+
+        if (User32.GetClientRect(_hWnd, out var clientRect))
+        {
+            int width = Math.Max(1, clientRect.Right - clientRect.Left);
+            int height = Math.Max(1, clientRect.Bottom - clientRect.Top);
+            _hitWidthPx = width;
+            _hitHeightPx = height;
+            UpdateWindowRegion(width, height);
+        }
+
+        RecenterOnMonitor();
+    }
+
     private IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == ClipboardListener.WM_CLIPBOARDUPDATE)
@@ -129,8 +149,8 @@ public partial class MainWindow : Window
             User32.ScreenToClient(_hWnd, ref point);
 
             int padding = Constants.HitTestPadding;
-            bool inside = point.X >= -padding && point.X <= _currentWidth + padding &&
-                          point.Y >= -padding && point.Y <= _currentHeight + padding;
+            bool inside = point.X >= -padding && point.X <= _hitWidthPx + padding &&
+                          point.Y >= -padding && point.Y <= _hitHeightPx + padding;
 
             handled = true;
             return new IntPtr(inside ? User32.HTCLIENT : User32.HTTRANSPARENT);
@@ -407,7 +427,7 @@ public partial class MainWindow : Window
 
         _currentState = newState;
         UpdateContentVisibility(newState);
-        ApplyDimensions(newState);
+        ApplyDimensions(newState, force: force && !_initialized);
         ScheduleReturn(timeout ?? result.Timeout, returnState ?? result.ReturnState);
     }
 
@@ -437,14 +457,7 @@ public partial class MainWindow : Window
 
         _currentWidth = w;
         _currentHeight = h;
-        Width = w;
-        Height = h;
-
-        Dispatcher.BeginInvoke(() =>
-        {
-            UpdateWindowRegion(w, h);
-            RecenterOnMonitor();
-        }, System.Windows.Threading.DispatcherPriority.Render);
+        _motionController.Apply(w, h, immediate: force || !_initialized);
     }
 
     private void ScheduleReturn(TimeSpan? timeout, NotchState? returnState)
@@ -653,6 +666,7 @@ public partial class MainWindow : Window
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _stateReturnTimer?.Stop();
+        _motionController.Dispose();
         DropZoneView.ShelfCleared -= OnShelfCleared;
         DropZoneView.DragOutStarted -= OnShelfDragOutStarted;
         DropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
