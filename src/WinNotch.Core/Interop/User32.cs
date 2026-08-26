@@ -126,32 +126,24 @@ internal static partial class User32
     /// <summary>GetWindow: return next window in Z-order.</summary>
     public const uint GW_HWNDNEXT = 2;
 
-    [LibraryImport(DllName, SetLastError = true)]
+    // WHY GetWindowLongW/SetWindowLongW: On 64-bit Windows, GetWindowLong is a
+    // macro that maps to GetWindowLongW (ANSI) or GetWindowLongPtrW (pointer-sized).
+    // LibraryImport resolves by exact name, so we must use the 'W' suffix.
+    // GetWindowLongW returns int (32-bit) which is sufficient for style flags.
+    [LibraryImport(DllName, EntryPoint = "GetWindowLongW", SetLastError = true)]
     public static partial int GetWindowLong(IntPtr hWnd, int nIndex);
 
-    [LibraryImport(DllName, SetLastError = true)]
+    [LibraryImport(DllName, EntryPoint = "SetWindowLongW", SetLastError = true)]
     public static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    // WHY SetWindowLongPtr: On 64-bit Windows, SetWindowLong is limited to 32-bit.
-    // SetWindowLongPtr handles both 32-bit and 64-bit correctly.
-    [LibraryImport(DllName, SetLastError = true)]
-    public static partial nint SetWindowLongPtr64(IntPtr hWnd, int nIndex, nint dwNewLong);
 
     public const int GWL_EXSTYLE = -20;
 
     /// <summary>
-    /// Sets extended window style correctly on both 32-bit and 64-bit.
+    /// Sets extended window style and forces frame update.
     /// </summary>
     public static void SetExtendedStyle(IntPtr hWnd, int exStyle)
     {
-        if (IntPtr.Size == 8)
-        {
-            SetWindowLongPtr64(hWnd, GWL_EXSTYLE, exStyle);
-        }
-        else
-        {
-            SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
-        }
+        SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
 
         // Force window to redraw with new styles
         SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,

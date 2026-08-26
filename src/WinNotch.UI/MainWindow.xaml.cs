@@ -90,8 +90,32 @@ public partial class MainWindow : Window
         _hWnd = new WindowInteropHelper(this).Handle;
         _hwndSource = HwndSource.FromHwnd(_hWnd);
 
-        // Register WndProc hook FIRST
+        // Register WndProc hook
         _hwndSource?.AddHook(WndProc);
+
+        // ═══════════════════════════════════════════════════════════
+        // Apply ALL Win32 setup here — BEFORE window is shown.
+        // WHY SourceInitialized: HWND is valid but WPF hasn't rendered yet.
+        // Applying styles here gives them the best chance of sticking.
+        // ═══════════════════════════════════════════════════════════
+        try
+        {
+            // 1. Extended styles FIRST (before DWM, which may affect style visibility)
+            ApplyExtendedStyles();
+
+            // 2. DWM transparency
+            DwmApi.ExtendGlassFrame(_hWnd);
+
+            // 3. Window region (rounded rect)
+            ApplyWindowRegion();
+
+            // 4. Position on monitor
+            PositionOnTargetMonitor();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WinNotch] SourceInitialized error: {ex}");
+        }
     }
 
     /// <summary>
@@ -108,46 +132,16 @@ public partial class MainWindow : Window
         // Theme detection
         DetectAndApplyTheme();
 
-        // Apply Win32 setup after first render
-        Dispatcher.BeginInvoke(() => SetupWin32(),
-            System.Windows.Threading.DispatcherPriority.ContextIdle);
-    }
-
-    /// <summary>
-    /// Applies all Win32 interop after the window is fully rendered.
-    /// WHY ContextIdle: This priority ensures WPF has finished its
-        // render pass before we modify Win32 styles.
-    /// </summary>
-    private void SetupWin32()
-    {
-        if (_hWnd == IntPtr.Zero) return;
-
-        try
+        // ═══════════════════════════════════════════════════════════
+        // WHY: WPF may have overwritten our styles during the first render.
+        // Re-apply styles ONCE after render completes.
+        // No DispatcherTimer — single re-application is sufficient.
+        // ═══════════════════════════════════════════════════════════
+        Dispatcher.BeginInvoke(() =>
         {
             ApplyExtendedStyles();
-            DwmApi.ExtendGlassFrame(_hWnd);
-            ApplyWindowRegion();
             PositionOnTargetMonitor();
-
-            // Re-apply after a short delay to ensure styles stick
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(500)
-            };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                ApplyExtendedStyles();
-                ApplyWindowRegion();
-                PositionOnTargetMonitor();
-                System.Diagnostics.Debug.WriteLine($"[WinNotch] Final style check. ExStyle=0x{User32.GetWindowLong(_hWnd, User32.GWL_EXSTYLE):X8}");
-            };
-            timer.Start();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[WinNotch] SetupWin32 error: {ex}");
-        }
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -292,22 +286,36 @@ public partial class MainWindow : Window
     /// </summary>
     public void PositionOnTargetMonitor()
     {
+        // WHY use Win32 directly: WPF Left/Top uses DIPs, screen.Bounds uses physical pixels.
+        // On mixed-DPI setups this causes offset errors (observed at 51,51 instead of 0,0).
+        // Using SetWindowPos with physical pixel coordinates avoids DPI confusion.
+
         var screens = System.Windows.Forms.Screen.AllScreens;
         int targetIndex = Math.Clamp(_settings.TargetMonitorIndex, 0, screens.Length - 1);
         var screen = screens[targetIndex];
 
-        double screenWidth = screen.Bounds.Width;
+        int screenWidth = screen.Bounds.Width;
+        int notchWidth = (int)Constants.NotchIdleWidth;
 
-        // WHY use Constants instead of ActualWidth: ActualWidth may be 0
-        // when called before first layout pass. Use known idle dimensions.
-        double notchWidth = Constants.NotchIdleWidth;
+        // Position at top-center of the target monitor (physical pixels)
+        int x = screen.Bounds.Left + (screenWidth - notchWidth) / 2;
+        int y = screen.Bounds.Top;
 
-        // Position at top-center of the target monitor
-        double x = screen.Bounds.Left + (screenWidth - notchWidth) / 2;
-        double y = screen.Bounds.Top;
-
-        Left = x;
-        Top = y;
+        if (_hWnd != IntPtr.Zero)
+        {
+            // Use Win32 SetWindowPos for pixel-accurate positioning
+            User32.SetWindowPos(
+                _hWnd,
+                User32.HWND_TOPMOST,
+                x, y, notchWidth, (int)Constants.NotchIdleHeight,
+                User32.SWP_SHOWWINDOW | User32.SWP_NOACTIVATE);
+        }
+        else
+        {
+            // Fallback to WPF positioning if HWND not yet available
+            Left = x;
+            Top = y;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
