@@ -20,6 +20,7 @@ public partial class MainWindow
         _motionController.Configure(_settings.Appearance);
 
         ApplyIdleSignature();
+        QuickPeekView.ApplyAppearance(_settings.Appearance);
         DropZoneView.ApplyAppearance(_settings.Appearance);
         ClipboardToastView.ApplyAppearance(_settings.Appearance);
         MediaWidgetView.ApplyAppearance(_settings.Appearance);
