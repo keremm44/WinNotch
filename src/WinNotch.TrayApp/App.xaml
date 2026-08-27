@@ -11,7 +11,6 @@
             <SolidColorBrush x:Key="AccentBlue" Color="#FF2D7DFF"/>
             <SolidColorBrush x:Key="TextSecondary" Color="#FF92929B"/>
 
-            <!-- One menu language for the notch and tray surfaces. -->
             <Style TargetType="{x:Type ContextMenu}">
                 <Setter Property="Background" Value="#FF18181C"/>
                 <Setter Property="Foreground" Value="#FFF0F0F2"/>
@@ -40,8 +39,8 @@
             <Style TargetType="{x:Type MenuItem}">
                 <Setter Property="Foreground" Value="#FFECECEF"/>
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Padding" Value="10,7"/>
-                <Setter Property="MinWidth" Value="190"/>
+                <Setter Property="Padding" Value="8,7"/>
+                <Setter Property="MinWidth" Value="205"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -53,14 +52,24 @@
                                         Padding="{TemplateBinding Padding}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="14"/>
                                         </Grid.ColumnDefinitions>
-                                        <ContentPresenter ContentSource="Header"
+                                        <TextBlock x:Name="CheckMark"
+                                                   Text="✓"
+                                                   Foreground="#FF65A1FF"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="11"
+                                                   HorizontalAlignment="Left"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="Collapsed"/>
+                                        <ContentPresenter Grid.Column="1"
+                                                          ContentSource="Header"
                                                           RecognizesAccessKey="True"
                                                           VerticalAlignment="Center"/>
                                         <Path x:Name="SubmenuArrow"
-                                              Grid.Column="1"
+                                              Grid.Column="2"
                                               Data="M 0 0 L 4 4 L 0 8"
                                               Stroke="#FF9B9BA4"
                                               StrokeThickness="1.4"
@@ -90,6 +99,9 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsHighlighted" Value="True">
                                     <Setter TargetName="ItemSurface" Property="Background" Value="#FF29292F"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.42"/>
