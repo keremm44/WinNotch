@@ -1,63 +1,75 @@
 <UserControl x:Class="WinNotch.UI.Views.ClipboardToastView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Foreground="#FFFFFFFF">
-
-    <!--
-        Clipboard Toast View (Module B/E)
-        Brief flash notification when clipboard content changes.
-        Shows text preview or image thumbnail.
-        Auto-dismisses after 1.5 seconds.
-    -->
-
-    <Grid Margin="8,4">
+             Foreground="#FFFFFFFF"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
+    <Grid Margin="10,5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Status icon -->
-        <TextBlock Grid.Column="0"
-                   x:Name="StatusIcon"
-                   Text="📋"
-                   FontSize="14"
-                   VerticalAlignment="Center"
-                   Margin="0,0,6,0"/>
-
-        <!-- Content preview -->
-        <StackPanel Grid.Column="1"
-                    VerticalAlignment="Center">
-            <TextBlock x:Name="PreviewText"
-                       Text="Panoya kopyalandı ✓"
-                       Foreground="#CCFFFFFF"
+        <Border Grid.Column="0"
+                Width="24" Height="24"
+                CornerRadius="7"
+                Background="#14FFFFFF"
+                BorderBrush="#20FFFFFF"
+                BorderThickness="1"
+                VerticalAlignment="Center">
+            <TextBlock x:Name="StatusIcon"
+                       Text="C"
+                       FontFamily="Segoe UI Symbol"
                        FontSize="10"
-                       TextTrimming="CharacterEllipsis"
-                       MaxWidth="180"/>
+                       FontWeight="SemiBold"
+                       Foreground="#E6FFFFFF"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Border>
 
-            <!-- Image thumbnail preview -->
-            <Border x:Name="ImagePreviewBorder"
-                    Width="32" Height="32"
-                    CornerRadius="4"
-                    ClipToBounds="True"
-                    Margin="0,3,0,0"
-                    Visibility="Collapsed">
-                <Border.Background>
-                    <SolidColorBrush Color="#FF333333"/>
-                </Border.Background>
-                <Image x:Name="ImagePreview"
-                       Stretch="UniformToFill"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
-            </Border>
+        <Border x:Name="ImagePreviewBorder"
+                Grid.Column="1"
+                Width="38" Height="38"
+                CornerRadius="7"
+                ClipToBounds="True"
+                BorderBrush="#24FFFFFF"
+                BorderThickness="1"
+                Background="#FF202024"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                Visibility="Collapsed">
+            <Image x:Name="ImagePreview"
+                   Stretch="UniformToFill"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Border>
+
+        <StackPanel Grid.Column="2"
+                    VerticalAlignment="Center"
+                    Margin="8,0,8,0">
+            <TextBlock x:Name="PreviewText"
+                       Text="Panoya alındı"
+                       Foreground="#F0FFFFFF"
+                       FontSize="10"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="170"/>
+            <TextBlock x:Name="DetailText"
+                       Text=""
+                       Foreground="#78FFFFFF"
+                       FontSize="8.5"
+                       Margin="0,1,0,0"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="170"/>
         </StackPanel>
 
-        <!-- Timestamp -->
-        <TextBlock Grid.Column="1"
+        <TextBlock Grid.Column="3"
                    x:Name="TimestampText"
                    Text="şimdi"
-                   Foreground="#66FFFFFF"
+                   Foreground="#58FFFFFF"
                    FontSize="8"
                    HorizontalAlignment="Right"
-                   VerticalAlignment="Center"
-                   Margin="0,0,0,0"/>
+                   VerticalAlignment="Center"/>
     </Grid>
 </UserControl>
