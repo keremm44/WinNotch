@@ -3,7 +3,9 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using WinNotch.Common;
 
 namespace WinNotch.TrayApp;
@@ -37,7 +39,79 @@ public partial class SettingsWindow : Window
 
         LoadSettings();
         UpdateDiagnosticsState();
+        Loaded += SettingsWindow_Loaded;
         Closed += SettingsWindow_Closed;
+    }
+
+    private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= SettingsWindow_Loaded;
+        Button? closeButton = FindButtonByContent(this, "×");
+        if (closeButton != null)
+            ApplyCloseButtonVisual(closeButton);
+    }
+
+    private static Button? FindButtonByContent(DependencyObject root, string content)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, i);
+            if (child is Button button && string.Equals(button.Content?.ToString(), content, StringComparison.Ordinal))
+                return button;
+
+            Button? nested = FindButtonByContent(child, content);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    private static void ApplyCloseButtonVisual(Button button)
+    {
+        button.Width = 28;
+        button.Height = 28;
+        button.Padding = new Thickness(0);
+        button.FontSize = 14;
+        button.FontWeight = FontWeights.Normal;
+        button.HorizontalAlignment = HorizontalAlignment.Center;
+        button.VerticalAlignment = VerticalAlignment.Center;
+        button.BorderThickness = new Thickness(0);
+        button.Background = Brushes.Transparent;
+        button.SetResourceReference(ForegroundProperty, "Brush.Text.Secondary");
+
+        var template = new ControlTemplate(typeof(Button));
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.Name = "CloseSurface";
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+        border.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        presenter.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
+        presenter.SetValue(ContentPresenter.ContentProperty, new System.Windows.Data.Binding("Content")
+        {
+            RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent)
+        });
+        presenter.SetValue(TextElement.ForegroundProperty, new System.Windows.Data.Binding("Foreground")
+        {
+            RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent)
+        });
+        border.AppendChild(presenter);
+        template.VisualTree = border;
+
+        var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+        hover.Setters.Add(new Setter(Border.BackgroundProperty,
+            new DynamicResourceExtension("Brush.Surface.Hover"), "CloseSurface"));
+        template.Triggers.Add(hover);
+
+        var pressed = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
+        pressed.Setters.Add(new Setter(Border.BackgroundProperty,
+            new DynamicResourceExtension("Brush.Surface.Pressed"), "CloseSurface"));
+        template.Triggers.Add(pressed);
+
+        button.Template = template;
     }
 
     private void SettingsWindow_Closed(object? sender, EventArgs e)
