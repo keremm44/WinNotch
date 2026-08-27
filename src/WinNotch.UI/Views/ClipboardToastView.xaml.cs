@@ -6,7 +6,7 @@ using WinNotch.Core.Services;
 
 using UserControl = System.Windows.Controls.UserControl;
 using Brush = System.Windows.Media.Brush;
-using BrushConverter = System.Windows.Media.BrushConverter;
+using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
 using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -15,17 +15,6 @@ namespace WinNotch.UI.Views;
 
 public partial class ClipboardToastView : UserControl
 {
-    private static readonly Brush NeutralSurface = CreateBrush("#14FFFFFF");
-    private static readonly Brush NeutralBorder = CreateBrush("#20FFFFFF");
-    private static readonly Brush UrlSurface = CreateBrush("#182D7DFF");
-    private static readonly Brush UrlBorder = CreateBrush("#482D7DFF");
-    private static readonly Brush FileSurface = CreateBrush("#1839B980");
-    private static readonly Brush FileBorder = CreateBrush("#4439B980");
-    private static readonly Brush EmailSurface = CreateBrush("#188C6CFF");
-    private static readonly Brush EmailBorder = CreateBrush("#448C6CFF");
-    private static readonly Brush ScreenshotSurface = CreateBrush("#183BA9FF");
-    private static readonly Brush ScreenshotBorder = CreateBrush("#443BA9FF");
-
     private const int HoverGraceMs = 280;
 
     private ContextAction? _currentAction;
@@ -36,6 +25,7 @@ public partial class ClipboardToastView : UserControl
     public ClipboardToastView()
     {
         InitializeComponent();
+        IsVisibleChanged += ClipboardToastView_IsVisibleChanged;
     }
 
     public void SetNotification(
@@ -83,8 +73,8 @@ public partial class ClipboardToastView : UserControl
             StatusIcon.Text = "▣";
             StatusIcon.Visibility = Visibility.Visible;
             ColorSwatch.Visibility = Visibility.Collapsed;
-            StatusSurface.Background = ScreenshotSurface;
-            StatusSurface.BorderBrush = ScreenshotBorder;
+            StatusSurface.Background = FindBrush("Brush.Accent.Subtle");
+            StatusSurface.BorderBrush = FindBrush("Brush.Accent.Border");
 
             PreviewText.Text = "Ekran görüntüsü hazır";
             DetailText.Text = "Panoya alındı";
@@ -111,37 +101,43 @@ public partial class ClipboardToastView : UserControl
 
     private MainWindow? GetHostWindow() => Window.GetWindow(this) as MainWindow;
 
+    private void ClipboardToastView_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+            SurfaceMotion.Reveal(this);
+    }
+
     private void ApplyClipboardAppearance(ClipboardContentType contentType, string? rawText)
     {
         StatusIcon.Visibility = Visibility.Visible;
         ColorSwatch.Visibility = Visibility.Collapsed;
-        StatusSurface.Background = NeutralSurface;
-        StatusSurface.BorderBrush = NeutralBorder;
+        StatusSurface.Background = FindBrush("Brush.Surface.Soft");
+        StatusSurface.BorderBrush = FindBrush("Brush.Border.OnDark");
 
         switch (contentType)
         {
             case ClipboardContentType.Url:
                 StatusIcon.Text = "↗";
-                StatusSurface.Background = UrlSurface;
-                StatusSurface.BorderBrush = UrlBorder;
+                StatusSurface.Background = FindBrush("Brush.Accent.Subtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.Accent.Border");
                 break;
 
             case ClipboardContentType.FilePath:
                 StatusIcon.Text = "F";
-                StatusSurface.Background = FileSurface;
-                StatusSurface.BorderBrush = FileBorder;
+                StatusSurface.Background = FindBrush("Brush.Semantic.SuccessSubtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.Semantic.SuccessBorder");
                 break;
 
             case ClipboardContentType.Color:
                 StatusIcon.Visibility = Visibility.Collapsed;
                 ColorSwatch.Visibility = Visibility.Visible;
-                ColorSwatch.Background = TryCreateColorBrush(rawText) ?? NeutralSurface;
+                ColorSwatch.Background = TryCreateColorBrush(rawText) ?? FindBrush("Brush.Surface.Soft");
                 break;
 
             case ClipboardContentType.Email:
                 StatusIcon.Text = "@";
-                StatusSurface.Background = EmailSurface;
-                StatusSurface.BorderBrush = EmailBorder;
+                StatusSurface.Background = FindBrush("Brush.Semantic.VioletSubtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.Semantic.VioletBorder");
                 break;
 
             case ClipboardContentType.Phone:
@@ -189,6 +185,7 @@ public partial class ClipboardToastView : UserControl
 
         _isExpanded = true;
         ActionPanel.Visibility = Visibility.Visible;
+        SurfaceMotion.Reveal(ActionPanel, 1.5, 95);
         GetHostWindow()?.SetContextSurfaceExpanded(true);
     }
 
@@ -255,6 +252,9 @@ public partial class ClipboardToastView : UserControl
         GetHostWindow()?.ExecuteContextAction(_currentAction, _currentImage);
     }
 
+    private Brush FindBrush(string key)
+        => TryFindResource(key) as Brush ?? Brushes.Transparent;
+
     private static Brush? TryCreateColorBrush(string? rawText)
     {
         if (string.IsNullOrWhiteSpace(rawText))
@@ -276,13 +276,6 @@ public partial class ClipboardToastView : UserControl
             (byte)(argb >> 16),
             (byte)(argb >> 8),
             (byte)argb));
-        brush.Freeze();
-        return brush;
-    }
-
-    private static Brush CreateBrush(string value)
-    {
-        var brush = (SolidColorBrush)new BrushConverter().ConvertFromString(value)!;
         brush.Freeze();
         return brush;
     }
