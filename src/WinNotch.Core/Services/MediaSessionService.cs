@@ -43,6 +43,8 @@ public sealed class MediaSessionService : IDisposable
     private GlobalSystemMediaTransportControlsSession? _currentSession;
     private MediaSessionInfo? _lastInfo;
     private CancellationTokenSource? _noSessionConfirmation;
+    private System.Threading.Timer? _sessionRecoveryTimer;
+    private int _recoveryPollRunning;
     private bool _disposed;
     private long _updateVersion;
 
@@ -238,6 +240,8 @@ public sealed class MediaSessionService : IDisposable
 
     private void AttachSession(GlobalSystemMediaTransportControlsSession session)
     {
+        StopSessionRecovery();
+
         if (ReferenceEquals(_currentSession, session) || _currentSession?.Equals(session) == true)
         {
             _ = UpdateSessionInfoAsync(_currentSession, Interlocked.Increment(ref _updateVersion));
@@ -472,6 +476,65 @@ public sealed class MediaSessionService : IDisposable
         {
             Session = new MediaSessionInfo { HasSession = false }
         });
+        StartSessionRecovery();
+    }
+
+    private void StartSessionRecovery()
+    {
+        if (_disposed || _sessionManager == null || _sessionRecoveryTimer != null)
+            return;
+
+        // Some Chromium builds recreate a paused/resumed session without delivering
+        // a reliable manager event. Poll only while there is no selected session; the
+        // timer is destroyed as soon as media is rediscovered.
+        var timer = new System.Threading.Timer(
+            SessionRecoveryTimer_Tick,
+            null,
+            Timeout.InfiniteTimeSpan,
+            Timeout.InfiniteTimeSpan);
+
+        if (Interlocked.CompareExchange(ref _sessionRecoveryTimer, timer, null) != null)
+        {
+            timer.Dispose();
+            return;
+        }
+
+        timer.Change(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1));
+    }
+
+    private void SessionRecoveryTimer_Tick(object? state)
+    {
+        if (_disposed || _currentSession != null || _sessionManager == null)
+            return;
+        if (Interlocked.Exchange(ref _recoveryPollRunning, 1) != 0)
+            return;
+
+        try
+        {
+            GlobalSystemMediaTransportControlsSession? session =
+                SelectBestSession(_sessionManager);
+            if (session != null)
+            {
+                CancelNoSessionConfirmation();
+                AttachSession(session);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MediaSessionService] Recovery poll failed: {ex.Message}");
+        }
+        finally
+        {
+            Volatile.Write(ref _recoveryPollRunning, 0);
+        }
+    }
+
+    private void StopSessionRecovery()
+    {
+        System.Threading.Timer? timer =
+            Interlocked.Exchange(ref _sessionRecoveryTimer, null);
+        timer?.Dispose();
     }
 
     public void Dispose()
@@ -480,6 +543,7 @@ public sealed class MediaSessionService : IDisposable
         _disposed = true;
         Interlocked.Increment(ref _updateVersion);
         CancelNoSessionConfirmation();
+        StopSessionRecovery();
 
         DetachSession();
 
