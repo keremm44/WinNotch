@@ -88,14 +88,172 @@
             </Setter>
         </Style>
 
+        <Style x:Key="ModernComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#FFEDEDF0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="11,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemSurface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#FF292930"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#FF243B62"/>
+                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.42"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource ModernComboItem}"/>
+
         <Style x:Key="ModernCombo" TargetType="ComboBox">
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Height" Value="38"/>
             <Setter Property="Background" Value="#FF222226"/>
             <Setter Property="Foreground" Value="#FFF2F2F4"/>
-            <Setter Property="BorderBrush" Value="#FF34343B"/>
+            <Setter Property="BorderBrush" Value="#FF3A3A42"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ModernComboItem}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="ComboSurface"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8">
+                                <Grid>
+                                    <ContentPresenter Margin="12,0,38,0"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                    <Path Data="M 0 0 L 4 4 L 8 0"
+                                          Stroke="#FF9B9BA4"
+                                          StrokeThickness="1.4"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,13,0"/>
+                                </Grid>
+                            </Border>
+
+                            <ToggleButton Focusable="False"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent"/>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Width="{Binding ActualWidth, ElementName=ComboSurface}"
+                                        MinWidth="220"
+                                        MaxHeight="240"
+                                        Margin="0,5,0,0"
+                                        Padding="5"
+                                        Background="#FF1C1C20"
+                                        BorderBrush="#FF393940"
+                                        BorderThickness="1"
+                                        CornerRadius="9">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="#FF5A5A65"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="#FF2D7DFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Vertical settings scroller: no stock white chrome. -->
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="True"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{TemplateBinding Value}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                                  Opacity="0"
+                                                  Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb MinHeight="36" Cursor="Hand">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="ThumbSurface"
+                                                        Background="#FF44444C"
+                                                        CornerRadius="4"
+                                                        Margin="1,0"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="ThumbSurface" Property="Background" Value="#FF5B5B65"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="ThumbSurface" Property="Background" Value="#FF6C6C77"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                                  Opacity="0"
+                                                  Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="PrimaryButton" TargetType="Button">
@@ -113,8 +271,7 @@
                                 CornerRadius="8"
                                 Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -122,6 +279,40 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonSurface" Property="Background" Value="#FF216FE8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="11,0"/>
+            <Setter Property="Background" Value="#FF242429"/>
+            <Setter Property="Foreground" Value="#FFE4E4E8"/>
+            <Setter Property="BorderBrush" Value="#FF37373E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF303037"/>
+                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#FF4A4A54"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF202025"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -138,7 +329,6 @@
                 <RowDefinition Height="58"/>
             </Grid.RowDefinitions>
 
-            <!-- Custom dark title area -->
             <Grid Grid.Row="0"
                   Background="#FF141416"
                   MouseLeftButtonDown="Header_MouseLeftButtonDown">
@@ -147,14 +337,8 @@
                     <ColumnDefinition Width="52"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="20,12,0,0">
-                    <TextBlock Text="WinNotch"
-                               FontSize="17"
-                               FontWeight="SemiBold"
-                               Foreground="#FFF7F7F8"/>
-                    <TextBlock Text="Ayarlar"
-                               FontSize="10"
-                               Foreground="#FF777780"
-                               Margin="0,2,0,0"/>
+                    <TextBlock Text="WinNotch" FontSize="17" FontWeight="SemiBold" Foreground="#FFF7F7F8"/>
+                    <TextBlock Text="Ayarlar" FontSize="10" Foreground="#FF777780" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Content="×"
@@ -164,15 +348,12 @@
                         BorderThickness="0"
                         Cursor="Hand"
                         Click="CloseButton_Click"/>
-                <Border Grid.RowSpan="1"
-                        VerticalAlignment="Bottom"
-                        Height="1"
-                        Background="#FF242429"/>
+                <Border VerticalAlignment="Bottom" Height="1" Background="#FF242429"/>
             </Grid>
 
             <ScrollViewer Grid.Row="1"
-                          Margin="18,18,8,0"
-                          Padding="0,0,10,0"
+                          Margin="18,18,10,0"
+                          Padding="0,0,8,0"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
@@ -182,32 +363,53 @@
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Yalnız kullandığın özellikleri açık tut. Medya entegrasyonu ek bellek kullanır."/>
 
-                            <CheckBox x:Name="ModuleACheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
+                            <CheckBox x:Name="ModuleACheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Dosya Rafı — dosyaları tut, kopyala ve yeniden sürükle"
-                                      Checked="ModuleCheckBox_Changed"
-                                      Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleBCheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleBCheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Akıllı Pano — URL, yol ve anlamlı içerikleri yakala"
-                                      Checked="ModuleCheckBox_Changed"
-                                      Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleCCheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleCCheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Medya Kontrolleri — sistem medya oturumunu göster"
-                                      Checked="ModuleCheckBox_Changed"
-                                      Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleDCheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleDCheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Pencere Sabitleme — aktif pencereyi üstte tut"
-                                      Checked="ModuleCheckBox_Changed"
-                                      Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleECheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleECheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Ekran Görüntüleri — Snipping Tool sonucunu yüzeyde göster"
                                       Margin="0"
-                                      Checked="ModuleCheckBox_Changed"
-                                      Unchecked="ModuleCheckBox_Changed"/>
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PinnedWindowsCard" Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Sabitlenen pencereler"/>
+                                    <TextBlock Text="Üstte tutulan pencereleri buradan tek tek veya topluca bırak."
+                                               FontSize="10.5"
+                                               Foreground="#FF8D8D96"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button x:Name="ClearAllPinnedButton"
+                                        Grid.Column="1"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="Tümünü kaldır"
+                                        Margin="12,0,0,0"
+                                        Visibility="Collapsed"
+                                        Click="ClearAllPinnedButton_Click"/>
+                            </Grid>
+                            <TextBlock x:Name="PinnedEmptyText"
+                                       Text="Şu anda sabitlenen pencere yok."
+                                       Foreground="#FF73737C"
+                                       FontSize="10.5"
+                                       Margin="0,2,0,0"/>
+                            <StackPanel x:Name="PinnedWindowsPanel"/>
                         </StackPanel>
                     </Border>
 
@@ -217,10 +419,7 @@
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Yüzeyin ne zaman görüneceğini ve ne kadar tepki vereceğini belirle."/>
 
-                            <TextBlock Text="Görünürlük"
-                                       Foreground="#FFBDBDC5"
-                                       FontSize="10.5"
-                                       Margin="0,0,0,6"/>
+                            <TextBlock Text="Görünürlük" Foreground="#FFBDBDC5" FontSize="10.5" Margin="0,0,0,6"/>
                             <ComboBox x:Name="VisibilityModeComboBox"
                                       Style="{StaticResource ModernCombo}"
                                       Margin="0,0,0,12"
@@ -230,10 +429,7 @@
                                 <ComboBoxItem Content="Gizli" Tag="Hidden"/>
                             </ComboBox>
 
-                            <TextBlock Text="Tepki seviyesi"
-                                       Foreground="#FFBDBDC5"
-                                       FontSize="10.5"
-                                       Margin="0,0,0,6"/>
+                            <TextBlock Text="Tepki seviyesi" Foreground="#FFBDBDC5" FontSize="10.5" Margin="0,0,0,6"/>
                             <ComboBox x:Name="ReactionLevelComboBox"
                                       Style="{StaticResource ModernCombo}"
                                       SelectionChanged="ReactionLevelComboBox_SelectionChanged">
@@ -288,26 +484,14 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Bellek"
-                                                   FontSize="9.5"
-                                                   Foreground="#FF777780"/>
-                                        <TextBlock x:Name="RamUsageText"
-                                                   Text="—"
-                                                   FontSize="13"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#FFEDEDF0"
-                                                   Margin="0,3,0,0"/>
+                                        <TextBlock Text="Bellek" FontSize="9.5" Foreground="#FF777780"/>
+                                        <TextBlock x:Name="RamUsageText" Text="—" FontSize="13"
+                                                   FontWeight="SemiBold" Foreground="#FFEDEDF0" Margin="0,3,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="CPU"
-                                                   FontSize="9.5"
-                                                   Foreground="#FF777780"/>
-                                        <TextBlock x:Name="CpuUsageText"
-                                                   Text="—"
-                                                   FontSize="13"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#FFEDEDF0"
-                                                   Margin="0,3,0,0"/>
+                                        <TextBlock Text="CPU" FontSize="9.5" Foreground="#FF777780"/>
+                                        <TextBlock x:Name="CpuUsageText" Text="—" FontSize="13"
+                                                   FontWeight="SemiBold" Foreground="#FFEDEDF0" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
