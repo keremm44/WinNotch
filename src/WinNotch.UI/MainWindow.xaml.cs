@@ -9,7 +9,6 @@ using DragEventArgs = System.Windows.DragEventArgs;
 using DragDropEffects = System.Windows.DragDropEffects;
 using DataFormats = System.Windows.DataFormats;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
-using Application = System.Windows.Application;
 
 namespace WinNotch.UI;
 
@@ -21,7 +20,6 @@ public partial class MainWindow : Window
     private ClipboardService? _clipboardService;
     private DragDropService? _dragDropService;
     private MediaSessionService? _mediaSessionService;
-    private WindowPinService? _windowPinService;
     private PowerMonitorService? _powerMonitorService;
     private readonly NotchMotionController _motionController;
 
@@ -114,8 +112,6 @@ public partial class MainWindow : Window
         IntPtr rounded = User32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius * 2, radius * 2);
         if (rounded == IntPtr.Zero) return;
 
-        // Fill the top rounded area back in so the window is perfectly flush with
-        // the display edge while the bottom corners remain rounded.
         IntPtr topRect = User32.CreateRectRgn(0, 0, w + 1, Math.Min(h + 1, radius + 2));
         if (topRect != IntPtr.Zero)
         {
@@ -123,7 +119,6 @@ public partial class MainWindow : Window
             User32.DeleteObject(topRect);
         }
 
-        // On success Windows owns the region handle. On failure we still own it.
         if (!User32.SetWindowRgn(_hWnd, rounded, true))
             User32.DeleteObject(rounded);
     }
@@ -286,12 +281,6 @@ public partial class MainWindow : Window
             _mediaSessionService.SessionChanged += OnMediaSessionChanged;
             _ = _mediaSessionService.InitializeAsync();
         }
-
-        if (_settings.ModuleD_WindowPin && _windowPinService == null)
-        {
-            _windowPinService = new WindowPinService();
-            _windowPinService.WindowPinChanged += OnWindowPinChanged;
-        }
     }
 
     private void DisposeDisabledModuleServices()
@@ -323,13 +312,6 @@ public partial class MainWindow : Window
             _hasActiveMediaSession = false;
             if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
                 TransitionToState(GetPersistentState(), force: true);
-        }
-
-        if (!_settings.ModuleD_WindowPin && _windowPinService != null)
-        {
-            _windowPinService.WindowPinChanged -= OnWindowPinChanged;
-            _windowPinService.Dispose();
-            _windowPinService = null;
         }
     }
 
@@ -455,9 +437,6 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void RootGrid_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        => ShowContextMenu();
-
     private void TransitionToState(
         NotchState newState,
         StatePriority priority = StatePriority.None,
@@ -488,8 +467,6 @@ public partial class MainWindow : Window
         IdleContent.Visibility = state is NotchState.Idle or NotchState.Hover
             ? Visibility.Visible : Visibility.Collapsed;
         MediaAmbientContent.Visibility = state == NotchState.MediaAmbient
-            ? Visibility.Visible : Visibility.Collapsed;
-        PinStatusContent.Visibility = state == NotchState.WindowPinned
             ? Visibility.Visible : Visibility.Collapsed;
         DropZoneView.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
         MediaWidgetView.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
@@ -707,55 +684,6 @@ public partial class MainWindow : Window
         });
     }
 
-    private void OnWindowPinChanged(object? sender, WindowPinEventArgs e)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            PinStatusText.Text = e.IsPinned ? "Pencere sabitlendi" : "Sabitleme kaldırıldı";
-            TransitionToState(
-                NotchState.WindowPinned,
-                StatePriority.WindowPin,
-                TimeSpan.FromMilliseconds(1400),
-                GetPersistentState(),
-                force: true);
-        });
-    }
-
-    private void ShowContextMenu()
-    {
-        IntPtr foreground = User32.GetForegroundWindow();
-        var menu = new System.Windows.Controls.ContextMenu();
-
-        if (_settings.ModuleD_WindowPin && _windowPinService != null &&
-            foreground != IntPtr.Zero && foreground != _hWnd)
-        {
-            bool pinned = _windowPinService.IsPinned(foreground);
-            var pinItem = new System.Windows.Controls.MenuItem
-            {
-                Header = pinned ? "Aktif pencerenin sabitlemesini kaldır" : "Aktif pencereyi sabitle"
-            };
-            pinItem.Click += (_, _) => _windowPinService.TogglePin(foreground);
-            menu.Items.Add(pinItem);
-            menu.Items.Add(new System.Windows.Controls.Separator());
-        }
-
-        var settingsItem = new System.Windows.Controls.MenuItem { Header = "Ayarlar" };
-        settingsItem.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
-        menu.Items.Add(settingsItem);
-
-        var hideItem = new System.Windows.Controls.MenuItem { Header = "1 saat gizle" };
-        hideItem.Click += (_, _) => HideNotchTemporarily();
-        menu.Items.Add(hideItem);
-
-        menu.Items.Add(new System.Windows.Controls.Separator());
-
-        var exitItem = new System.Windows.Controls.MenuItem { Header = "Çıkış" };
-        exitItem.Click += (_, _) => Application.Current.Shutdown();
-        menu.Items.Add(exitItem);
-
-        menu.IsOpen = true;
-    }
-
     private void HideNotchTemporarily()
     {
         _manuallyHidden = true;
@@ -785,14 +713,9 @@ public partial class MainWindow : Window
         DropZoneView.DragOutStarted -= OnShelfDragOutStarted;
         DropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
 
-        if (_windowPinService != null)
-            _windowPinService.WindowPinChanged -= OnWindowPinChanged;
-
-        _windowPinService?.UnpinAll();
         _windowHookManager?.Dispose();
         _clipboardService?.Dispose();
         _mediaSessionService?.Dispose();
-        _windowPinService?.Dispose();
         _powerMonitorService?.Dispose();
         _hwndSource?.RemoveHook(WndProc);
     }
