@@ -12,13 +12,41 @@ public partial class MainWindow
     private readonly LastMeaningfulClipboardContextCache _lastMeaningfulClipboard = new();
     private System.Windows.Threading.DispatcherTimer? _quickPeekLeaveTimer;
 
+    private void RootGrid_PrimaryMouseEnter(object sender, MouseEventArgs e)
+    {
+        CancelQuickPeekLeave();
+        if (_isDragging || _isDraggingOut)
+            return;
+
+        if (_currentState == NotchState.Idle)
+            TransitionToState(NotchState.Hover, force: true);
+
+        if (_currentState is NotchState.Idle or NotchState.Hover)
+            SetIdleHoverAffordance(true);
+    }
+
+    private void RootGrid_PrimaryMouseLeave(object sender, MouseEventArgs e)
+    {
+        if (_isDragging || _isDraggingOut)
+            return;
+
+        SetIdleHoverAffordance(false);
+
+        if (_currentState == NotchState.Hover)
+            TransitionToState(GetPersistentState(), force: true);
+        else if (_currentState == NotchState.QuickPeek)
+            ScheduleQuickPeekCollapse();
+        else if (_currentState == NotchState.ShelfExpanded)
+            TransitionToState(NotchState.ShelfOccupied, force: true);
+        else if (_currentState == NotchState.MediaActive)
+            TransitionToState(GetPersistentState(), force: true);
+    }
+
     private void RootGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left || _isDragging || _isDraggingOut)
             return;
 
-        // Preview events tunnel before child buttons receive Click. Never reinterpret a
-        // deliberate control click as a notch-level primary interaction.
         if (IsInteractiveChild(e.OriginalSource as DependencyObject))
             return;
 
@@ -52,6 +80,30 @@ public partial class MainWindow
         }
 
         e.Handled = true;
+    }
+
+    private void MainWindow_PrimarySizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool quickPeek = _currentState == NotchState.QuickPeek;
+        QuickPeekView.Visibility = quickPeek ? Visibility.Visible : Visibility.Collapsed;
+        if (quickPeek)
+            QuickPeekView.SetContext(_lastMeaningfulClipboard.Current);
+
+        UpdatePrimaryCursor(_currentState);
+    }
+
+    private void ClipboardToastView_MeaningfulContextAvailable(
+        object? sender,
+        LastMeaningfulClipboardContext context)
+    {
+        _lastMeaningfulClipboard.TryRemember(
+            context.ContentType,
+            context.RawText,
+            context.PreviewText,
+            context.Timestamp);
+
+        if (_currentState == NotchState.QuickPeek)
+            QuickPeekView.SetContext(_lastMeaningfulClipboard.Current);
     }
 
     private void OnQuickPeekContextRequested(object? sender, EventArgs e)
