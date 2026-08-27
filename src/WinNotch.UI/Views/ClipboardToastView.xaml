@@ -8,11 +8,11 @@
              MouseLeave="Surface_MouseLeave">
     <UserControl.Resources>
         <Style x:Key="ContextActionButton" TargetType="Button">
-            <Setter Property="Height" Value="30"/>
+            <Setter Property="Height" Value="{DynamicResource Metric.ControlHeight}"/>
             <Setter Property="MinWidth" Value="72"/>
             <Setter Property="Padding" Value="12,0"/>
             <Setter Property="Background" Value="{DynamicResource Brush.Accent.Primary}"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Foreground}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontSize" Value="9.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -70,14 +70,17 @@
                             Margin="4"
                             CornerRadius="4"
                             Visibility="Collapsed"/>
-                    <TextBlock x:Name="StatusIcon"
-                               Text="C"
-                               FontFamily="Segoe UI Symbol"
-                               FontSize="10"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <Path x:Name="StatusIconPath"
+                          Data="{DynamicResource Icon.Copy}"
+                          Width="13" Height="13"
+                          Stretch="Uniform"
+                          Stroke="{DynamicResource Brush.Text.OnDarkPrimary}"
+                          StrokeThickness="1.45"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
