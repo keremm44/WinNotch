@@ -5,6 +5,8 @@ using System.Windows.Threading;
 using WinNotch.Core.Interop;
 using WinNotch.Core.Services;
 
+using WpfApplication = System.Windows.Application;
+
 namespace WinNotch.UI;
 
 public partial class MainWindow
@@ -150,7 +152,7 @@ public partial class MainWindow
         menu.Items.Add(new Separator());
 
         var exitItem = new MenuItem { Header = "Çıkış" };
-        exitItem.Click += (_, _) => Application.Current.Shutdown();
+        exitItem.Click += (_, _) => WpfApplication.Current.Shutdown();
         menu.Items.Add(exitItem);
 
         menu.PlacementTarget = RootGrid;
