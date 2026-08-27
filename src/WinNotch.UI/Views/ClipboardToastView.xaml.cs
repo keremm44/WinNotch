@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using WinNotch.Common;
 using WinNotch.Core.Services;
 
 using UserControl = System.Windows.Controls.UserControl;
+using Brush = System.Windows.Media.Brush;
+using BrushConverter = System.Windows.Media.BrushConverter;
+using Color = System.Windows.Media.Color;
+using SolidColorBrush = System.Windows.Media.SolidColorBrush;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace WinNotch.UI.Views;
 
