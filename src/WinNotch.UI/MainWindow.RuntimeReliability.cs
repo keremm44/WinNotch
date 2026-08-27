@@ -7,6 +7,7 @@ namespace WinNotch.UI;
 public partial class MainWindow
 {
     private System.Windows.Threading.DispatcherTimer? _runtimeReliabilityTimer;
+    private bool _runtimeReliabilityCloseHooked;
 
     private void StartRuntimeReliabilityChecks()
     {
@@ -19,6 +20,19 @@ public partial class MainWindow
         };
         _runtimeReliabilityTimer.Tick += RuntimeReliabilityTimer_Tick;
         _runtimeReliabilityTimer.Start();
+
+        if (!_runtimeReliabilityCloseHooked)
+        {
+            Closed += MainWindow_RuntimeReliabilityClosed;
+            _runtimeReliabilityCloseHooked = true;
+        }
+    }
+
+    private void MainWindow_RuntimeReliabilityClosed(object? sender, EventArgs e)
+    {
+        StopRuntimeReliabilityChecks();
+        Closed -= MainWindow_RuntimeReliabilityClosed;
+        _runtimeReliabilityCloseHooked = false;
     }
 
     private void StopRuntimeReliabilityChecks()
