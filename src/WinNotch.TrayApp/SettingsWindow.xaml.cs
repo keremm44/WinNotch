@@ -24,6 +24,10 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         _settings = settings;
 
+        double availableHeight = Math.Max(560, SystemParameters.WorkArea.Height - 32);
+        MaxHeight = availableHeight;
+        Height = Math.Min(720, availableHeight);
+
         _statsTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(1)
@@ -54,8 +58,18 @@ public partial class SettingsWindow : Window
             AutoStartCheckBox.IsChecked = _settings.AutoStart;
             DiagnosticsCheckBox.IsChecked = _settings.DiagnosticsEnabled;
 
-            SelectTaggedItem(VisibilityModeComboBox, _settings.VisibilityMode, "Auto");
-            SelectTaggedItem(ReactionLevelComboBox, _settings.ReactionLevel, "Balanced");
+            SelectTaggedRadio(
+                _settings.VisibilityMode,
+                "Auto",
+                VisibilityAutoRadio,
+                VisibilityAlwaysRadio,
+                VisibilityHiddenRadio);
+            SelectTaggedRadio(
+                _settings.ReactionLevel,
+                "Balanced",
+                ReactionQuietRadio,
+                ReactionBalancedRadio,
+                ReactionActiveRadio);
 
             MonitorComboBox.Items.Clear();
             var screens = System.Windows.Forms.Screen.AllScreens;
@@ -85,24 +99,17 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private static void SelectTaggedItem(ComboBox comboBox, string? value, string fallback)
+    private static void SelectTaggedRadio(
+        string? value,
+        string fallback,
+        params RadioButton[] radios)
     {
         string target = string.IsNullOrWhiteSpace(value) ? fallback : value;
-        for (int i = 0; i < comboBox.Items.Count; i++)
-        {
-            if (comboBox.Items[i] is ComboBoxItem item &&
-                string.Equals(item.Tag?.ToString(), target, StringComparison.OrdinalIgnoreCase))
-            {
-                comboBox.SelectedIndex = i;
-                return;
-            }
-        }
-
-        comboBox.SelectedIndex = 0;
+        RadioButton selected = radios.FirstOrDefault(r =>
+            string.Equals(r.Tag?.ToString(), target, StringComparison.OrdinalIgnoreCase))
+            ?? radios[0];
+        selected.IsChecked = true;
     }
-
-    private static string SelectedTag(ComboBox comboBox, string fallback)
-        => (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? fallback;
 
     private void ModuleCheckBox_Changed(object sender, RoutedEventArgs e)
     {
@@ -115,17 +122,21 @@ public partial class SettingsWindow : Window
         OnSettingsChanged();
     }
 
-    private void VisibilityModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void VisibilityModeRadio_Checked(object sender, RoutedEventArgs e)
     {
-        if (_isLoadingSettings) return;
-        _settings.VisibilityMode = SelectedTag(VisibilityModeComboBox, "Auto");
+        if (_isLoadingSettings || sender is not RadioButton { IsChecked: true } radio)
+            return;
+
+        _settings.VisibilityMode = radio.Tag?.ToString() ?? "Auto";
         OnSettingsChanged();
     }
 
-    private void ReactionLevelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ReactionLevelRadio_Checked(object sender, RoutedEventArgs e)
     {
-        if (_isLoadingSettings) return;
-        _settings.ReactionLevel = SelectedTag(ReactionLevelComboBox, "Balanced");
+        if (_isLoadingSettings || sender is not RadioButton { IsChecked: true } radio)
+            return;
+
+        _settings.ReactionLevel = radio.Tag?.ToString() ?? "Balanced";
         OnSettingsChanged();
     }
 
