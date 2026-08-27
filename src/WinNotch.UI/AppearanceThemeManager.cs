@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using WinNotch.Common;
@@ -57,6 +56,7 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Text.OnDarkMuted", palette.TextOnDarkMuted);
 
         SetBrush(resources, "Brush.Accent.Primary", palette.AccentPrimary);
+        SetBrush(resources, "Brush.Accent.Foreground", ContrastForeground(palette.AccentPrimary));
         SetBrush(resources, "Brush.Accent.Hover", palette.AccentHover);
         SetBrush(resources, "Brush.Accent.Pressed", palette.AccentPressed);
         SetBrush(resources, "Brush.Accent.Selection", palette.AccentSelection);
@@ -122,6 +122,15 @@ public static class AppearanceThemeManager
         {
             return null;
         }
+    }
+
+    private static string ContrastForeground(string argb)
+    {
+        Color color = (Color)ColorConverter.ConvertFromString(argb);
+        // WCAG-style relative luminance is unnecessary for two fixed foregrounds;
+        // this weighted luma split keeps cyan/amber/green readable without changing accents.
+        double luma = (0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B);
+        return luma >= 150 ? "#FF101114" : "#FFFFFFFF";
     }
 
     private static string WithAlpha(string argb, byte alpha)
