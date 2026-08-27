@@ -6,15 +6,20 @@
              DispatcherUnhandledException="OnDispatcherUnhandledException">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/WinNotch.UI;component/Themes/WinNotchTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Backward-compatible aliases while remaining views migrate to tokens. -->
             <SolidColorBrush x:Key="BackgroundDark" Color="#FF101012"/>
             <SolidColorBrush x:Key="ForegroundLight" Color="#FFF4F4F6"/>
             <SolidColorBrush x:Key="AccentBlue" Color="#FF2D7DFF"/>
             <SolidColorBrush x:Key="TextSecondary" Color="#FF92929B"/>
 
             <Style TargetType="{x:Type ContextMenu}">
-                <Setter Property="Background" Value="#FF18181C"/>
-                <Setter Property="Foreground" Value="#FFF0F0F2"/>
-                <Setter Property="BorderBrush" Value="#FF303037"/>
+                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="5"/>
                 <Setter Property="HasDropShadow" Value="True"/>
@@ -37,7 +42,7 @@
             </Style>
 
             <Style TargetType="{x:Type MenuItem}">
-                <Setter Property="Foreground" Value="#FFECECEF"/>
+                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Padding" Value="8,7"/>
                 <Setter Property="MinWidth" Value="205"/>
@@ -58,7 +63,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="CheckMark"
                                                    Text="✓"
-                                                   Foreground="#FF65A1FF"
+                                                   Foreground="{DynamicResource Brush.Accent.Hover}"
                                                    FontWeight="SemiBold"
                                                    FontSize="11"
                                                    HorizontalAlignment="Left"
@@ -71,7 +76,7 @@
                                         <Path x:Name="SubmenuArrow"
                                               Grid.Column="2"
                                               Data="M 0 0 L 4 4 L 0 8"
-                                              Stroke="#FF9B9BA4"
+                                              Stroke="{DynamicResource Brush.Text.Muted}"
                                               StrokeThickness="1.4"
                                               HorizontalAlignment="Right"
                                               VerticalAlignment="Center"
@@ -86,8 +91,8 @@
                                        HorizontalOffset="-3"
                                        IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                        PopupAnimation="Fade">
-                                    <Border Background="#FF18181C"
-                                            BorderBrush="#FF303037"
+                                    <Border Background="{DynamicResource Brush.Surface.Raised}"
+                                            BorderBrush="{DynamicResource Brush.Border.Subtle}"
                                             BorderThickness="1"
                                             CornerRadius="9"
                                             Padding="5">
@@ -122,7 +127,7 @@
             <Style TargetType="{x:Type Separator}">
                 <Setter Property="Margin" Value="7,5"/>
                 <Setter Property="Height" Value="1"/>
-                <Setter Property="Background" Value="#FF303037"/>
+                <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type Separator}">
