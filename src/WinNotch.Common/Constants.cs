@@ -26,12 +26,12 @@ public static class Constants
     public const double NotchDropTargetHeight = 62;
 
     public const double NotchDropResultWidth = 340;
-    public const double NotchDropResultHeight = 70;
+    public const double NotchDropResultHeight = 100;
 
     public const double NotchShelfWidth = 230;
     public const double NotchShelfHeight = 40;
     public const double NotchShelfExpandedWidth = 340;
-    public const double NotchShelfExpandedHeight = 70;
+    public const double NotchShelfExpandedHeight = 100;
 
     public const double NotchMediaAmbientWidth = 124;
     public const double NotchMediaAmbientHeight = 28;
