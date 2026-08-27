@@ -13,10 +13,6 @@ using Application = System.Windows.Application;
 
 namespace WinNotch.UI;
 
-/// <summary>
-/// Native-backed top-center WinNotch window.
-/// Owns window integration and routes module events into the lightweight state machine.
-/// </summary>
 public partial class MainWindow : Window
 {
     private IntPtr _hWnd;
@@ -92,6 +88,7 @@ public partial class MainWindow : Window
         {
             ApplyExtendedStyles();
             ApplyDimensions(_currentState, force: true);
+            ApplyVisibilityMode();
         }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
@@ -108,13 +105,27 @@ public partial class MainWindow : Window
 
     public void UpdateWindowRegion(double width, double height)
     {
+        if (_hWnd == IntPtr.Zero) return;
+
         int w = Math.Max(1, (int)Math.Round(width));
         int h = Math.Max(1, (int)Math.Round(height));
         int radius = Math.Min((int)Constants.NotchCornerRadius, h / 2);
 
-        IntPtr hRgn = User32.CreateRoundRectRgn(0, 0, w, h, radius * 2, radius * 2);
-        if (hRgn != IntPtr.Zero)
-            User32.SetWindowRgn(_hWnd, hRgn, true);
+        IntPtr rounded = User32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius * 2, radius * 2);
+        if (rounded == IntPtr.Zero) return;
+
+        // Fill the top rounded area back in so the window is perfectly flush with
+        // the display edge while the bottom corners remain rounded.
+        IntPtr topRect = User32.CreateRectRgn(0, 0, w + 1, Math.Min(h + 1, radius + 2));
+        if (topRect != IntPtr.Zero)
+        {
+            User32.CombineRgn(rounded, rounded, topRect, User32.RGN_OR);
+            User32.DeleteObject(topRect);
+        }
+
+        // On success Windows owns the region handle. On failure we still own it.
+        if (!User32.SetWindowRgn(_hWnd, rounded, true))
+            User32.DeleteObject(rounded);
     }
 
     private void SyncNativeGeometry()
@@ -217,7 +228,7 @@ public partial class MainWindow : Window
             _hWnd,
             User32.HWND_TOPMOST,
             x, screen.Bounds.Top, 0, 0,
-            User32.SWP_NOACTIVATE | 0x0040 | User32.SWP_NOSIZE);
+            User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW | User32.SWP_NOSIZE);
     }
 
     private void DetectAndApplyTheme()
@@ -228,8 +239,13 @@ public partial class MainWindow : Window
                 @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             if (key?.GetValue("AppsUseLightTheme") is int value && value == 1)
                 ThemeBorder.Visibility = Visibility.Visible;
+            else
+                ThemeBorder.Visibility = Visibility.Collapsed;
         }
-        catch { }
+        catch
+        {
+            ThemeBorder.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void InitializeServices()
@@ -246,7 +262,8 @@ public partial class MainWindow : Window
 
     private void InitializeModuleServices()
     {
-        if (_settings.ModuleB_Clipboard && _clipboardService == null)
+        bool needsClipboardListener = _settings.ModuleB_Clipboard || _settings.ModuleE_Screenshot;
+        if (needsClipboardListener && _clipboardService == null)
         {
             _clipboardService = new ClipboardService();
             _clipboardService.NotificationRequested += OnClipboardNotification;
@@ -279,7 +296,8 @@ public partial class MainWindow : Window
 
     private void DisposeDisabledModuleServices()
     {
-        if (!_settings.ModuleB_Clipboard && _clipboardService != null)
+        bool needsClipboardListener = _settings.ModuleB_Clipboard || _settings.ModuleE_Screenshot;
+        if (!needsClipboardListener && _clipboardService != null)
         {
             _clipboardService.NotificationRequested -= OnClipboardNotification;
             _clipboardService.ImageNotificationRequested -= OnClipboardImageNotification;
@@ -320,14 +338,44 @@ public partial class MainWindow : Window
         DisposeDisabledModuleServices();
         InitializeModuleServices();
         PositionOnTargetMonitor();
+        ApplyVisibilityMode();
     }
+
+    private void ApplyVisibilityMode()
+    {
+        if (!_initialized) return;
+
+        if (string.Equals(_settings.VisibilityMode, "Hidden", StringComparison.OrdinalIgnoreCase))
+        {
+            Visibility = Visibility.Hidden;
+            return;
+        }
+
+        if (string.Equals(_settings.VisibilityMode, "AlwaysShow", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_manuallyHidden)
+                Visibility = Visibility.Visible;
+            return;
+        }
+
+        _windowHookManager?.RefreshForegroundWindow();
+    }
+
+    private bool ShouldShowMediaAmbient()
+        => _hasActiveMediaSession &&
+           !string.Equals(_settings.ReactionLevel, "Quiet", StringComparison.OrdinalIgnoreCase);
 
     private void RootGrid_MouseEnter(object sender, MouseEventArgs e)
     {
         if (_isDragging || _isDraggingOut) return;
 
         if (_currentState == NotchState.Idle)
-            TransitionToState(NotchState.Hover);
+        {
+            if (_hasActiveMediaSession && _settings.ModuleC_Media)
+                TransitionToState(NotchState.MediaActive);
+            else
+                TransitionToState(NotchState.Hover);
+        }
         else if (_currentState == NotchState.ShelfOccupied)
             TransitionToState(NotchState.ShelfExpanded);
         else if (_currentState == NotchState.MediaAmbient)
@@ -348,7 +396,7 @@ public partial class MainWindow : Window
 
     private void RootGrid_DragEnter(object sender, DragEventArgs e)
     {
-        if (_isDraggingOut)
+        if (_isDraggingOut || !_settings.ModuleA_DragDrop)
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -380,7 +428,7 @@ public partial class MainWindow : Window
 
     private void RootGrid_DragOver(object sender, DragEventArgs e)
     {
-        if (_isDraggingOut)
+        if (_isDraggingOut || !_settings.ModuleA_DragDrop)
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -395,7 +443,7 @@ public partial class MainWindow : Window
 
     private void RootGrid_Drop(object sender, DragEventArgs e)
     {
-        if (_isDraggingOut)
+        if (_isDraggingOut || !_settings.ModuleA_DragDrop)
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -437,7 +485,11 @@ public partial class MainWindow : Window
         bool shelfVisible = state is NotchState.DragActive or NotchState.DropResult or
             NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.ShelfDraggingOut;
 
-        IdleContent.Visibility = state is NotchState.Idle or NotchState.Hover or NotchState.MediaAmbient
+        IdleContent.Visibility = state is NotchState.Idle or NotchState.Hover
+            ? Visibility.Visible : Visibility.Collapsed;
+        MediaAmbientContent.Visibility = state == NotchState.MediaAmbient
+            ? Visibility.Visible : Visibility.Collapsed;
+        PinStatusContent.Visibility = state == NotchState.WindowPinned
             ? Visibility.Visible : Visibility.Collapsed;
         DropZoneView.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
         MediaWidgetView.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
@@ -490,24 +542,39 @@ public partial class MainWindow : Window
     {
         if (DropZoneView.HasItems)
             return NotchState.ShelfOccupied;
-        if (_hasActiveMediaSession)
+        if (ShouldShowMediaAmbient())
             return NotchState.MediaAmbient;
         return NotchState.Idle;
     }
 
     private void OnForegroundWindowChanged(object? sender, ForegroundChangedEventArgs e)
     {
-        if (!_initialized || _settings.VisibilityMode == "AlwaysShow" || _settings.VisibilityMode == "Hidden")
+        if (!_initialized) return;
+
+        if (string.Equals(_settings.VisibilityMode, "Hidden", StringComparison.OrdinalIgnoreCase))
+        {
+            Dispatcher.Invoke(() => Visibility = Visibility.Hidden);
             return;
+        }
+
+        if (string.Equals(_settings.VisibilityMode, "AlwaysShow", StringComparison.OrdinalIgnoreCase))
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (!_manuallyHidden)
+                    Visibility = Visibility.Visible;
+            });
+            return;
+        }
+
         if (e.ClassName is "Shell_TrayWnd" or "WorkerW" or "Shell_SecondaryTrayWnd")
             return;
 
         bool isFullscreen = WindowHookManager.IsWindowFullscreen(e.WindowHandle);
-        bool isMaximized = WindowHookManager.IsWindowMaximized(e.WindowHandle);
 
         Dispatcher.Invoke(() =>
         {
-            if (isFullscreen && !isMaximized && Visibility == Visibility.Visible)
+            if (isFullscreen && Visibility == Visibility.Visible)
                 Visibility = Visibility.Hidden;
             else if (!isFullscreen && Visibility == Visibility.Hidden && !_manuallyHidden)
                 Visibility = Visibility.Visible;
@@ -516,10 +583,15 @@ public partial class MainWindow : Window
 
     private void OnClipboardNotification(object? sender, ClipboardNotification e)
     {
+        if (!_settings.ModuleB_Clipboard) return;
+
         Dispatcher.Invoke(() =>
         {
             var contentType = ClipboardClassifier.Classify(e.PreviewText);
-            var decision = _attentionPolicy.ClassifyClipboard(contentType, e.PreviewText);
+            var decision = _attentionPolicy.ClassifyClipboard(
+                contentType,
+                e.PreviewText,
+                _settings.ReactionLevel);
             if (decision.Level == AttentionLevel.Silent || decision.Suppressed) return;
 
             ClipboardToastView.SetNotification(e, contentType);
@@ -533,6 +605,8 @@ public partial class MainWindow : Window
 
     private void OnClipboardImageNotification(object? sender, ClipboardImageNotification e)
     {
+        if (!_settings.ModuleE_Screenshot) return;
+
         Dispatcher.Invoke(() =>
         {
             var decision = _attentionPolicy.ClassifyScreenshot();
@@ -600,18 +674,34 @@ public partial class MainWindow : Window
             if (_hasActiveMediaSession)
             {
                 MediaWidgetView.SetSessionInfo(e.Session);
+                MediaAmbientTitle.Text = string.IsNullOrWhiteSpace(e.Session.Title)
+                    ? "Medya"
+                    : e.Session.Title;
+
                 if (!DropZoneView.HasItems && !_isDraggingOut)
                 {
-                    var decision = _attentionPolicy.ClassifyMediaChange(true);
-                    TransitionToState(
-                        decision.TargetState,
-                        decision.Priority,
-                        decision.Duration,
-                        NotchState.MediaAmbient);
+                    var decision = _attentionPolicy.ClassifyMediaChange(
+                        true,
+                        _settings.ReactionLevel);
+
+                    if (decision.Level == AttentionLevel.Silent)
+                    {
+                        if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
+                            TransitionToState(NotchState.Idle, force: true);
+                    }
+                    else
+                    {
+                        TransitionToState(
+                            decision.TargetState,
+                            decision.Priority,
+                            decision.Duration,
+                            GetPersistentState());
+                    }
                 }
             }
             else if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
             {
+                MediaAmbientTitle.Text = "Medya";
                 TransitionToState(GetPersistentState(), force: true);
             }
         });
@@ -619,13 +709,35 @@ public partial class MainWindow : Window
 
     private void OnWindowPinChanged(object? sender, WindowPinEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine(
-            $"[MainWindow] Window {(e.IsPinned ? "pinned" : "unpinned")}: {e.WindowTitle}");
+        Dispatcher.Invoke(() =>
+        {
+            PinStatusText.Text = e.IsPinned ? "Pencere sabitlendi" : "Sabitleme kaldırıldı";
+            TransitionToState(
+                NotchState.WindowPinned,
+                StatePriority.WindowPin,
+                TimeSpan.FromMilliseconds(1400),
+                GetPersistentState(),
+                force: true);
+        });
     }
 
     private void ShowContextMenu()
     {
+        IntPtr foreground = User32.GetForegroundWindow();
         var menu = new System.Windows.Controls.ContextMenu();
+
+        if (_settings.ModuleD_WindowPin && _windowPinService != null &&
+            foreground != IntPtr.Zero && foreground != _hWnd)
+        {
+            bool pinned = _windowPinService.IsPinned(foreground);
+            var pinItem = new System.Windows.Controls.MenuItem
+            {
+                Header = pinned ? "Aktif pencerenin sabitlemesini kaldır" : "Aktif pencereyi sabitle"
+            };
+            pinItem.Click += (_, _) => _windowPinService.TogglePin(foreground);
+            menu.Items.Add(pinItem);
+            menu.Items.Add(new System.Windows.Controls.Separator());
+        }
 
         var settingsItem = new System.Windows.Controls.MenuItem { Header = "Ayarlar" };
         settingsItem.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -634,6 +746,8 @@ public partial class MainWindow : Window
         var hideItem = new System.Windows.Controls.MenuItem { Header = "1 saat gizle" };
         hideItem.Click += (_, _) => HideNotchTemporarily();
         menu.Items.Add(hideItem);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
 
         var exitItem = new System.Windows.Controls.MenuItem { Header = "Çıkış" };
         exitItem.Click += (_, _) => Application.Current.Shutdown();
@@ -657,7 +771,7 @@ public partial class MainWindow : Window
             timer.Stop();
             if (handler != null) timer.Tick -= handler;
             _manuallyHidden = false;
-            Visibility = Visibility.Visible;
+            ApplyVisibilityMode();
         };
         timer.Tick += handler;
         timer.Start();
@@ -670,6 +784,9 @@ public partial class MainWindow : Window
         DropZoneView.ShelfCleared -= OnShelfCleared;
         DropZoneView.DragOutStarted -= OnShelfDragOutStarted;
         DropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
+
+        if (_windowPinService != null)
+            _windowPinService.WindowPinChanged -= OnWindowPinChanged;
 
         _windowPinService?.UnpinAll();
         _windowHookManager?.Dispose();
