@@ -20,6 +20,7 @@ public partial class SettingsWindow : Window
 {
     private readonly ModuleSettings _settings;
     private readonly System.Windows.Threading.DispatcherTimer _statsTimer;
+    private bool _isLoadingSettings;
 
     /// <summary>
     /// Fired when settings are changed.
@@ -31,7 +32,8 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         _settings = settings;
 
-        // Load current settings into UI
+        // Loading IsChecked/SelectedIndex raises WPF change events. Guard those
+        // events so opening the settings window can never mutate persisted state.
         LoadSettings();
 
         // Setup performance stats timer (only updates while window is visible)
@@ -46,42 +48,52 @@ public partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// Loads current settings into the UI controls.
+    /// Loads current settings into the UI controls without writing them back.
     /// </summary>
     private void LoadSettings()
     {
-        ModuleACheckBox.IsChecked = _settings.ModuleA_DragDrop;
-        ModuleBCheckBox.IsChecked = _settings.ModuleB_Clipboard;
-        ModuleCCheckBox.IsChecked = _settings.ModuleC_Media;
-        ModuleDCheckBox.IsChecked = _settings.ModuleD_WindowPin;
-        ModuleECheckBox.IsChecked = _settings.ModuleE_Screenshot;
-        AutoStartCheckBox.IsChecked = _settings.AutoStart;
-        DiagnosticsCheckBox.IsChecked = _settings.DiagnosticsEnabled;
-
-        // Populate monitor dropdown
-        var screens = System.Windows.Forms.Screen.AllScreens;
-        for (int i = 0; i < screens.Length; i++)
+        _isLoadingSettings = true;
+        try
         {
-            var screen = screens[i];
-            string label = screens.Length == 1
-                ? "Varsayılan monitör"
-                : $"Monitör {i + 1}: {screen.DeviceName} ({screen.Bounds.Width}x{screen.Bounds.Height})";
+            ModuleACheckBox.IsChecked = _settings.ModuleA_DragDrop;
+            ModuleBCheckBox.IsChecked = _settings.ModuleB_Clipboard;
+            ModuleCCheckBox.IsChecked = _settings.ModuleC_Media;
+            ModuleDCheckBox.IsChecked = _settings.ModuleD_WindowPin;
+            ModuleECheckBox.IsChecked = _settings.ModuleE_Screenshot;
+            AutoStartCheckBox.IsChecked = _settings.AutoStart;
+            DiagnosticsCheckBox.IsChecked = _settings.DiagnosticsEnabled;
 
-            MonitorComboBox.Items.Add(new ComboBoxItem
+            MonitorComboBox.Items.Clear();
+            var screens = System.Windows.Forms.Screen.AllScreens;
+            for (int i = 0; i < screens.Length; i++)
             {
-                Content = label,
-                Tag = i
-            });
-        }
+                var screen = screens[i];
+                string label = screens.Length == 1
+                    ? "Varsayılan monitör"
+                    : $"Monitör {i + 1}: {screen.DeviceName} ({screen.Bounds.Width}x{screen.Bounds.Height})";
 
-        if (MonitorComboBox.Items.Count > _settings.TargetMonitorIndex)
+                MonitorComboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = label,
+                    Tag = i
+                });
+            }
+
+            if (MonitorComboBox.Items.Count > _settings.TargetMonitorIndex)
+                MonitorComboBox.SelectedIndex = _settings.TargetMonitorIndex;
+            else if (MonitorComboBox.Items.Count > 0)
+                MonitorComboBox.SelectedIndex = 0;
+        }
+        finally
         {
-            MonitorComboBox.SelectedIndex = _settings.TargetMonitorIndex;
+            _isLoadingSettings = false;
         }
     }
 
     private void ModuleCheckBox_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
+
         _settings.ModuleA_DragDrop = ModuleACheckBox.IsChecked == true;
         _settings.ModuleB_Clipboard = ModuleBCheckBox.IsChecked == true;
         _settings.ModuleC_Media = ModuleCCheckBox.IsChecked == true;
@@ -93,6 +105,8 @@ public partial class SettingsWindow : Window
 
     private void MonitorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isLoadingSettings) return;
+
         if (MonitorComboBox.SelectedIndex >= 0)
         {
             _settings.TargetMonitorIndex = MonitorComboBox.SelectedIndex;
@@ -102,20 +116,20 @@ public partial class SettingsWindow : Window
 
     private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settings.AutoStart = AutoStartCheckBox.IsChecked == true;
         OnSettingsChanged();
     }
 
     private void DiagnosticsCheckBox_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settings.DiagnosticsEnabled = DiagnosticsCheckBox.IsChecked == true;
         OnSettingsChanged();
     }
 
     /// <summary>
     /// Updates performance stats display every second.
-    /// WHY: Process stats are lightweight to read. One query per second
-    /// is negligible. This helps developers verify the 15MB RAM limit.
     /// </summary>
     private void StatsTimer_Tick(object? sender, EventArgs e)
     {
@@ -130,7 +144,6 @@ public partial class SettingsWindow : Window
                 ? System.Windows.Media.Brushes.Red
                 : System.Windows.Media.Brushes.LightGreen;
 
-            // CPU usage (averaged over 1 second)
             var cpuTime = process.TotalProcessorTime;
             var uptime = DateTime.Now - process.StartTime;
             double cpuPercent = uptime.TotalMilliseconds > 0
