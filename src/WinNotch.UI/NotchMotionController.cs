@@ -21,6 +21,7 @@ internal sealed class NotchMotionController : IDisposable
     private double _targetHeight;
     private long _startTimestamp;
     private int _durationMs;
+    private double _durationScale = 1.0;
     private bool _disposed;
 
     public NotchMotionController(Window window, Action syncNativeGeometry)
@@ -34,11 +35,15 @@ internal sealed class NotchMotionController : IDisposable
         _timer.Tick += OnTick;
     }
 
+    public void Configure(AppearanceSettings settings)
+        => _durationScale = AppearanceResolver.ResolveMotion(settings).ContainerDurationScale;
+
     public void Apply(double targetWidth, double targetHeight, bool immediate = false)
     {
         if (_disposed) return;
 
-        if (immediate)
+        // Windows accessibility preference has final authority over WinNotch settings.
+        if (immediate || !SystemParameters.ClientAreaAnimation)
         {
             _timer.Stop();
             _window.Width = targetWidth;
@@ -60,8 +65,8 @@ internal sealed class NotchMotionController : IDisposable
         _targetHeight = targetHeight;
 
         bool expanding = targetWidth > currentWidth || targetHeight > currentHeight;
-        _durationMs = expanding ? Constants.ExpandDurationMs : Constants.ContractDurationMs;
-        _durationMs = Math.Max(1, _durationMs);
+        int baseDuration = expanding ? Constants.ExpandDurationMs : Constants.ContractDurationMs;
+        _durationMs = Math.Max(1, (int)Math.Round(baseDuration * _durationScale));
         _startTimestamp = Stopwatch.GetTimestamp();
 
         if (!_timer.IsEnabled)
@@ -73,7 +78,6 @@ internal sealed class NotchMotionController : IDisposable
         double elapsedMs = Stopwatch.GetElapsedTime(_startTimestamp).TotalMilliseconds;
         double progress = Math.Clamp(elapsedMs / _durationMs, 0.0, 1.0);
 
-        // Cubic ease-out: fast response, soft landing, no overshoot.
         double inv = 1.0 - progress;
         double eased = 1.0 - (inv * inv * inv);
 
