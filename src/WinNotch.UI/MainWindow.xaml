@@ -24,8 +24,7 @@
           Drop="RootGrid_Drop"
           DragEnter="RootGrid_DragEnter"
           DragLeave="RootGrid_DragLeave"
-          DragOver="RootGrid_DragOver"
-          MouseRightButtonUp="RootGrid_MouseRightButtonUp">
+          DragOver="RootGrid_DragOver">
 
         <Border x:Name="NotchBorder"
                 Background="#FF0B0B0D"
