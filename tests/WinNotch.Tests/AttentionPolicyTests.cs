@@ -1,6 +1,3 @@
-// WinNotch.Tests/AttentionPolicyTests.cs
-// Tests for the AttentionPolicy — ensures WinNotch doesn't become an annoyance engine.
-
 using WinNotch.Common;
 using Xunit;
 
@@ -10,21 +7,44 @@ public class AttentionPolicyTests
 {
     private readonly AttentionPolicy _policy = new();
 
-    // ═══════════════════════════════════════════════════════════════
-    // CLIPBOARD CLASSIFICATION
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
-    public void PlainTextClipboard_IsSilent()
+    public void PlainTextClipboard_IsSilent_InBalancedMode()
     {
-        var result = _policy.ClassifyClipboard(ClipboardContentType.Text, "Hello world");
+        var result = _policy.ClassifyClipboard(
+            ClipboardContentType.Text,
+            "Hello world",
+            "Balanced");
         Assert.Equal(AttentionLevel.Silent, result.Level);
     }
 
     [Fact]
-    public void FilePathClipboard_IsActionable()
+    public void PlainTextClipboard_IsSubtle_InActiveMode()
     {
-        var result = _policy.ClassifyClipboard(ClipboardContentType.FilePath, @"C:\Users\test\file.cs");
+        var result = _policy.ClassifyClipboard(
+            ClipboardContentType.Text,
+            "Hello world",
+            "Active");
+        Assert.Equal(AttentionLevel.Subtle, result.Level);
+        Assert.Equal(NotchState.ClipboardNotify, result.TargetState);
+    }
+
+    [Fact]
+    public void UrlClipboard_IsSilent_InQuietMode()
+    {
+        var result = _policy.ClassifyClipboard(
+            ClipboardContentType.Url,
+            "https://example.com",
+            "Quiet");
+        Assert.Equal(AttentionLevel.Silent, result.Level);
+    }
+
+    [Fact]
+    public void FilePathClipboard_RemainsActionable_InQuietMode()
+    {
+        var result = _policy.ClassifyClipboard(
+            ClipboardContentType.FilePath,
+            @"C:\Users\test\file.cs",
+            "Quiet");
         Assert.Equal(AttentionLevel.Actionable, result.Level);
         Assert.Equal(NotchState.ClipboardNotify, result.TargetState);
     }
@@ -50,10 +70,6 @@ public class AttentionPolicyTests
         Assert.Equal(AttentionLevel.Silent, result.Level);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // SCREENSHOT CLASSIFICATION
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
     public void Screenshot_IsAlwaysActionable()
     {
@@ -62,16 +78,19 @@ public class AttentionPolicyTests
         Assert.Equal(NotchState.ScreenshotNotify, result.TargetState);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // MEDIA CLASSIFICATION
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
-    public void MediaStarted_IsSubtle()
+    public void MediaStarted_IsSubtle_InBalancedMode()
     {
-        var result = _policy.ClassifyMediaChange(hasSession: true);
+        var result = _policy.ClassifyMediaChange(hasSession: true, reactionLevel: "Balanced");
         Assert.Equal(AttentionLevel.Subtle, result.Level);
         Assert.Equal(NotchState.MediaAmbient, result.TargetState);
+    }
+
+    [Fact]
+    public void MediaStarted_IsSilent_InQuietMode()
+    {
+        var result = _policy.ClassifyMediaChange(hasSession: true, reactionLevel: "Quiet");
+        Assert.Equal(AttentionLevel.Silent, result.Level);
     }
 
     [Fact]
@@ -81,10 +100,6 @@ public class AttentionPolicyTests
         Assert.Equal(AttentionLevel.Silent, result.Level);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // DROP CLASSIFICATION
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
     public void FileDrop_IsImportant()
     {
@@ -93,20 +108,32 @@ public class AttentionPolicyTests
         Assert.Equal(NotchState.DropResult, result.TargetState);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CORE PRINCIPLE: Plain text should NEVER expand the notch
-    // ═══════════════════════════════════════════════════════════════
-
     [Theory]
     [InlineData(ClipboardContentType.Text)]
     [InlineData(ClipboardContentType.Unknown)]
-    public void NonActionableContent_NeverExpands(ClipboardContentType type)
+    public void NonActionableContent_NeverExpands_InBalancedMode(ClipboardContentType type)
     {
-        var result = _policy.ClassifyClipboard(type, "some text");
+        var result = _policy.ClassifyClipboard(type, "some text", "Balanced");
         Assert.Equal(AttentionLevel.Silent, result.Level);
-        // Must NOT transition to an expanded state
         Assert.NotEqual(NotchState.ClipboardNotify, result.TargetState);
         Assert.NotEqual(NotchState.ScreenshotNotify, result.TargetState);
         Assert.NotEqual(NotchState.DropResult, result.TargetState);
+    }
+
+    [Fact]
+    public void RapidSecondNotification_IsMarkedSuppressed()
+    {
+        var first = _policy.ClassifyClipboard(
+            ClipboardContentType.Url,
+            "https://example.com/1",
+            "Balanced");
+        var second = _policy.ClassifyClipboard(
+            ClipboardContentType.Url,
+            "https://example.com/2",
+            "Balanced");
+
+        Assert.False(first.Suppressed);
+        Assert.True(second.Suppressed);
+        Assert.Equal(NotchState.Idle, second.TargetState);
     }
 }
