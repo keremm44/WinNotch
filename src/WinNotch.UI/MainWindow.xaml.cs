@@ -481,7 +481,7 @@ public partial class MainWindow : Window
 
     private void ApplyDimensions(NotchState state, bool force = false)
     {
-        var (w, h) = StateDimensions.GetDimensions(state);
+        var (w, h) = ResolveAppearanceDimensions(state);
         if (!force && Math.Abs(w - _currentWidth) < 1 && Math.Abs(h - _currentHeight) < 1)
             return;
 
@@ -564,10 +564,11 @@ public partial class MainWindow : Window
 
         Dispatcher.Invoke(() =>
         {
-            var contentType = ClipboardClassifier.Classify(e.PreviewText);
+            string rawText = e.RawText ?? e.PreviewText ?? string.Empty;
+            var contentType = ClipboardClassifier.Classify(rawText);
             var decision = _attentionPolicy.ClassifyClipboard(
                 contentType,
-                e.PreviewText,
+                rawText,
                 _settings.ReactionLevel);
             if (decision.Level == AttentionLevel.Silent || decision.Suppressed) return;
 
