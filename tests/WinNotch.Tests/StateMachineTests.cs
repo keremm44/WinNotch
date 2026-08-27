@@ -81,7 +81,6 @@ public class StateMachineTests
     {
         var sm = new NotchStateMachine();
         sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
-
         var result = sm.ForceTransition(NotchState.Idle);
 
         Assert.True(result.ShouldApply);
@@ -141,16 +140,16 @@ public class StateMachineTests
     [Theory]
     [InlineData(NotchState.Idle, 100, 22)]
     [InlineData(NotchState.Hover, 118, 28)]
-    [InlineData(NotchState.DragActive, 280, 60)]
-    [InlineData(NotchState.DropResult, 320, 72)]
-    [InlineData(NotchState.ShelfOccupied, 220, 36)]
-    [InlineData(NotchState.ShelfExpanded, 330, 66)]
-    [InlineData(NotchState.ShelfDraggingOut, 330, 66)]
-    [InlineData(NotchState.MediaActive, 300, 64)]
-    [InlineData(NotchState.MediaAmbient, 120, 28)]
-    [InlineData(NotchState.ClipboardNotify, 220, 36)]
-    [InlineData(NotchState.ScreenshotNotify, 260, 56)]
-    [InlineData(NotchState.WindowPinned, 130, 28)]
+    [InlineData(NotchState.DragActive, 290, 62)]
+    [InlineData(NotchState.DropResult, 340, 70)]
+    [InlineData(NotchState.ShelfOccupied, 230, 40)]
+    [InlineData(NotchState.ShelfExpanded, 340, 70)]
+    [InlineData(NotchState.ShelfDraggingOut, 340, 70)]
+    [InlineData(NotchState.MediaActive, 336, 64)]
+    [InlineData(NotchState.MediaAmbient, 124, 28)]
+    [InlineData(NotchState.ClipboardNotify, 260, 40)]
+    [InlineData(NotchState.ScreenshotNotify, 310, 56)]
+    [InlineData(NotchState.WindowPinned, 150, 30)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
         var (w, h) = StateDimensions.GetDimensions(state);
