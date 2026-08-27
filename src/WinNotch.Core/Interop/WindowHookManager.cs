@@ -156,14 +156,14 @@ public sealed class WindowHookManager : IDisposable
                     DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
                     out DwmApi.RECT frameRect,
                     (uint)Marshal.SizeOf<DwmApi.RECT>()) == 0 &&
-                CoversMonitor(frameRect.Left, frameRect.Top, frameRect.Right, frameRect.Bottom,
+                MatchesMonitor(frameRect.Left, frameRect.Top, frameRect.Right, frameRect.Bottom,
                     mi.rcMonitor, tolerancePx);
 
             // Chromium/DirectComposition can update DWM bounds one composition after
             // its HWND. Accept either source, then distinguish ordinary maximize by
             // checking whether the actual client content fills the monitor.
             bool windowCoversMonitor = User32.GetWindowRect(hWnd, out var windowRect) &&
-                CoversMonitor(windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
+                MatchesMonitor(windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
                     mi.rcMonitor, tolerancePx);
 
             bool coversMonitor = frameCoversMonitor || windowCoversMonitor;
@@ -201,19 +201,17 @@ public sealed class WindowHookManager : IDisposable
         if (shellFullscreen)
             return true;
 
-        // During Chromium's two-stage fullscreen transition the client reaches the
-        // monitor before DWM publishes new outer-frame bounds. Client coverage alone
-        // is therefore sufficient and avoids depending on the unreliable shell hint.
-        if (clientCoversMonitor)
-            return true;
-
-        if (!coversMonitor)
+        // A normal maximized window remains decorated. Its outer/client bounds can
+        // still match rcMonitor with an auto-hidden taskbar, so geometry alone must
+        // never override this style signal. Chromium's Windows fullscreen handler
+        // removes WS_CAPTION and WS_THICKFRAME before sizing to rcMonitor.
+        if (decoratedMaximized)
             return false;
 
-        // A decorated outer frame can cover the monitor when a normal maximized
-        // window has an auto-hidden taskbar. An undecorated monitor-sized root window
-        // is the borderless/exclusive fallback when client coordinates are unavailable.
-        return !decoratedMaximized;
+        // Client geometry can lead DWM by one composition during Chromium's two-step
+        // transition. Outer geometry remains a fallback for exclusive/borderless apps
+        // whose client coordinates cannot be queried.
+        return clientCoversMonitor || coversMonitor;
     }
 
     private static bool ClientCoversMonitor(IntPtr hWnd, User32.RECT monitorBounds, int tolerancePx)
@@ -226,20 +224,23 @@ public sealed class WindowHookManager : IDisposable
             !User32.ClientToScreen(hWnd, ref bottomRight))
             return false;
 
-        return CoversMonitor(
+        return MatchesMonitor(
             topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y,
             monitorBounds, tolerancePx);
     }
 
-    private static bool CoversMonitor(
+    private static bool MatchesMonitor(
         int left, int top, int right, int bottom,
         User32.RECT monitorBounds,
         int tolerancePx)
     {
-        return left <= monitorBounds.Left + tolerancePx &&
-               top <= monitorBounds.Top + tolerancePx &&
-               right >= monitorBounds.Right - tolerancePx &&
-               bottom >= monitorBounds.Bottom - tolerancePx;
+        // Match all four edges, rather than merely accepting a rectangle which
+        // contains the monitor. This prevents a borderless window spanning multiple
+        // displays from being mistaken for fullscreen on its nearest monitor.
+        return Math.Abs(left - monitorBounds.Left) <= tolerancePx &&
+               Math.Abs(top - monitorBounds.Top) <= tolerancePx &&
+               Math.Abs(right - monitorBounds.Right) <= tolerancePx &&
+               Math.Abs(bottom - monitorBounds.Bottom) <= tolerancePx;
     }
 
     public static bool IsWindowMaximized(IntPtr hWnd)

@@ -6,27 +6,24 @@ namespace WinNotch.Tests;
 public class FullscreenDetectionTests
 {
     [Fact]
-    public void NormalMaximize_IsNotFullscreen_EvenWhenOuterBoundsCoverMonitor()
+    public void NormalMaximize_IsNotFullscreen_EvenWhenAutoHideMakesAllBoundsMatchMonitor()
     {
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
-            clientCoversMonitor: false,
+            clientCoversMonitor: true,
             decoratedMaximized: true,
             shellFullscreen: false);
 
         Assert.False(result);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void ChromiumClient_CoveringMonitor_IsFullscreen_EvenIfWindowKeepsDecoratedStyle(
-        bool decoratedMaximized)
+    [Fact]
+    public void UndecoratedChromiumClient_CoveringMonitor_IsFullscreen()
     {
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
             clientCoversMonitor: true,
-            decoratedMaximized: decoratedMaximized,
+            decoratedMaximized: false,
             shellFullscreen: false);
 
         Assert.True(result);
@@ -50,7 +47,7 @@ public class FullscreenDetectionTests
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: false,
             clientCoversMonitor: true,
-            decoratedMaximized: true,
+            decoratedMaximized: false,
             shellFullscreen: false);
 
         Assert.True(result);
