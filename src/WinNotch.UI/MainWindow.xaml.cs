@@ -46,6 +46,7 @@ public partial class MainWindow : Window
 
     public ModuleSettings Settings => _settings;
     public MediaSessionService? MediaService => _mediaSessionService;
+    public event EventHandler? SettingsRequested;
 
     public MainWindow()
     {
@@ -98,7 +99,7 @@ public partial class MainWindow : Window
     {
         int exStyle = User32.GetWindowLong(_hWnd, User32.GWL_EXSTYLE);
         exStyle |= User32.WS_EX_TOOLWINDOW | User32.WS_EX_NOACTIVATE;
-        exStyle &= ~0x00040000; // WS_EX_APPWINDOW
+        exStyle &= ~0x00040000;
         User32.SetExtendedStyle(_hWnd, exStyle);
     }
 
@@ -562,12 +563,10 @@ public partial class MainWindow : Window
 
     private void OnDragEntered(object? sender, EventArgs e)
     {
-        // RootGrid_DragEnter owns the visual transition.
     }
 
     private void OnDragLeft(object? sender, EventArgs e)
     {
-        // RootGrid_DragLeave owns the visual transition.
     }
 
     private void OnShelfCleared(object? sender, EventArgs e)
@@ -629,6 +628,7 @@ public partial class MainWindow : Window
         var menu = new System.Windows.Controls.ContextMenu();
 
         var settingsItem = new System.Windows.Controls.MenuItem { Header = "Ayarlar" };
+        settingsItem.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(settingsItem);
 
         var hideItem = new System.Windows.Controls.MenuItem { Header = "1 saat gizle" };
