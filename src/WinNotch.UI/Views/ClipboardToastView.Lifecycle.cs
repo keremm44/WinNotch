@@ -17,6 +17,7 @@ public partial class ClipboardToastView
         if (IsVisible)
             return;
 
+        CancelCollapseGrace();
         CollapseActions(notify: false);
         _currentAction = null;
         _currentImage = null;
