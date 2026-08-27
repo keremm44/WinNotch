@@ -8,11 +8,6 @@
 // - Exit the application
 //
 // Using Hardcodet.NotifyIcon.Wpf for native NotifyIcon support.
-// This avoids the complexity of Forms.NotifyIcon and integrates
-// cleanly with WPF's resource and theme system.
-//
-// PERFORMANCE: NotifyIcon is lightweight — just a tray icon.
-// Menu items are created lazily and only when right-clicked.
 
 using System.Diagnostics;
 using System.Windows;
@@ -21,10 +16,6 @@ using WinNotch.Common;
 
 namespace WinNotch.TrayApp;
 
-/// <summary>
-/// Manages the system tray icon and its context menu.
-/// Provides module toggle, settings, diagnostics, and exit functionality.
-/// </summary>
 public sealed class TrayIconManager : IDisposable
 {
     private readonly Hardcodet.Wpf.TaskbarNotification.TaskbarIcon _trayIcon;
@@ -34,9 +25,6 @@ public sealed class TrayIconManager : IDisposable
     public event EventHandler<ModuleSettings>? SettingsChanged;
     public event EventHandler? SettingsRequested;
 
-    /// <summary>
-    /// Creates the tray icon with context menu.
-    /// </summary>
     public TrayIconManager(ModuleSettings settings)
     {
         _settings = settings;
@@ -106,8 +94,8 @@ public sealed class TrayIconManager : IDisposable
         };
         diagItem.Click += (_, _) =>
         {
-            _settings.DiagnosticsEnabled = !_settings.DiagnosticsEnabled;
-            diagItem.IsChecked = _settings.DiagnosticsEnabled;
+            // WPF already toggles IsChecked before Click fires.
+            _settings.DiagnosticsEnabled = diagItem.IsChecked;
             OnSettingsChanged();
         };
         menu.Items.Add(diagItem);
@@ -124,8 +112,8 @@ public sealed class TrayIconManager : IDisposable
         };
         startupItem.Click += (_, _) =>
         {
-            _settings.AutoStart = !_settings.AutoStart;
-            startupItem.IsChecked = _settings.AutoStart;
+            // WPF already toggles IsChecked before Click fires.
+            _settings.AutoStart = startupItem.IsChecked;
             ToggleAutoStart(_settings.AutoStart);
             OnSettingsChanged();
         };
@@ -162,8 +150,9 @@ public sealed class TrayIconManager : IDisposable
 
         item.Click += (_, _) =>
         {
-            bool newValue = !item.IsChecked;
-            item.IsChecked = newValue;
+            // IsCheckable MenuItem toggles itself before the Click handler runs.
+            // Persist that actual value instead of inverting it a second time.
+            bool newValue = item.IsChecked;
 
             switch (propertyName)
             {
