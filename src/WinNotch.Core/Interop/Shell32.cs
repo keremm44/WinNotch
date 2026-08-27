@@ -47,10 +47,6 @@ internal static partial class Shell32
     // SHELL OPERATIONS
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Opens a file or folder in Explorer.
-    /// Used by Module A (Drag & Drop) when user clicks a dropped path.
-    /// </summary>
     [LibraryImport(DllName, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial IntPtr ShellExecuteW(
         IntPtr hWnd,
@@ -60,7 +56,6 @@ internal static partial class Shell32
         string? lpDirectory,
         int nShowCmd);
 
-    /// <summary>SW_SHOW constant for ShellExecute.</summary>
     public const int SW_SHOW = 5;
 
     /// <summary>
@@ -68,8 +63,13 @@ internal static partial class Shell32
     /// </summary>
     public static void OpenFileInExplorer(string filePath)
     {
-        ShellExecuteW(IntPtr.Zero, "explorer.exe", $"/select,\"{filePath}\"",
-            null, null, SW_SHOW);
+        ShellExecuteW(
+            IntPtr.Zero,
+            "open",
+            "explorer.exe",
+            $"/select,\"{filePath}\"",
+            null,
+            SW_SHOW);
     }
 
     /// <summary>
@@ -80,24 +80,10 @@ internal static partial class Shell32
         ShellExecuteW(IntPtr.Zero, "open", folderPath, null, null, SW_SHOW);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CLIPBOARD FORMAT CONSTANTS
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Clipboard format for excluding content from clipboard monitors.
-    /// Password managers use this — we must respect it for privacy.
-    /// </summary>
     public const uint CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR = 0x4010;
 
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW CLASS HELPERS
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Checks if a window is a taskbar window (to exclude from pin operations).
-    /// </summary>
+    // Kept for documentation; taskbar class checks use User32.GetClassName.
     [LibraryImport(DllName, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool Shell_TrayWnd(); // Just for documentation — actual check uses GetClassName
+    public static partial bool Shell_TrayWnd();
 }
