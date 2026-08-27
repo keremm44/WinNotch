@@ -8,7 +8,7 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        Background="#FF0B0B0D"
+        Background="{DynamicResource Brush.Notch.Base}"
         AllowsTransparency="False"
         Cursor="Arrow"
         SnapsToDevicePixels="True"
@@ -27,8 +27,8 @@
           DragOver="RootGrid_DragOver">
 
         <Border x:Name="NotchBorder"
-                Background="#FF0B0B0D"
-                CornerRadius="0,0,11,11"
+                Background="{DynamicResource Brush.Notch.Base}"
+                CornerRadius="{DynamicResource Radius.Notch}"
                 ClipToBounds="True"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
@@ -39,7 +39,7 @@
                             VerticalAlignment="Center">
                     <Border Width="18" Height="3"
                             CornerRadius="1.5"
-                            Background="#52FFFFFF"/>
+                            Background="{DynamicResource Brush.Notch.Handle}"/>
                 </StackPanel>
 
                 <StackPanel x:Name="MediaAmbientContent"
@@ -49,12 +49,12 @@
                             Visibility="Collapsed">
                     <Border Width="16" Height="16"
                             CornerRadius="8"
-                            Background="#18FFFFFF"
+                            Background="{DynamicResource Brush.Notch.AmbientSurface}"
                             Margin="0,0,5,0">
                         <TextBlock Text="▶"
                                    FontFamily="Segoe UI Symbol"
                                    FontSize="7"
-                                   Foreground="#D8FFFFFF"
+                                   Foreground="{DynamicResource Brush.Notch.AmbientIcon}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    Margin="1,0,0,0"/>
@@ -62,7 +62,7 @@
                     <TextBlock x:Name="MediaAmbientTitle"
                                Text="Medya"
                                FontSize="9"
-                               Foreground="#C8FFFFFF"
+                               Foreground="{DynamicResource Brush.Notch.AmbientText}"
                                MaxWidth="82"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
@@ -80,9 +80,9 @@
         </Border>
 
         <Border x:Name="ThemeBorder"
-                BorderBrush="#364A4A50"
+                BorderBrush="{DynamicResource Brush.Border.LightTheme}"
                 BorderThickness="1,0,1,1"
-                CornerRadius="0,0,11,11"
+                CornerRadius="{DynamicResource Radius.Notch}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 IsHitTestVisible="False"
