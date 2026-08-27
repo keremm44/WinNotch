@@ -15,13 +15,22 @@
         UseLayoutRounding="True">
 
     <Window.Resources>
+        <DropShadowEffect x:Key="CardShadow"
+                          Color="#FF000000"
+                          BlurRadius="16"
+                          ShadowDepth="3"
+                          Direction="270"
+                          Opacity="0.18"
+                          RenderingBias="Quality"/>
+
         <Style x:Key="SectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Premium}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}"/>
             <Setter Property="Padding" Value="{DynamicResource Thickness.CardPadding}"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
         </Style>
 
         <Style x:Key="SectionTitle" TargetType="TextBlock">
@@ -115,6 +124,8 @@
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="SegmentSurface"
                                 Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="8,0">
                             <ContentPresenter HorizontalAlignment="Center"
@@ -126,6 +137,7 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="SegmentSurface" Property="Background" Value="{DynamicResource Brush.Accent.Selection}"/>
+                                <Setter TargetName="SegmentSurface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Border}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -295,10 +307,17 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="ButtonSurface"
-                                CornerRadius="8"
+                                CornerRadius="9"
                                 Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border Height="1"
+                                        Margin="2,0"
+                                        VerticalAlignment="Top"
+                                        Background="{DynamicResource Brush.Surface.Highlight}"
+                                        IsHitTestVisible="False"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -331,11 +350,34 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="52"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Margin="20,12,0,0">
-                    <TextBlock Text="WinNotch" FontSize="17" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.Text.Primary}"/>
-                    <TextBlock Text="Ayarlar" FontSize="10"
-                               Foreground="{DynamicResource Brush.Text.Faint}" Margin="0,2,0,0"/>
+                <StackPanel Orientation="Horizontal"
+                            Margin="18,0,0,0"
+                            VerticalAlignment="Center">
+                    <Border Width="32" Height="32"
+                            CornerRadius="10"
+                            Background="{DynamicResource Brush.Accent.Selection}"
+                            BorderBrush="{DynamicResource Brush.Accent.Border}"
+                            BorderThickness="1"
+                            Margin="0,0,11,0">
+                        <Grid>
+                            <Ellipse Width="14" Height="14"
+                                     Fill="{DynamicResource Brush.Accent.Glow}"/>
+                            <Border Width="13" Height="3"
+                                    CornerRadius="1.5"
+                                    Background="{DynamicResource Brush.Accent.Primary}"/>
+                        </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="WinNotch"
+                                   FontSize="16.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.Text.Primary}"/>
+                        <TextBlock Text="AYARLAR  ·  KİŞİSELLEŞTİRME"
+                                   FontSize="7.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.Text.Faint}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Content="×"

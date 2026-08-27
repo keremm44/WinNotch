@@ -46,11 +46,16 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
-            <TextBlock Text="WinNotch"
-                       FontSize="10"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
-                       VerticalAlignment="Top"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                <Border Width="3" Height="11"
+                        CornerRadius="1.5"
+                        Background="{DynamicResource Brush.Accent.Primary}"
+                        Margin="0,0,6,0"/>
+                <TextBlock Text="WinNotch"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            </StackPanel>
             <TextBlock Text="Hızlı görünüm"
                        FontSize="8"
                        Foreground="{DynamicResource Brush.Text.OnDarkMuted}"

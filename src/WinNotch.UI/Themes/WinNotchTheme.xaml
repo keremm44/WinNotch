@@ -9,6 +9,8 @@
     <SolidColorBrush x:Key="Brush.Notch.AmbientGlow" Color="#182D7DFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientIcon" Color="#D8FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientText" Color="#C8FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Highlight" Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.InnerEdge" Color="#18FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Window.Base" Color="#FF101012"/>
     <SolidColorBrush x:Key="Brush.Window.Header" Color="#FF141416"/>
     <SolidColorBrush x:Key="Brush.Surface.Raised" Color="#FF18181B"/>
@@ -18,6 +20,7 @@
     <SolidColorBrush x:Key="Brush.Surface.Softer" Color="#0CFFFFFF"/>
     <SolidColorBrush x:Key="Brush.Surface.Hover" Color="#24FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="#34FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Highlight" Color="#16FFFFFF"/>
 
     <!-- Borders -->
     <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#FF29292E"/>
@@ -25,6 +28,7 @@
     <SolidColorBrush x:Key="Brush.Border.OnDark" Color="#20FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Border.OnDarkStrong" Color="#38FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Border.LightTheme" Color="#364A4A50"/>
+    <SolidColorBrush x:Key="Brush.Border.Premium" Color="#28FFFFFF"/>
 
     <!-- Typography -->
     <SolidColorBrush x:Key="Brush.Text.Primary" Color="#FFF5F5F7"/>
@@ -45,6 +49,7 @@
     <SolidColorBrush x:Key="Brush.Accent.Selection" Color="#342D7DFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Subtle" Color="#182D7DFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Border" Color="#522D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Glow" Color="#282D7DFF"/>
     <SolidColorBrush x:Key="Brush.Semantic.Success" Color="#FF35C98A"/>
     <SolidColorBrush x:Key="Brush.Semantic.SuccessSubtle" Color="#1835C98A"/>
     <SolidColorBrush x:Key="Brush.Semantic.SuccessBorder" Color="#4435C98A"/>

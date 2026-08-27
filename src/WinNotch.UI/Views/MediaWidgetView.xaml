@@ -10,7 +10,8 @@
             <Setter Property="Height" Value="30"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -23,7 +24,9 @@
                                 Width="{TemplateBinding Width}"
                                 Height="{TemplateBinding Height}"
                                 CornerRadius="15"
-                                Background="{TemplateBinding Background}">
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
                         </Border>
@@ -76,6 +79,16 @@
                 <Image x:Name="AlbumArtImage"
                        Stretch="UniformToFill"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Border Height="13"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#24FFFFFF" Offset="0"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
             </Grid>
         </Border>
 
@@ -131,6 +144,8 @@
             <Button x:Name="PlayPauseButton"
                     Style="{StaticResource MediaControlButton}"
                     Width="34" Height="34"
+                    Background="{DynamicResource Brush.State.Media.Subtle}"
+                    BorderBrush="{DynamicResource Brush.State.Media.Border}"
                     Content="▶"
                     FontSize="14"
                     Click="PlayPauseButton_Click"

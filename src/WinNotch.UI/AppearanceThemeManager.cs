@@ -35,6 +35,8 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Notch.AmbientGlow", palette.AccentSubtle);
         SetBrush(resources, "Brush.Notch.AmbientIcon", palette.IsLightTheme ? "#CC17181B" : "#D8FFFFFF");
         SetBrush(resources, "Brush.Notch.AmbientText", palette.IsLightTheme ? "#B817181B" : "#C8FFFFFF");
+        SetBrush(resources, "Brush.Notch.Highlight", palette.IsLightTheme ? "#14000000" : "#22FFFFFF");
+        SetBrush(resources, "Brush.Notch.InnerEdge", palette.IsLightTheme ? "#18000000" : "#18FFFFFF");
 
         SetBrush(resources, "Brush.Window.Base", palette.WindowBase);
         SetBrush(resources, "Brush.Window.Header", palette.WindowHeader);
@@ -45,12 +47,14 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Surface.Softer", palette.SurfaceSofter);
         SetBrush(resources, "Brush.Surface.Hover", palette.SurfaceHover);
         SetBrush(resources, "Brush.Surface.Pressed", palette.SurfacePressed);
+        SetBrush(resources, "Brush.Surface.Highlight", palette.IsLightTheme ? "#0E000000" : "#16FFFFFF");
 
         SetBrush(resources, "Brush.Border.Subtle", palette.BorderSubtle);
         SetBrush(resources, "Brush.Border.Strong", palette.BorderStrong);
         SetBrush(resources, "Brush.Border.OnDark", palette.BorderOnDark);
         SetBrush(resources, "Brush.Border.OnDarkStrong", palette.BorderOnDarkStrong);
         SetBrush(resources, "Brush.Border.LightTheme", palette.IsLightTheme ? "#26000000" : "#364A4A50");
+        SetBrush(resources, "Brush.Border.Premium", palette.IsLightTheme ? "#24000000" : "#28FFFFFF");
 
         SetBrush(resources, "Brush.Text.Primary", palette.TextPrimary);
         SetBrush(resources, "Brush.Text.Secondary", palette.TextSecondary);
@@ -70,6 +74,7 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Accent.Selection", palette.AccentSelection);
         SetBrush(resources, "Brush.Accent.Subtle", palette.AccentSubtle);
         SetBrush(resources, "Brush.Accent.Border", palette.AccentBorder);
+        SetBrush(resources, "Brush.Accent.Glow", WithAlpha(palette.AccentPrimary, 0x28));
 
         SetBrush(resources, "Brush.Semantic.Success", palette.Success);
         SetBrush(resources, "Brush.Semantic.SuccessSubtle", WithAlpha(palette.Success, 0x18));

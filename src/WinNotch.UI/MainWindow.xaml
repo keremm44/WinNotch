@@ -103,6 +103,25 @@
                 <views:ClipboardToastView x:Name="ClipboardToastView"
                                           Visibility="Collapsed"
                                           MeaningfulContextAvailable="ClipboardToastView_MeaningfulContextAvailable"/>
+
+                <!-- Lightweight material treatment: no blur/effect loop, only two
+                     compositor-friendly overlays which follow every notch size. -->
+                <Border BorderBrush="{DynamicResource Brush.Notch.InnerEdge}"
+                        BorderThickness="1,0,1,1"
+                        CornerRadius="0,0,10,10"
+                        Margin="1,0,1,1"
+                        IsHitTestVisible="False"/>
+                <Border Height="10"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource Brush.Notch.Highlight}"
+                        IsHitTestVisible="False">
+                    <Border.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#A0FFFFFF" Offset="0"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.OpacityMask>
+                </Border>
             </Grid>
         </Border>
 

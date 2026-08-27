@@ -4,6 +4,14 @@
              SnapsToDevicePixels="True"
              UseLayoutRounding="True">
     <UserControl.Resources>
+        <DropShadowEffect x:Key="AppearanceCardShadow"
+                          Color="#FF000000"
+                          BlurRadius="16"
+                          ShadowDepth="3"
+                          Direction="270"
+                          Opacity="0.18"
+                          RenderingBias="Quality"/>
+
         <Style x:Key="ChoiceRadio" TargetType="RadioButton">
             <Setter Property="Height" Value="32"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
@@ -53,11 +61,21 @@
                                 Background="Transparent"
                                 BorderBrush="{DynamicResource Brush.Border.Strong}"
                                 BorderThickness="1">
-                            <Ellipse x:Name="Swatch"
-                                     Width="20" Height="20"
-                                     Fill="{TemplateBinding Background}"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center"/>
+                            <Grid>
+                                <Ellipse x:Name="SelectionGlow"
+                                         Width="27" Height="27"
+                                         Fill="{TemplateBinding Background}"
+                                         Opacity="0"/>
+                                <Ellipse x:Name="Swatch"
+                                         Width="20" Height="20"
+                                         Fill="{TemplateBinding Background}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                                <Ellipse Width="18" Height="18"
+                                         Stroke="{DynamicResource Brush.Surface.Highlight}"
+                                         StrokeThickness="1"
+                                         IsHitTestVisible="False"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -69,6 +87,7 @@
                                 <Setter TargetName="Ring" Property="BorderBrush"
                                         Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"/>
                                 <Setter TargetName="Ring" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="SelectionGlow" Property="Opacity" Value="0.16"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -78,11 +97,12 @@
     </UserControl.Resources>
 
     <Border Background="{DynamicResource Brush.Surface.Raised}"
-            BorderBrush="{DynamicResource Brush.Border.Subtle}"
+            BorderBrush="{DynamicResource Brush.Border.Premium}"
             BorderThickness="1"
             CornerRadius="{DynamicResource Radius.Large}"
             Padding="{DynamicResource Thickness.CardPadding}"
-            Margin="0,0,0,12">
+            Margin="0,0,0,12"
+            Effect="{StaticResource AppearanceCardShadow}">
         <StackPanel>
             <TextBlock Text="Görünüm"
                        FontSize="12"
