@@ -48,7 +48,9 @@ public sealed class NotchStateMachine
         if (newState == _currentState)
             return new StateTransition { State = _currentState, ShouldApply = false };
 
-        if (newState == NotchState.ClipboardNotify || newState == NotchState.ScreenshotNotify)
+        // Coalescing protects unsolicited event bursts. An explicit user-driven force
+        // transition must remain reliable even when a recent clipboard burst occurred.
+        if (!force && (newState == NotchState.ClipboardNotify || newState == NotchState.ScreenshotNotify))
         {
             if (!TryCoalesceEvent())
                 return new StateTransition { State = _currentState, ShouldApply = false };
@@ -173,7 +175,7 @@ public static class ClipboardClassifier
             for (int i = 1; i < text.Length; i++)
             {
                 char c = text[i];
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
                 {
                     isHex = false;
                     break;
