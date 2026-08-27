@@ -33,14 +33,32 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Grid>
-                <StackPanel x:Name="IdleContent"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <Border Width="18" Height="3"
+                <Grid x:Name="IdleContent"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+                    <Border x:Name="IdleAmbientGlow"
+                            Width="34" Height="12"
+                            CornerRadius="6"
+                            Background="{DynamicResource Brush.Notch.AmbientGlow}"
+                            Opacity="0.55"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"/>
+                    <Border x:Name="IdleLine"
+                            Width="18" Height="3"
                             CornerRadius="1.5"
-                            Background="{DynamicResource Brush.Notch.Handle}"/>
-                </StackPanel>
+                            Background="{DynamicResource Brush.Notch.Handle}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    <StackPanel x:Name="IdleDots"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}"/>
+                    </StackPanel>
+                </Grid>
 
                 <StackPanel x:Name="MediaAmbientContent"
                             Orientation="Horizontal"
