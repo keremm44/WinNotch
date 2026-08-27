@@ -8,9 +8,11 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        Background="#FF000000"
+        Background="#FF0B0B0D"
         AllowsTransparency="False"
         Cursor="Arrow"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
         Closing="MainWindow_Closing"
         Loaded="MainWindow_Loaded">
 
@@ -25,13 +27,11 @@
           DragOver="RootGrid_DragOver"
           MouseRightButtonUp="RootGrid_MouseRightButtonUp">
 
-        <!--
-            Geometry is owned by the Window/state machine. These borders stretch to
-            the current HWND size instead of remaining stuck at the 100x22 idle size.
-        -->
+        <!-- The notch is physically attached to the display edge: square on top,
+             rounded only where it enters the desktop. Native region mirrors this. -->
         <Border x:Name="NotchBorder"
-                Background="#FF000000"
-                CornerRadius="11"
+                Background="#FF0B0B0D"
+                CornerRadius="0,0,11,11"
                 ClipToBounds="True"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
@@ -39,11 +39,35 @@
                 <StackPanel x:Name="IdleContent"
                             Orientation="Horizontal"
                             HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <Border Width="18" Height="3"
+                            CornerRadius="1.5"
+                            Background="#52FFFFFF"/>
+                </StackPanel>
+
+                <StackPanel x:Name="MediaAmbientContent"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Opacity="1">
-                    <TextBlock Text="•"
-                               Foreground="#66FFFFFF"
-                               FontSize="10"
+                            Visibility="Collapsed">
+                    <Border Width="16" Height="16"
+                            CornerRadius="8"
+                            Background="#18FFFFFF"
+                            Margin="0,0,5,0">
+                        <TextBlock Text="▶"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="7"
+                                   Foreground="#D8FFFFFF"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="1,0,0,0"/>
+                    </Border>
+                    <TextBlock x:Name="MediaAmbientTitle"
+                               Text="Medya"
+                               FontSize="9"
+                               Foreground="#C8FFFFFF"
+                               MaxWidth="82"
+                               TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
@@ -59,9 +83,9 @@
         </Border>
 
         <Border x:Name="ThemeBorder"
-                BorderBrush="#FF404040"
-                BorderThickness="1"
-                CornerRadius="11"
+                BorderBrush="#364A4A50"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0,0,11,11"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 IsHitTestVisible="False"
