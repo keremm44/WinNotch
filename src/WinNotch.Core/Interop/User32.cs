@@ -58,7 +58,6 @@ internal static partial class User32
         SWP_FRAMECHANGED = 0x0020
     }
 
-    // WINDOW REGION
     [LibraryImport(DllName, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool SetWindowRgn(
@@ -89,6 +88,9 @@ internal static partial class User32
 
     [LibraryImport(DllName, SetLastError = true)]
     public static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+    [LibraryImport(DllName)]
+    public static partial IntPtr GetForegroundWindow();
 
     public const uint GW_HWNDNEXT = 2;
 
