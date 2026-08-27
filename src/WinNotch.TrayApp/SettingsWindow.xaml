@@ -7,77 +7,89 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="#FF101012"
-        Foreground="#FFF5F5F7"
+        Background="{DynamicResource Brush.Window.Base}"
+        Foreground="{DynamicResource Brush.Text.Primary}"
         FontFamily="Segoe UI"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True">
 
     <Window.Resources>
         <Style x:Key="SectionCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF18181B"/>
-            <Setter Property="BorderBrush" Value="#FF29292E"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="16"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}"/>
+            <Setter Property="Padding" Value="{DynamicResource Thickness.CardPadding}"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
 
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FFF2F2F4"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
             <Setter Property="Margin" Value="0,0,0,3"/>
         </Style>
 
         <Style x:Key="SectionDescription" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Foreground" Value="#FF8D8D96"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,13"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
 
-        <Style x:Key="ModernCheckBox" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#FFE2E2E6"/>
-            <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+        <Style x:Key="SettingsToggleRow" TargetType="CheckBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+            <Setter Property="Padding" Value="8,8"/>
+            <Setter Property="Margin" Value="-8,0,-8,1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <Grid Background="Transparent">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border x:Name="Box"
-                                    Width="18" Height="18"
-                                    CornerRadius="5"
-                                    Background="#FF222227"
-                                    BorderBrush="#FF3A3A42"
-                                    BorderThickness="1"
-                                    VerticalAlignment="Center">
-                                <TextBlock x:Name="Tick"
-                                           Text="✓"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           Visibility="Collapsed"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <ContentPresenter Grid.Column="1"
-                                              Margin="9,0,0,0"
-                                              VerticalAlignment="Center"/>
-                        </Grid>
+                        <Border x:Name="RowSurface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,14,0"/>
+                                <Border x:Name="ToggleTrack"
+                                        Grid.Column="1"
+                                        Width="36" Height="20"
+                                        CornerRadius="10"
+                                        Background="{DynamicResource Brush.Surface.Control}"
+                                        BorderBrush="{DynamicResource Brush.Border.Strong}"
+                                        BorderThickness="1"
+                                        VerticalAlignment="Center">
+                                    <Border x:Name="ToggleKnob"
+                                            Width="14" Height="14"
+                                            CornerRadius="7"
+                                            Background="{DynamicResource Brush.Text.Muted}"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Margin="2,0,0,0"/>
+                                </Border>
+                            </Grid>
+                        </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Box" Property="Background" Value="#FF2D7DFF"/>
-                                <Setter TargetName="Box" Property="BorderBrush" Value="#FF2D7DFF"/>
-                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
-                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Box" Property="BorderBrush" Value="#FF6A6A75"/>
+                                <Setter TargetName="RowSurface" Property="Background" Value="{DynamicResource Brush.Surface.Softer}"/>
+                                <Setter TargetName="ToggleTrack" Property="BorderBrush" Value="{DynamicResource Brush.Text.Faint}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ToggleTrack" Property="Background" Value="{DynamicResource Brush.Accent.Primary}"/>
+                                <Setter TargetName="ToggleTrack" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}"/>
+                                <Setter TargetName="ToggleKnob" Property="Background" Value="White"/>
+                                <Setter TargetName="ToggleKnob" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="ToggleKnob" Property="Margin" Value="0,0,2,0"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.4"/>
@@ -88,8 +100,41 @@
             </Setter>
         </Style>
 
+        <Style x:Key="SegmentRadio" TargetType="RadioButton">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="SegmentSurface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="8,0">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SegmentSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SegmentSurface" Property="Background" Value="{DynamicResource Brush.Accent.Selection}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ModernComboItem" TargetType="ComboBoxItem">
-            <Setter Property="Foreground" Value="#FFEDEDF0"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Padding" Value="11,8"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -108,24 +153,20 @@
                                 <Setter TargetName="ItemSurface" Property="Background" Value="#FF292930"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemSurface" Property="Background" Value="#FF243B62"/>
-                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.42"/>
+                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Accent.Selection}"/>
+                                <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource ModernComboItem}"/>
 
         <Style x:Key="ModernCombo" TargetType="ComboBox">
             <Setter Property="Height" Value="38"/>
-            <Setter Property="Background" Value="#FF222226"/>
-            <Setter Property="Foreground" Value="#FFF2F2F4"/>
-            <Setter Property="BorderBrush" Value="#FF3A3A42"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -147,25 +188,21 @@
                                                       ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                                       TextElement.Foreground="{TemplateBinding Foreground}"/>
                                     <Path Data="M 0 0 L 4 4 L 8 0"
-                                          Stroke="#FF9B9BA4"
+                                          Stroke="{DynamicResource Brush.Text.Muted}"
                                           StrokeThickness="1.4"
                                           HorizontalAlignment="Right"
                                           VerticalAlignment="Center"
                                           Margin="0,0,13,0"/>
                                 </Grid>
                             </Border>
-
                             <ToggleButton Focusable="False"
                                           Background="Transparent"
                                           BorderThickness="0"
                                           IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                                 <ToggleButton.Template>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <Border Background="Transparent"/>
-                                    </ControlTemplate>
+                                    <ControlTemplate TargetType="ToggleButton"><Border Background="Transparent"/></ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
-
                             <Popup x:Name="PART_Popup"
                                    Placement="Bottom"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
@@ -177,8 +214,8 @@
                                         MaxHeight="240"
                                         Margin="0,5,0,0"
                                         Padding="5"
-                                        Background="#FF1C1C20"
-                                        BorderBrush="#FF393940"
+                                        Background="{DynamicResource Brush.Surface.Popup}"
+                                        BorderBrush="{DynamicResource Brush.Border.Strong}"
                                         BorderThickness="1"
                                         CornerRadius="9">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -190,13 +227,10 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="#FF5A5A65"/>
+                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="{DynamicResource Brush.Text.Faint}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="#FF2D7DFF"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="ComboSurface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -233,9 +267,6 @@
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="ThumbSurface" Property="Background" Value="#FF5B5B65"/>
                                                     </Trigger>
-                                                    <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="ThumbSurface" Property="Background" Value="#FF6C6C77"/>
-                                                    </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Thumb.Template>
@@ -254,7 +285,7 @@
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="18,0"/>
-            <Setter Property="Background" Value="#FF2D7DFF"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Primary}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -270,10 +301,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF438CFF"/>
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource Brush.Accent.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF216FE8"/>
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource Brush.Accent.Pressed}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -282,7 +313,9 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="#FF2A2A30" BorderThickness="1" Background="#FF101012">
+    <Border BorderBrush="{DynamicResource Brush.Border.Subtle}"
+            BorderThickness="1"
+            Background="{DynamicResource Brush.Window.Base}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="64"/>
@@ -291,25 +324,28 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0"
-                  Background="#FF141416"
+                  Background="{DynamicResource Brush.Window.Header}"
                   MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="52"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="20,12,0,0">
-                    <TextBlock Text="WinNotch" FontSize="17" FontWeight="SemiBold" Foreground="#FFF7F7F8"/>
-                    <TextBlock Text="Ayarlar" FontSize="10" Foreground="#FF777780" Margin="0,2,0,0"/>
+                    <TextBlock Text="WinNotch" FontSize="17" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.Text.Primary}"/>
+                    <TextBlock Text="Ayarlar" FontSize="10"
+                               Foreground="{DynamicResource Brush.Text.Faint}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Content="×"
                         FontSize="20"
-                        Foreground="#FFB8B8BF"
+                        Foreground="{DynamicResource Brush.Text.Secondary}"
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand"
                         Click="CloseButton_Click"/>
-                <Border VerticalAlignment="Bottom" Height="1" Background="#FF242429"/>
+                <Border VerticalAlignment="Bottom" Height="1"
+                        Background="{DynamicResource Brush.Border.Subtle}"/>
             </Grid>
 
             <ScrollViewer Grid.Row="1"
@@ -322,21 +358,40 @@
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="Özellikler"/>
                             <TextBlock Style="{StaticResource SectionDescription}"
-                                       Text="Yalnız kullandığın özellikleri açık tut. Medya entegrasyonu ek bellek kullanır."/>
+                                       Text="Yalnız kullandığın yüzeyleri açık tut. Medya entegrasyonu ek bellek kullanır."/>
 
-                            <CheckBox x:Name="ModuleACheckBox" Style="{StaticResource ModernCheckBox}"
-                                      Content="Dosya Rafı — dosyaları tut, kopyala ve yeniden sürükle"
-                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleBCheckBox" Style="{StaticResource ModernCheckBox}"
-                                      Content="Akıllı Pano — URL, yol ve anlamlı içerikleri yakala"
-                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleCCheckBox" Style="{StaticResource ModernCheckBox}"
-                                      Content="Medya Kontrolleri — sistem medya oturumunu göster"
-                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleECheckBox" Style="{StaticResource ModernCheckBox}"
-                                      Content="Ekran Görüntüleri — Snipping Tool sonucunu yüzeyde göster"
-                                      Margin="0"
-                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleACheckBox" Style="{StaticResource SettingsToggleRow}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Dosya Rafı" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Dosyaları geçici olarak tut, kopyala ve yeniden sürükle"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox x:Name="ModuleBCheckBox" Style="{StaticResource SettingsToggleRow}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Akıllı Pano" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="URL, dosya yolu ve anlamlı içeriklerde bağlamsal aksiyon göster"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox x:Name="ModuleCCheckBox" Style="{StaticResource SettingsToggleRow}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Medya Kontrolleri" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Aktif sistem medya oturumunu kompakt yüzeyde göster"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox x:Name="ModuleECheckBox" Style="{StaticResource SettingsToggleRow}"
+                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Ekran Görüntüleri" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Snipping Tool sonucunu önizle ve hızlıca kaydet"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
                         </StackPanel>
                     </Border>
 
@@ -346,24 +401,47 @@
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Yüzeyin ne zaman görüneceğini ve ne kadar tepki vereceğini belirle."/>
 
-                            <TextBlock Text="Görünürlük" Foreground="#FFBDBDC5" FontSize="10.5" Margin="0,0,0,6"/>
-                            <ComboBox x:Name="VisibilityModeComboBox"
-                                      Style="{StaticResource ModernCombo}"
-                                      Margin="0,0,0,12"
-                                      SelectionChanged="VisibilityModeComboBox_SelectionChanged">
-                                <ComboBoxItem Content="Otomatik — tam ekranda gizle" Tag="Auto"/>
-                                <ComboBoxItem Content="Her zaman göster" Tag="AlwaysShow"/>
-                                <ComboBoxItem Content="Gizli" Tag="Hidden"/>
-                            </ComboBox>
+                            <TextBlock Text="Görünürlük" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                       FontSize="10.5" Margin="0,0,0,6"/>
+                            <Border Background="{DynamicResource Brush.Surface.Control}"
+                                    BorderBrush="{DynamicResource Brush.Border.Strong}"
+                                    BorderThickness="1" CornerRadius="8" Padding="2" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="VisibilityAutoRadio" Grid.Column="0" GroupName="VisibilityMode"
+                                                 Style="{StaticResource SegmentRadio}" Content="Otomatik" Tag="Auto"
+                                                 Checked="VisibilityModeRadio_Checked"/>
+                                    <RadioButton x:Name="VisibilityAlwaysRadio" Grid.Column="1" GroupName="VisibilityMode"
+                                                 Style="{StaticResource SegmentRadio}" Content="Her zaman" Tag="AlwaysShow"
+                                                 Checked="VisibilityModeRadio_Checked"/>
+                                    <RadioButton x:Name="VisibilityHiddenRadio" Grid.Column="2" GroupName="VisibilityMode"
+                                                 Style="{StaticResource SegmentRadio}" Content="Gizli" Tag="Hidden"
+                                                 Checked="VisibilityModeRadio_Checked"/>
+                                </Grid>
+                            </Border>
 
-                            <TextBlock Text="Tepki seviyesi" Foreground="#FFBDBDC5" FontSize="10.5" Margin="0,0,0,6"/>
-                            <ComboBox x:Name="ReactionLevelComboBox"
-                                      Style="{StaticResource ModernCombo}"
-                                      SelectionChanged="ReactionLevelComboBox_SelectionChanged">
-                                <ComboBoxItem Content="Sessiz — yalnız doğrudan aksiyonlar" Tag="Quiet"/>
-                                <ComboBoxItem Content="Dengeli — önerilen" Tag="Balanced"/>
-                                <ComboBoxItem Content="Aktif — daha fazla bağlamsal bildirim" Tag="Active"/>
-                            </ComboBox>
+                            <TextBlock Text="Tepki seviyesi" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                       FontSize="10.5" Margin="0,0,0,6"/>
+                            <Border Background="{DynamicResource Brush.Surface.Control}"
+                                    BorderBrush="{DynamicResource Brush.Border.Strong}"
+                                    BorderThickness="1" CornerRadius="8" Padding="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="ReactionQuietRadio" Grid.Column="0" GroupName="ReactionLevel"
+                                                 Style="{StaticResource SegmentRadio}" Content="Sessiz" Tag="Quiet"
+                                                 Checked="ReactionLevelRadio_Checked"/>
+                                    <RadioButton x:Name="ReactionBalancedRadio" Grid.Column="1" GroupName="ReactionLevel"
+                                                 Style="{StaticResource SegmentRadio}" Content="Dengeli" Tag="Balanced"
+                                                 Checked="ReactionLevelRadio_Checked"/>
+                                    <RadioButton x:Name="ReactionActiveRadio" Grid.Column="2" GroupName="ReactionLevel"
+                                                 Style="{StaticResource SegmentRadio}" Content="Aktif" Tag="Active"
+                                                 Checked="ReactionLevelRadio_Checked"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
@@ -372,17 +450,22 @@
                             <TextBlock Style="{StaticResource SectionTitle}" Text="Ekran ve başlangıç"/>
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="WinNotch'un hangi monitöre bağlanacağını ve Windows ile başlayıp başlamayacağını seç."/>
-
+                            <TextBlock Text="Hedef monitör" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                       FontSize="10.5" Margin="0,0,0,6"/>
                             <ComboBox x:Name="MonitorComboBox"
                                       Style="{StaticResource ModernCombo}"
-                                      Margin="0,0,0,12"
+                                      Margin="0,0,0,8"
                                       SelectionChanged="MonitorComboBox_SelectionChanged"/>
                             <CheckBox x:Name="AutoStartCheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
-                                      Content="Windows ile otomatik başlat"
-                                      Margin="0"
+                                      Style="{StaticResource SettingsToggleRow}"
                                       Checked="AutoStartCheckBox_Changed"
-                                      Unchecked="AutoStartCheckBox_Changed"/>
+                                      Unchecked="AutoStartCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Windows ile otomatik başlat" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Oturum açıldığında WinNotch'u sessizce başlat"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
                         </StackPanel>
                     </Border>
 
@@ -392,33 +475,38 @@
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Geliştirme sırasında anlık process kullanımını göster. Kapalıyken sayaç çalışmaz."/>
                             <CheckBox x:Name="DiagnosticsCheckBox"
-                                      Style="{StaticResource ModernCheckBox}"
-                                      Content="Performans panelini göster"
+                                      Style="{StaticResource SettingsToggleRow}"
                                       Checked="DiagnosticsCheckBox_Changed"
-                                      Unchecked="DiagnosticsCheckBox_Changed"/>
+                                      Unchecked="DiagnosticsCheckBox_Changed">
+                                <StackPanel>
+                                    <TextBlock Text="Performans panelini göster" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Bellek ve CPU örneklerini yalnız bu pencere açıkken izle"
+                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </CheckBox>
 
                             <Border x:Name="PerformancePanel"
                                     Visibility="Collapsed"
-                                    Background="#FF202024"
-                                    BorderBrush="#FF303036"
+                                    Background="{DynamicResource Brush.Surface.Control}"
+                                    BorderBrush="{DynamicResource Brush.Border.Subtle}"
                                     BorderThickness="1"
                                     CornerRadius="9"
                                     Padding="12"
-                                    Margin="0,2,0,0">
+                                    Margin="0,5,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Bellek" FontSize="9.5" Foreground="#FF777780"/>
+                                        <TextBlock Text="Bellek" FontSize="9.5" Foreground="{DynamicResource Brush.Text.Faint}"/>
                                         <TextBlock x:Name="RamUsageText" Text="—" FontSize="13"
-                                                   FontWeight="SemiBold" Foreground="#FFEDEDF0" Margin="0,3,0,0"/>
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="CPU" FontSize="9.5" Foreground="#FF777780"/>
+                                        <TextBlock Text="CPU" FontSize="9.5" Foreground="{DynamicResource Brush.Text.Faint}"/>
                                         <TextBlock x:Name="CpuUsageText" Text="—" FontSize="13"
-                                                   FontWeight="SemiBold" Foreground="#FFEDEDF0" Margin="0,3,0,0"/>
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -427,8 +515,8 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Grid Grid.Row="2" Background="#FF141416">
-                <Border VerticalAlignment="Top" Height="1" Background="#FF242429"/>
+            <Grid Grid.Row="2" Background="{DynamicResource Brush.Window.Header}">
+                <Border VerticalAlignment="Top" Height="1" Background="{DynamicResource Brush.Border.Subtle}"/>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
