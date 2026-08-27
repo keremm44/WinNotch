@@ -1,6 +1,4 @@
-using System.IO;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 
 namespace WinNotch.UI;
 
@@ -22,7 +20,7 @@ internal static class ScreenshotSaveService
             return ScreenshotSaveResult.Failed;
         }
 
-        var dialog = new SaveFileDialog
+        var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Title = "Ekran görüntüsünü kaydet",
             Filter = "PNG görüntüsü (*.png)|*.png",
@@ -39,11 +37,11 @@ internal static class ScreenshotSaveService
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(image));
 
-            using var stream = new FileStream(
+            using var stream = new System.IO.FileStream(
                 dialog.FileName,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None);
+                System.IO.FileMode.Create,
+                System.IO.FileAccess.Write,
+                System.IO.FileShare.None);
             encoder.Save(stream);
             return ScreenshotSaveResult.Saved;
         }
