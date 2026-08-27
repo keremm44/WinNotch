@@ -105,7 +105,7 @@ public static class AppearanceResolver
 
         string hover = ShiftRgb(accent, monochrome ? 10 : 22);
         string pressed = ShiftRgb(accent, monochrome ? -22 : -20);
-        string selection = WithAlpha(accent, monochrome ? 0x22 : 0x34);
+        string selection = WithAlpha(accent, (byte)(monochrome ? 0x22 : 0x34));
         string subtle = WithAlpha(accent, 0x18);
         string accentBorder = WithAlpha(accent, 0x52);
 
