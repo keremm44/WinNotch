@@ -20,6 +20,7 @@
           Background="Transparent"
           MouseEnter="RootGrid_MouseEnter"
           MouseLeave="RootGrid_MouseLeave"
+          PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp"
           AllowDrop="True"
           Drop="RootGrid_Drop"
           DragEnter="RootGrid_DragEnter"
@@ -87,6 +88,9 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
+
+                <views:QuickPeekView x:Name="QuickPeekView"
+                                     Visibility="Collapsed"/>
 
                 <views:DropZoneView x:Name="DropZoneView"
                                     Visibility="Collapsed"/>
