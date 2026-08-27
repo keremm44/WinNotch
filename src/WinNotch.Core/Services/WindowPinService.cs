@@ -1,64 +1,56 @@
 // WinNotch.Core/Services/WindowPinService.cs
-// WHY: Module D - Window Pinner.
-// When a title bar is dragged to the notch, pin the window as HWND_TOPMOST.
-// Uses SetWindowPos for reliable topmost behavior.
-//
-// PERFORMANCE NOTE: Only active during drag operations.
-// No idle cost. Pinned windows are tracked in a HashSet for O(1) lookup.
-//
-// LIMITATION: Windows 10+ limits the number of topmost windows.
-// We track our pinned windows and can unpin them all on exit.
+// Lightweight always-on-top window management with explicit lifecycle cleanup.
 
 using WinNotch.Core.Interop;
 
 namespace WinNotch.Core.Services;
 
-/// <summary>
-/// Event args for window pin/unpin operations.
-/// </summary>
 public sealed class WindowPinEventArgs : EventArgs
 {
-    /// <summary>Handle of the pinned/unpinned window.</summary>
     public IntPtr WindowHandle { get; init; }
-
-    /// <summary>Title of the window.</summary>
     public string WindowTitle { get; init; } = string.Empty;
-
-    /// <summary>True if window was pinned, false if unpinned.</summary>
     public bool IsPinned { get; init; }
 }
 
-/// <summary>
-/// Manages always-on-top pinning for windows dragged to the notch.
-/// </summary>
+public sealed record PinnedWindowInfo(IntPtr WindowHandle, string WindowTitle);
+
 public sealed class WindowPinService : IDisposable
 {
     private readonly HashSet<IntPtr> _pinnedWindows = new();
     private bool _disposed;
 
-    /// <summary>
-    /// Fired when a window is pinned or unpinned.
-    /// </summary>
     public event EventHandler<WindowPinEventArgs>? WindowPinChanged;
 
-    /// <summary>
-    /// Gets the number of currently pinned windows.
-    /// </summary>
-    public int PinnedCount => _pinnedWindows.Count;
+    public int PinnedCount
+    {
+        get
+        {
+            PruneClosedWindows();
+            return _pinnedWindows.Count;
+        }
+    }
 
-    /// <summary>
-    /// Checks if a window handle is currently pinned by us.
-    /// </summary>
-    public bool IsPinned(IntPtr hWnd) => _pinnedWindows.Contains(hWnd);
-
-    /// <summary>
-    /// Pins a window to always-on-top.
-    /// </summary>
-    /// <param name="hWnd">Handle of the window to pin.</param>
-    /// <returns>True if successfully pinned.</returns>
-    public bool PinWindow(IntPtr hWnd)
+    public bool IsPinned(IntPtr hWnd)
     {
         if (_disposed || hWnd == IntPtr.Zero) return false;
+        PruneClosedWindows();
+        return _pinnedWindows.Contains(hWnd);
+    }
+
+    public IReadOnlyList<PinnedWindowInfo> GetPinnedWindows()
+    {
+        if (_disposed) return Array.Empty<PinnedWindowInfo>();
+
+        PruneClosedWindows();
+        return _pinnedWindows
+            .Select(hWnd => new PinnedWindowInfo(hWnd, GetWindowTitle(hWnd)))
+            .OrderBy(info => info.WindowTitle, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    public bool PinWindow(IntPtr hWnd)
+    {
+        if (_disposed || hWnd == IntPtr.Zero || !IsValidWindow(hWnd)) return false;
 
         try
         {
@@ -66,22 +58,23 @@ public sealed class WindowPinService : IDisposable
                 hWnd,
                 User32.HWND_TOPMOST,
                 0, 0, 0, 0,
-                User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+                User32.SWP_NOMOVE | User32.SWP_NOSIZE |
+                User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
 
-            if (success)
+            if (!success) return false;
+
+            bool newlyPinned = _pinnedWindows.Add(hWnd);
+            if (newlyPinned)
             {
-                _pinnedWindows.Add(hWnd);
-                string title = GetWindowTitle(hWnd);
-
                 WindowPinChanged?.Invoke(this, new WindowPinEventArgs
                 {
                     WindowHandle = hWnd,
-                    WindowTitle = title,
+                    WindowTitle = GetWindowTitle(hWnd),
                     IsPinned = true
                 });
             }
 
-            return success;
+            return true;
         }
         catch (Exception ex)
         {
@@ -91,36 +84,41 @@ public sealed class WindowPinService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Unpins a previously pinned window (removes HWND_TOPMOST).
-    /// </summary>
     public bool UnpinWindow(IntPtr hWnd)
     {
         if (_disposed || hWnd == IntPtr.Zero) return false;
 
+        // A closed window does not need a native NOTOPMOST call. Remove the stale
+        // handle and report success so UI state can clean itself up.
+        if (!IsValidWindow(hWnd))
+        {
+            _pinnedWindows.Remove(hWnd);
+            return true;
+        }
+
         try
         {
-            // Set to HWND_NOTOPMOST to remove topmost flag
             bool success = User32.SetWindowPos(
                 hWnd,
                 new IntPtr(-2), // HWND_NOTOPMOST
                 0, 0, 0, 0,
-                User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+                User32.SWP_NOMOVE | User32.SWP_NOSIZE |
+                User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
 
-            if (success)
+            if (!success) return false;
+
+            bool wasPinned = _pinnedWindows.Remove(hWnd);
+            if (wasPinned)
             {
-                _pinnedWindows.Remove(hWnd);
-                string title = GetWindowTitle(hWnd);
-
                 WindowPinChanged?.Invoke(this, new WindowPinEventArgs
                 {
                     WindowHandle = hWnd,
-                    WindowTitle = title,
+                    WindowTitle = GetWindowTitle(hWnd),
                     IsPinned = false
                 });
             }
 
-            return success;
+            return true;
         }
         catch (Exception ex)
         {
@@ -130,43 +128,56 @@ public sealed class WindowPinService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Toggles pin state for a window.
-    /// </summary>
     public bool TogglePin(IntPtr hWnd)
-    {
-        return IsPinned(hWnd) ? UnpinWindow(hWnd) : PinWindow(hWnd);
-    }
+        => IsPinned(hWnd) ? UnpinWindow(hWnd) : PinWindow(hWnd);
 
-    /// <summary>
-    /// Unpins all windows. Called on application exit to clean up.
-    /// </summary>
     public void UnpinAll()
     {
-        var handles = _pinnedWindows.ToList();
-        foreach (var hWnd in handles)
-        {
+        if (_disposed) return;
+
+        foreach (IntPtr hWnd in _pinnedWindows.ToArray())
             UnpinWindow(hWnd);
+
+        // If a native call failed because the target disappeared mid-loop, do not
+        // retain stale bookkeeping after an explicit clear request.
+        PruneClosedWindows();
+    }
+
+    private void PruneClosedWindows()
+    {
+        if (_pinnedWindows.Count == 0) return;
+
+        foreach (IntPtr hWnd in _pinnedWindows.ToArray())
+        {
+            if (!IsValidWindow(hWnd))
+                _pinnedWindows.Remove(hWnd);
         }
     }
 
-    /// <summary>
-    /// Gets the title of a window.
-    /// </summary>
+    private static bool IsValidWindow(IntPtr hWnd)
+        => hWnd != IntPtr.Zero && User32.GetWindowRect(hWnd, out _);
+
     private static string GetWindowTitle(IntPtr hWnd)
     {
         int length = User32.GetWindowTextLength(hWnd);
-        if (length == 0) return string.Empty;
+        if (length <= 0) return "Adsız pencere";
 
         var buffer = new char[length + 1];
         User32.GetWindowText(hWnd, buffer, buffer.Length);
-        return new string(buffer, 0, length);
+        string title = new(buffer, 0, length);
+        return string.IsNullOrWhiteSpace(title) ? "Adsız pencere" : title;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
+
+        // Unpin BEFORE marking disposed; UnpinWindow intentionally refuses work
+        // after disposal. The previous order left windows stuck as TOPMOST.
         UnpinAll();
+        _disposed = true;
+        _pinnedWindows.Clear();
+        WindowPinChanged = null;
+        GC.SuppressFinalize(this);
     }
 }
