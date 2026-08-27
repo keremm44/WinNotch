@@ -1,35 +1,19 @@
 // WinNotch.TrayApp/App.xaml.cs
-// WHY: This is the application entry point.
-// Key responsibilities:
-// 1. Single Instance Enforcement — Mutex prevents duplicate instances
-// 2. Service Lifecycle — Initialize and dispose all services on exit
-// 3. Tray Icon Management — Create and manage the system tray
-// 4. Error Recovery — try-catch with tray restart capability
-// 5. Startup Registry — Manage auto-start with Windows
-//
-// CRITICAL: OnExit MUST clean up all Win32 hooks, unpin all windows,
-// and dispose all services. Failure to do so leaves orphaned topmost
-// windows and clipboard listeners.
-//
-// PERFORMANCE: Workstation GC + Concurrent mode (configured in runtimeconfig.json).
-// GC.Collect() is NEVER called manually — .NET's GC is smart enough.
+// Application entry point and lifecycle coordinator.
 
 using System.Diagnostics;
 using System.Threading;
 using System.Windows;
 using WinNotch.Common;
-using WinNotch.Core.Services;
 using WinNotch.UI;
 
 namespace WinNotch.TrayApp;
 
-/// <summary>
-/// WinNotch application entry point.
-/// Handles single instance, lifecycle, and service coordination.
-/// </summary>
 public partial class App : Application
 {
     private Mutex? _mutex;
+    private EventWaitHandle? _shutdownEvent;
+    private RegisteredWaitHandle? _shutdownRegistration;
     private TrayIconManager? _trayIcon;
     private MainWindow? _mainWindow;
     private SettingsWindow? _settingsWindow;
@@ -45,7 +29,6 @@ public partial class App : Application
             Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}");
 
             _mutex = new Mutex(true, Constants.MutexName, out bool createdNew);
-
             if (!createdNew)
             {
                 Debug.WriteLine("[WinNotch] Another instance running, exiting.");
@@ -53,21 +36,33 @@ public partial class App : Application
                 return;
             }
 
-            Debug.WriteLine("[WinNotch] Mutex acquired.");
+            // The rebuild helper signals this event before replacing binaries.
+            // That guarantees MainWindow.Close/OnExit run and pinned HWNDs are
+            // demoted from TOPMOST before the process disappears.
+            _shutdownEvent = new EventWaitHandle(
+                false,
+                EventResetMode.AutoReset,
+                Constants.ShutdownEventName);
+            _shutdownRegistration = ThreadPool.RegisterWaitForSingleObject(
+                _shutdownEvent,
+                (_, timedOut) =>
+                {
+                    if (timedOut) return;
+                    Dispatcher.BeginInvoke(() => Shutdown());
+                },
+                null,
+                Timeout.Infinite,
+                executeOnlyOnce: false);
 
             Debug.WriteLine("[WinNotch] Creating MainWindow...");
             _mainWindow = new MainWindow();
             _mainWindow.SetSettings(_settings);
             _mainWindow.SettingsRequested += OnSettingsRequested;
-            Debug.WriteLine("[WinNotch] Showing MainWindow...");
             _mainWindow.Show();
-            Debug.WriteLine("[WinNotch] MainWindow shown.");
 
-            Debug.WriteLine("[WinNotch] Creating TrayIcon...");
             _trayIcon = new TrayIconManager(_settings);
             _trayIcon.SettingsChanged += OnTraySettingsChanged;
             _trayIcon.SettingsRequested += OnSettingsRequested;
-            Debug.WriteLine("[WinNotch] TrayIcon created.");
 
             Debug.WriteLine("[WinNotch] Startup complete!");
         }
@@ -114,20 +109,21 @@ public partial class App : Application
             _mainWindow = null;
         }
 
-        _mutex?.ReleaseMutex();
+        _shutdownRegistration?.Unregister(null);
+        _shutdownRegistration = null;
+        _shutdownEvent?.Dispose();
+        _shutdownEvent = null;
+
+        try { _mutex?.ReleaseMutex(); } catch (ApplicationException) { }
         _mutex?.Dispose();
         _mutex = null;
     }
 
     private void OnTraySettingsChanged(object? sender, ModuleSettings settings)
-    {
-        ApplySettings(settings);
-    }
+        => ApplySettings(settings);
 
     private void OnSettingsWindowChanged(object? sender, ModuleSettings settings)
-    {
-        ApplySettings(settings);
-    }
+        => ApplySettings(settings);
 
     private void ApplySettings(ModuleSettings settings)
     {
@@ -137,26 +133,31 @@ public partial class App : Application
     }
 
     private void OnSettingsRequested(object? sender, EventArgs e)
-    {
-        Dispatcher.Invoke(OpenSettingsWindow);
-    }
+        => Dispatcher.Invoke(OpenSettingsWindow);
 
     private void OpenSettingsWindow()
     {
+        if (_mainWindow == null) return;
+
         if (_settingsWindow != null)
         {
             if (_settingsWindow.WindowState == WindowState.Minimized)
                 _settingsWindow.WindowState = WindowState.Normal;
 
+            _settingsWindow.Topmost = true;
             _settingsWindow.Show();
             _settingsWindow.Activate();
-            _settingsWindow.Topmost = true;
-            _settingsWindow.Topmost = false;
             _settingsWindow.Focus();
             return;
         }
 
-        _settingsWindow = new SettingsWindow(_settings);
+        // Pass the exact live MainWindow instance. Searching Application.Windows
+        // could return no surface during focus/topmost transitions and made the
+        // pinned-window list appear empty even while the live service held pins.
+        _settingsWindow = new SettingsWindow(_settings, _mainWindow)
+        {
+            Topmost = true
+        };
         _settingsWindow.SettingsChanged += OnSettingsWindowChanged;
         _settingsWindow.Closed += OnSettingsWindowClosed;
         _settingsWindow.Show();
@@ -188,9 +189,7 @@ public partial class App : Application
             System.IO.File.AppendAllText(logPath,
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Exception}\n\n");
         }
-        catch
-        {
-        }
+        catch { }
 
         e.Handled = true;
     }
