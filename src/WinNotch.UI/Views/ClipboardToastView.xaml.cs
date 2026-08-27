@@ -27,9 +27,6 @@ public partial class ClipboardToastView : UserControl
     private BitmapSource? _currentImage;
     private bool _isExpanded;
 
-    public event EventHandler<ContextActionRequestedEventArgs>? ActionRequested;
-    public event EventHandler<ContextSurfaceInteractionEventArgs>? InteractionChanged;
-
     public ClipboardToastView()
     {
         InitializeComponent();
@@ -105,6 +102,8 @@ public partial class ClipboardToastView : UserControl
             CollapseActions(notify: true);
         });
     }
+
+    private MainWindow? GetHostWindow() => Window.GetWindow(this) as MainWindow;
 
     private void ApplyClipboardAppearance(ClipboardContentType contentType, string? rawText)
     {
@@ -182,10 +181,7 @@ public partial class ClipboardToastView : UserControl
 
         _isExpanded = true;
         ActionPanel.Visibility = Visibility.Visible;
-        InteractionChanged?.Invoke(this, new ContextSurfaceInteractionEventArgs
-        {
-            IsExpanded = true
-        });
+        GetHostWindow()?.SetContextSurfaceExpanded(true);
     }
 
     private void Surface_MouseLeave(object sender, MouseEventArgs e)
@@ -203,12 +199,7 @@ public partial class ClipboardToastView : UserControl
         ActionPanel.Visibility = Visibility.Collapsed;
 
         if (notify)
-        {
-            InteractionChanged?.Invoke(this, new ContextSurfaceInteractionEventArgs
-            {
-                IsExpanded = false
-            });
-        }
+            GetHostWindow()?.SetContextSurfaceExpanded(false);
     }
 
     private void PrimaryActionButton_Click(object sender, RoutedEventArgs e)
@@ -217,11 +208,7 @@ public partial class ClipboardToastView : UserControl
             return;
 
         e.Handled = true;
-        ActionRequested?.Invoke(this, new ContextActionRequestedEventArgs
-        {
-            Action = _currentAction,
-            Image = _currentImage
-        });
+        GetHostWindow()?.ExecuteContextAction(_currentAction, _currentImage);
     }
 
     private static Brush? TryCreateColorBrush(string? rawText)
@@ -264,15 +251,4 @@ public partial class ClipboardToastView : UserControl
         if (elapsed.TotalHours < 1) return $"{(int)elapsed.TotalMinutes} dk";
         return timestamp.ToString("HH:mm");
     }
-}
-
-public sealed class ContextSurfaceInteractionEventArgs : EventArgs
-{
-    public bool IsExpanded { get; init; }
-}
-
-public sealed class ContextActionRequestedEventArgs : EventArgs
-{
-    public required ContextAction Action { get; init; }
-    public BitmapSource? Image { get; init; }
 }
