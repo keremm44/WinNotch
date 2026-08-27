@@ -23,19 +23,19 @@ public class StateMachineTests
     }
 
     [Fact]
-    public void QuickPeek_HasDedicatedPriority_AbovePersistentShelfAndMedia()
+    public void CommandHub_HasDedicatedPriority_AbovePersistentShelfAndMedia()
     {
-        Assert.Equal(StatePriority.QuickPeek, NotchStateMachine.PriorityFor(NotchState.QuickPeek));
-        Assert.True(StatePriority.QuickPeek > StatePriority.Shelf);
-        Assert.True(StatePriority.QuickPeek > StatePriority.Media);
-        Assert.True(StatePriority.QuickPeek < StatePriority.Clipboard);
+        Assert.Equal(StatePriority.CommandHub, NotchStateMachine.PriorityFor(NotchState.CommandHub));
+        Assert.True(StatePriority.CommandHub > StatePriority.Shelf);
+        Assert.True(StatePriority.CommandHub > StatePriority.Media);
+        Assert.True(StatePriority.CommandHub < StatePriority.Clipboard);
     }
 
     [Fact]
-    public void QuickPeek_CanBeInterruptedByActionableNotification()
+    public void CommandHub_CanBeInterruptedByActionableNotification()
     {
         var sm = new NotchStateMachine();
-        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+        sm.TryTransition(NotchState.CommandHub, StatePriority.CommandHub);
 
         var result = sm.TryTransition(NotchState.ScreenshotNotify, StatePriority.Screenshot);
 
@@ -44,10 +44,10 @@ public class StateMachineTests
     }
 
     [Fact]
-    public void QuickPeek_CanBeInterruptedByDragTarget()
+    public void CommandHub_CanBeInterruptedByDragTarget()
     {
         var sm = new NotchStateMachine();
-        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+        sm.TryTransition(NotchState.CommandHub, StatePriority.CommandHub);
 
         var result = sm.TryTransition(NotchState.DragActive, StatePriority.DropTarget);
 
@@ -110,10 +110,10 @@ public class StateMachineTests
     }
 
     [Fact]
-    public void QuickPeek_DefaultReturnState_IsIdle()
+    public void CommandHub_DefaultReturnState_IsIdle()
     {
         var sm = new NotchStateMachine();
-        var result = sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+        var result = sm.TryTransition(NotchState.CommandHub, StatePriority.CommandHub);
         Assert.Equal(NotchState.Idle, result.ReturnState);
     }
 
@@ -181,7 +181,7 @@ public class StateMachineTests
     [Theory]
     [InlineData(NotchState.Idle, 100, 22)]
     [InlineData(NotchState.Hover, 118, 28)]
-    [InlineData(NotchState.QuickPeek, 300, 82)]
+    [InlineData(NotchState.CommandHub, 360, 94)]
     [InlineData(NotchState.DragActive, 290, 62)]
     [InlineData(NotchState.DropResult, 340, 100)]
     [InlineData(NotchState.ShelfOccupied, 230, 40)]

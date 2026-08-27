@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private Views.DropZoneView? _dropZoneView;
     private Views.MediaWidgetView? _mediaWidgetView;
     private Views.ClipboardToastView? _clipboardToastView;
+    private Views.CommandHubView? _commandHubView;
     private readonly NotchMotionController _motionController;
 
     private bool _isDragging;
@@ -74,6 +75,31 @@ public partial class MainWindow : Window
         _mediaWidgetView.ApplyAppearance(_settings.Appearance);
         MediaWidgetHost.Content = _mediaWidgetView;
         return _mediaWidgetView;
+    }
+
+    private Views.CommandHubView EnsureCommandHubView()
+    {
+        if (_commandHubView != null) return _commandHubView;
+
+        _commandHubView = new Views.CommandHubView { Visibility = Visibility.Visible };
+        _commandHubView.ClipboardRequested += OnCommandHubClipboardRequested;
+        _commandHubView.ShelfRequested += OnCommandHubShelfRequested;
+        _commandHubView.SettingsRequested += OnCommandHubSettingsRequested;
+        _commandHubView.ApplyAppearance(_settings.Appearance);
+        _commandHubView.SetClipboardContext(_lastMeaningfulClipboard.Current);
+        _commandHubView.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
+        CommandHubHost.Content = _commandHubView;
+        return _commandHubView;
+    }
+
+    private void ReleaseCommandHubView()
+    {
+        if (_commandHubView == null) return;
+        _commandHubView.ClipboardRequested -= OnCommandHubClipboardRequested;
+        _commandHubView.ShelfRequested -= OnCommandHubShelfRequested;
+        _commandHubView.SettingsRequested -= OnCommandHubSettingsRequested;
+        CommandHubHost.Content = null;
+        _commandHubView = null;
     }
 
     private Views.ClipboardToastView EnsureClipboardToastView()
@@ -388,9 +414,9 @@ public partial class MainWindow : Window
             if (!_settings.ModuleB_Clipboard && !_settings.ModuleE_Screenshot)
             {
                 _lastMeaningfulClipboard.Clear();
-                QuickPeekView.SetContext(null);
+                _commandHubView?.SetClipboardContext(null);
             }
-            if (_currentState is NotchState.ClipboardNotify or NotchState.ScreenshotNotify or NotchState.QuickPeek)
+            if (_currentState is NotchState.ClipboardNotify or NotchState.ScreenshotNotify)
                 TransitionToState(GetPersistentState(), force: true);
         }
 
@@ -578,6 +604,13 @@ public partial class MainWindow : Window
             ? Visibility.Visible : Visibility.Collapsed;
         DropZoneHost.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
         MediaWidgetHost.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
+        bool commandHubVisible = state == NotchState.CommandHub;
+        CommandHubHost.Visibility = commandHubVisible ? Visibility.Visible : Visibility.Collapsed;
+        if (commandHubVisible)
+            EnsureCommandHubView();
+        else
+            ReleaseCommandHubView();
+
         bool contextVisible = state is NotchState.ClipboardNotify or NotchState.ScreenshotNotify;
         ClipboardToastHost.Visibility = contextVisible ? Visibility.Visible : Visibility.Collapsed;
         if (!contextVisible)
@@ -837,7 +870,8 @@ public partial class MainWindow : Window
             _stateReturnTimer.Tick -= StateReturnTimer_Tick;
             _stateReturnTimer = null;
         }
-        ReleaseQuickPeekLeaveTimer();
+        ReleaseCommandHubLeaveTimer();
+        ReleaseCommandHubView();
         ReleaseTemporaryHideTimer();
         _motionController.Dispose();
         ReleaseDropZoneView();

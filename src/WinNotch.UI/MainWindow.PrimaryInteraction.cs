@@ -13,14 +13,16 @@ namespace WinNotch.UI;
 public partial class MainWindow
 {
     private readonly LastMeaningfulClipboardContextCache _lastMeaningfulClipboard = new();
-    private System.Windows.Threading.DispatcherTimer? _quickPeekLeaveTimer;
+    private System.Windows.Threading.DispatcherTimer? _commandHubLeaveTimer;
 
     private void RootGrid_PrimaryMouseEnter(object sender, MouseEventArgs e)
     {
-        CancelQuickPeekLeave();
+        CancelCommandHubLeave();
         if (_isDragging || _isDraggingOut)
             return;
 
+        // Media remains exclusively hover-driven. A subsequent background click is
+        // resolved independently and opens Command Hub.
         if (_currentState == NotchState.MediaAmbient)
         {
             TransitionToState(NotchState.MediaActive, force: true);
@@ -44,8 +46,8 @@ public partial class MainWindow
 
         if (_currentState == NotchState.Hover)
             TransitionToState(GetPersistentState(), force: true);
-        else if (_currentState == NotchState.QuickPeek)
-            ScheduleQuickPeekCollapse();
+        else if (_currentState == NotchState.CommandHub)
+            ScheduleCommandHubCollapse();
         else if (_currentState == NotchState.ShelfExpanded)
             TransitionToState(NotchState.ShelfOccupied, force: true);
         else if (_currentState == NotchState.MediaActive)
@@ -57,21 +59,19 @@ public partial class MainWindow
         if (e.ChangedButton != MouseButton.Left || _isDragging || _isDraggingOut)
             return;
 
+        // Transport, shelf and hub buttons retain their own actions.
         if (IsInteractiveChild(e.OriginalSource as DependencyObject))
             return;
 
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(_currentState);
         switch (decision.Kind)
         {
-            case PrimaryInteractionKind.OpenQuickPeek:
-                CancelQuickPeekLeave();
-                QuickPeekView.SetContext(_lastMeaningfulClipboard.Current);
-                TransitionToState(NotchState.QuickPeek, force: true);
-                break;
-
-            case PrimaryInteractionKind.ExpandShelf:
-                if (decision.TargetState is NotchState target)
-                    TransitionToState(target, force: true);
+            case PrimaryInteractionKind.OpenCommandHub:
+                CancelCommandHubLeave();
+                Views.CommandHubView hub = EnsureCommandHubView();
+                hub.SetClipboardContext(_lastMeaningfulClipboard.Current);
+                hub.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
+                TransitionToState(NotchState.CommandHub, force: true);
                 break;
 
             case PrimaryInteractionKind.ExpandContextAction:
@@ -79,8 +79,8 @@ public partial class MainWindow
                 break;
 
             case PrimaryInteractionKind.CollapseToPersistent:
-                CancelQuickPeekLeave();
-                TransitionToState(GetPersistentState(), force: true);
+                CancelCommandHubLeave();
+                TransitionToState(GetStateAfterCommandHub(), force: true);
                 break;
 
             case PrimaryInteractionKind.None:
@@ -94,13 +94,8 @@ public partial class MainWindow
     private void MainWindow_PrimarySizeChanged(object sender, SizeChangedEventArgs e)
     {
         // SizeChanged can fire while XAML is still constructing named children.
-        if (QuickPeekView == null || RootGrid == null)
+        if (RootGrid == null)
             return;
-
-        bool quickPeek = _currentState == NotchState.QuickPeek;
-        QuickPeekView.Visibility = quickPeek ? Visibility.Visible : Visibility.Collapsed;
-        if (quickPeek)
-            QuickPeekView.SetContext(_lastMeaningfulClipboard.Current);
 
         UpdatePrimaryCursor(_currentState);
     }
@@ -115,14 +110,13 @@ public partial class MainWindow
             context.PreviewText,
             context.Timestamp);
 
-        if (_currentState == NotchState.QuickPeek)
-            QuickPeekView.SetContext(_lastMeaningfulClipboard.Current);
+        _commandHubView?.SetClipboardContext(_lastMeaningfulClipboard.Current);
     }
 
-    private void OnQuickPeekContextRequested(object? sender, EventArgs e)
+    private void OnCommandHubClipboardRequested(object? sender, EventArgs e)
     {
         LastMeaningfulClipboardContext? context = _lastMeaningfulClipboard.Current;
-        if (_currentState != NotchState.QuickPeek || context == null)
+        if (_currentState != NotchState.CommandHub || context == null)
             return;
 
         var notification = new ClipboardNotification
@@ -142,37 +136,62 @@ public partial class MainWindow
         EnsureClipboardToastView().RevealActionsFromPrimaryClick();
     }
 
-    private void ScheduleQuickPeekCollapse()
+    private void OnCommandHubShelfRequested(object? sender, EventArgs e)
     {
-        CancelQuickPeekLeave();
-        if (_quickPeekLeaveTimer == null)
-        {
-            _quickPeekLeaveTimer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(Constants.QuickPeekLeaveGraceMs)
-            };
-            _quickPeekLeaveTimer.Tick += QuickPeekLeaveTimer_Tick;
-        }
-        _quickPeekLeaveTimer.Start();
+        if (_currentState != NotchState.CommandHub || _dropZoneView?.HasItems != true)
+            return;
+
+        TransitionToState(NotchState.ShelfExpanded, force: true);
     }
 
-    private void QuickPeekLeaveTimer_Tick(object? sender, EventArgs e)
+    private void OnCommandHubSettingsRequested(object? sender, EventArgs e)
     {
-        _quickPeekLeaveTimer?.Stop();
-        if (_currentState != NotchState.QuickPeek || RootGrid.IsMouseOver)
+        if (_currentState != NotchState.CommandHub)
+            return;
+
+        TransitionToState(GetPersistentState(), force: true);
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private NotchState GetStateAfterCommandHub()
+    {
+        NotchState persistent = GetPersistentState();
+        return persistent == NotchState.MediaAmbient && RootGrid.IsMouseOver
+            ? NotchState.MediaActive
+            : persistent;
+    }
+
+    private void ScheduleCommandHubCollapse()
+    {
+        CancelCommandHubLeave();
+        if (_commandHubLeaveTimer == null)
+        {
+            _commandHubLeaveTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(Constants.CommandHubLeaveGraceMs)
+            };
+            _commandHubLeaveTimer.Tick += CommandHubLeaveTimer_Tick;
+        }
+        _commandHubLeaveTimer.Start();
+    }
+
+    private void CommandHubLeaveTimer_Tick(object? sender, EventArgs e)
+    {
+        _commandHubLeaveTimer?.Stop();
+        if (_currentState != NotchState.CommandHub || RootGrid.IsMouseOver)
             return;
 
         TransitionToState(GetPersistentState(), force: true);
     }
 
-    private void CancelQuickPeekLeave() => _quickPeekLeaveTimer?.Stop();
+    private void CancelCommandHubLeave() => _commandHubLeaveTimer?.Stop();
 
-    private void ReleaseQuickPeekLeaveTimer()
+    private void ReleaseCommandHubLeaveTimer()
     {
-        if (_quickPeekLeaveTimer == null) return;
-        _quickPeekLeaveTimer.Stop();
-        _quickPeekLeaveTimer.Tick -= QuickPeekLeaveTimer_Tick;
-        _quickPeekLeaveTimer = null;
+        if (_commandHubLeaveTimer == null) return;
+        _commandHubLeaveTimer.Stop();
+        _commandHubLeaveTimer.Tick -= CommandHubLeaveTimer_Tick;
+        _commandHubLeaveTimer = null;
     }
 
     private void SetIdleHoverAffordance(bool hovered)

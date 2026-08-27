@@ -8,29 +8,24 @@ public class PrimaryInteractionTests
     [Theory]
     [InlineData(NotchState.Idle)]
     [InlineData(NotchState.Hover)]
-    public void IdleLikeStates_OpenQuickPeek(NotchState state)
-    {
-        PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
-        Assert.Equal(PrimaryInteractionKind.OpenQuickPeek, decision.Kind);
-        Assert.Equal(NotchState.QuickPeek, decision.TargetState);
-    }
-
-    [Theory]
+    [InlineData(NotchState.MediaAmbient)]
+    [InlineData(NotchState.MediaActive)]
     [InlineData(NotchState.ShelfOccupied)]
+    [InlineData(NotchState.ShelfExpanded)]
     [InlineData(NotchState.DropResult)]
-    public void ShelfStates_ExpandShelf(NotchState state)
+    public void UnclaimedPrimaryClick_OpensCommandHub(NotchState state)
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
-        Assert.Equal(PrimaryInteractionKind.ExpandShelf, decision.Kind);
-        Assert.Equal(NotchState.ShelfExpanded, decision.TargetState);
+        Assert.Equal(PrimaryInteractionKind.OpenCommandHub, decision.Kind);
+        Assert.Equal(NotchState.CommandHub, decision.TargetState);
     }
 
     [Fact]
-    public void MediaAmbient_IgnoresPrimaryClick_BecauseExpansionIsHoverDriven()
+    public void MediaClick_OpensHub_WithoutBecomingAMediaExpansionCommand()
     {
-        PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(NotchState.MediaAmbient);
-        Assert.Equal(PrimaryInteractionKind.None, decision.Kind);
-        Assert.Null(decision.TargetState);
+        PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(NotchState.MediaActive);
+        Assert.Equal(PrimaryInteractionKind.OpenCommandHub, decision.Kind);
+        Assert.Equal(NotchState.CommandHub, decision.TargetState);
     }
 
     [Theory]
@@ -43,21 +38,18 @@ public class PrimaryInteractionTests
         Assert.Equal(state, decision.TargetState);
     }
 
-    [Theory]
-    [InlineData(NotchState.QuickPeek)]
-    [InlineData(NotchState.ShelfExpanded)]
-    public void ClickDrivenExpandedStates_CollapseToPersistent(NotchState state)
+    [Fact]
+    public void CommandHub_ClickCollapsesToPersistentState()
     {
-        PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
+        PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(NotchState.CommandHub);
         Assert.Equal(PrimaryInteractionKind.CollapseToPersistent, decision.Kind);
         Assert.Null(decision.TargetState);
     }
 
     [Theory]
-    [InlineData(NotchState.MediaActive)]
     [InlineData(NotchState.DragActive)]
     [InlineData(NotchState.ShelfDraggingOut)]
-    public void HoverAndDragStates_IgnorePrimaryClick(NotchState state)
+    public void DragOwnedStates_IgnorePrimaryClick(NotchState state)
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
         Assert.Equal(PrimaryInteractionKind.None, decision.Kind);

@@ -7,7 +7,7 @@ public enum NotchState
 {
     Idle,
     Hover,
-    QuickPeek,
+    CommandHub,
     DragActive,
     DropResult,
     ShelfOccupied,

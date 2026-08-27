@@ -2,32 +2,28 @@ namespace WinNotch.Common;
 
 /// <summary>
 /// Pure decision layer for the notch's primary (left-click) interaction.
-/// A primary click reveals or expands context; it never executes a destructive/external action directly.
+/// Hover owns media expansion, drag owns File Shelf, and an unclaimed primary click
+/// opens the compact Command Hub.
 /// </summary>
 public static class PrimaryInteractionController
 {
     public static PrimaryInteractionDecision Resolve(NotchState state) => state switch
     {
-        NotchState.Idle or NotchState.Hover
-            => new(PrimaryInteractionKind.OpenQuickPeek, NotchState.QuickPeek),
+        NotchState.Idle or NotchState.Hover or
+        NotchState.MediaAmbient or NotchState.MediaActive or
+        NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.DropResult
+            => new(PrimaryInteractionKind.OpenCommandHub, NotchState.CommandHub),
 
-        NotchState.ShelfOccupied or NotchState.DropResult
-            => new(PrimaryInteractionKind.ExpandShelf, NotchState.ShelfExpanded),
-
-        // Media expansion is hover-driven; clicking the ambient surface must not
-        // create a second, competing expansion path.
-        NotchState.MediaAmbient
-            => new(PrimaryInteractionKind.None, null),
-
+        // Notifications remain contextual: their background click reveals the
+        // already-resolved action rather than replacing an active notification.
         NotchState.ClipboardNotify or NotchState.ScreenshotNotify
             => new(PrimaryInteractionKind.ExpandContextAction, state),
 
-        NotchState.QuickPeek or NotchState.ShelfExpanded
+        NotchState.CommandHub
             => new(PrimaryInteractionKind.CollapseToPersistent, null),
 
-        // Media is entirely hover-driven. Background clicks neither expand nor
-        // collapse it; transport buttons remain independently interactive.
-        NotchState.MediaActive
+        // Drag gestures own these states exclusively.
+        NotchState.DragActive or NotchState.ShelfDraggingOut
             => new(PrimaryInteractionKind.None, null),
 
         _ => new(PrimaryInteractionKind.None, null)
@@ -37,8 +33,7 @@ public static class PrimaryInteractionController
 public enum PrimaryInteractionKind
 {
     None,
-    OpenQuickPeek,
-    ExpandShelf,
+    OpenCommandHub,
     ExpandContextAction,
     CollapseToPersistent
 }

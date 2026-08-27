@@ -90,9 +90,8 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <views:QuickPeekView x:Name="QuickPeekView"
-                                     Visibility="Collapsed"
-                                     ContextRequested="OnQuickPeekContextRequested"/>
+                <ContentControl x:Name="CommandHubHost"
+                                Visibility="Collapsed"/>
 
                 <!-- Feature visual trees are materialized only when their module is
                      actually used; disabled modules retain no templates or timers. -->
