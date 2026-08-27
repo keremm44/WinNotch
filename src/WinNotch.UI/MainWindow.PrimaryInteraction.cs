@@ -5,6 +5,8 @@ using System.Windows.Media.Media3D;
 using WinNotch.Common;
 using WinNotch.Core.Services;
 
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+
 namespace WinNotch.UI;
 
 public partial class MainWindow
