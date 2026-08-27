@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using WinNotch.Common;
 
+using UserControl = System.Windows.Controls.UserControl;
+
 namespace WinNotch.UI.Views;
 
 public partial class QuickPeekView : UserControl
