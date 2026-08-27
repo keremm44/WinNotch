@@ -8,8 +8,6 @@
 // When hidden (Collapsed), zero layout/render cost.
 
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 using WinNotch.Core.Services;
 
 using UserControl = System.Windows.Controls.UserControl;
@@ -24,19 +22,8 @@ public partial class MediaWidgetView : UserControl
 {
     private MediaSessionInfo? _currentSession;
 
-    /// <summary>
-    /// Fired when user clicks play/pause.
-    /// </summary>
     public event EventHandler? PlayPauseRequested;
-
-    /// <summary>
-    /// Fired when user clicks next track.
-    /// </summary>
     public event EventHandler? NextTrackRequested;
-
-    /// <summary>
-    /// Fired when user clicks previous track.
-    /// </summary>
     public event EventHandler? PreviousTrackRequested;
 
     public MediaWidgetView()
@@ -44,9 +31,6 @@ public partial class MediaWidgetView : UserControl
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Updates the display with new session info.
-    /// </summary>
     public void SetSessionInfo(MediaSessionInfo session)
     {
         _currentSession = session;
@@ -55,35 +39,30 @@ public partial class MediaWidgetView : UserControl
         {
             TitleText.Text = session.Title;
             ArtistText.Text = session.Artist;
-
-            // Update play/pause button icon
             PlayPauseButton.Content = session.IsPlaying ? "⏸" : "▶";
-
-            // Update album art
-            if (session.AlbumArt != null)
-            {
-                AlbumArtImage.Source = session.AlbumArt;
-            }
-            else
-            {
-                // Default placeholder
-                AlbumArtImage.Source = null;
-            }
+            AlbumArtImage.Source = session.AlbumArt;
         });
     }
 
+    private MainWindow? GetHostWindow() => Window.GetWindow(this) as MainWindow;
+
     private void PlayPauseButton_Click(object sender, RoutedEventArgs e)
     {
+        // Keep the public events for future consumers, but make the current
+        // WinNotch view functional even when no external handler is attached.
+        GetHostWindow()?.MediaService?.TogglePlayPause();
         PlayPauseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void NextButton_Click(object sender, RoutedEventArgs e)
     {
+        GetHostWindow()?.MediaService?.NextTrack();
         NextTrackRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void PrevButton_Click(object sender, RoutedEventArgs e)
     {
+        GetHostWindow()?.MediaService?.PreviousTrack();
         PreviousTrackRequested?.Invoke(this, EventArgs.Empty);
     }
 }
