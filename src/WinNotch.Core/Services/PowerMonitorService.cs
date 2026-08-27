@@ -52,7 +52,7 @@ public sealed partial class PowerMonitorService : IDisposable
         public byte ACLineStatus;       // 0=Offline, 1=Online, 255=Unknown
         public byte BatteryFlag;        // Bit flags: 1=High, 2=Low, 4=Critical, 8=Charging, 127=NoBattery, 255=Unknown
         public byte BatteryLifePercent; // 0-100, 255=Unknown
-        public byte Reserved1;
+        public byte SystemStatusFlag;   // 0=Battery Saver off, 1=Battery Saver on
         public int BatteryLifeTime;     // Seconds remaining, -1=Unknown
         public int BatteryFullLifeTime; // Seconds to full charge, -1=Unknown
     }
@@ -98,7 +98,7 @@ public sealed partial class PowerMonitorService : IDisposable
             if (GetSystemPowerStatus(out var status))
             {
                 bool isOnBattery = status.ACLineStatus == 0;
-                bool isBatterySaver = (status.BatteryFlag & 0x10) != 0; // Bit 4 = Battery Saver active
+                bool isBatterySaver = status.SystemStatusFlag == 1;
 
                 _currentMode = (!isOnBattery) ? PowerMode.HighPerformance
                              : (isBatterySaver) ? PowerMode.BatterySaver

@@ -150,8 +150,11 @@ public partial class MainWindow : Window
 
         if (msg == User32.WM_NCHITTEST)
         {
-            int x = (short)(lParam.ToInt32() & 0xFFFF);
-            int y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+            // LPARAM carries signed 16-bit screen coordinates in its low 32 bits.
+            // IntPtr.ToInt32 can overflow on 64-bit Windows for negative-monitor Y.
+            long packedPoint = lParam.ToInt64();
+            int x = (short)(packedPoint & 0xFFFF);
+            int y = (short)((packedPoint >> 16) & 0xFFFF);
             var point = new User32.POINT { X = x, Y = y };
             User32.ScreenToClient(_hWnd, ref point);
 

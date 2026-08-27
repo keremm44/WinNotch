@@ -29,7 +29,7 @@ Window pinning / arbitrary external-window `TOPMOST` management is intentionally
 
 ## Performance
 
-WinNotch is designed to do no continuous work while idle beyond the small fullscreen reliability check used in Auto visibility mode. Actual memory depends on the enabled integrations and the WPF/.NET runtime, so the project does not claim a fixed 15 MB process limit.
+WinNotch is designed to do minimal continuous work while idle: a small fullscreen reliability check runs in Auto visibility mode, and the opt-in media module uses a low-frequency SMTC recovery check only while no session is selected. Actual memory depends on the enabled integrations and the WPF/.NET runtime, so the project does not claim a fixed 15 MB process limit.
 
 Use a direct Release build when measuring memory or CPU. The Settings diagnostics panel and Windows CI smoke test can be used for comparison.
 
