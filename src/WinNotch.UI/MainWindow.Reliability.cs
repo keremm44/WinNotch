@@ -12,6 +12,7 @@ public partial class MainWindow
 {
     private DispatcherTimer? _fullscreenFallbackTimer;
     private bool _reliabilityLayerInitialized;
+    private bool _hiddenForFullscreen;
 
     protected override void OnContentRendered(EventArgs e)
     {
@@ -23,6 +24,8 @@ public partial class MainWindow
 
         _fullscreenFallbackTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
+            // WinEvents are primary. This catches delayed Chromium/DWM transitions
+            // and exclusive-fullscreen changes which do not emit a foreground event.
             Interval = TimeSpan.FromMilliseconds(650)
         };
         _fullscreenFallbackTimer.Tick += FullscreenFallbackTimer_Tick;
@@ -49,28 +52,36 @@ public partial class MainWindow
 
     private void VerifyAutomaticFullscreenVisibility()
     {
-        if (!_initialized || _manuallyHidden) return;
-        if (!string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase))
+        if (!_initialized ||
+            !string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase))
             return;
 
         IntPtr foreground = User32.GetForegroundWindow();
-        if (foreground == IntPtr.Zero || foreground == _hWnd) return;
+        bool fullscreen = foreground != IntPtr.Zero && foreground != _hWnd &&
+                          WindowHookManager.IsWindowFullscreen(foreground);
+        ApplyAutomaticFullscreenVisibility(fullscreen);
+    }
 
-        string className = WindowHookManager.GetWindowClassName(foreground);
-        if (className is "Shell_TrayWnd" or "WorkerW" or "Shell_SecondaryTrayWnd")
+    private void ApplyAutomaticFullscreenVisibility(bool fullscreen)
+    {
+        if (!string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase))
             return;
-
-        bool fullscreen = WindowHookManager.IsWindowFullscreen(foreground);
 
         if (fullscreen)
         {
-            if (Visibility == Visibility.Visible)
+            _hiddenForFullscreen = true;
+            if (Visibility != Visibility.Hidden)
                 Visibility = Visibility.Hidden;
+            return;
         }
-        else if (Visibility == Visibility.Hidden)
-        {
+
+        // Desktop/taskbar foreground is explicitly non-fullscreen. Do not return
+        // early for shell classes: that used to leave the notch hidden forever after
+        // a fullscreen window closed or lost focus.
+        bool wasHiddenForFullscreen = _hiddenForFullscreen;
+        _hiddenForFullscreen = false;
+        if (!_manuallyHidden && (wasHiddenForFullscreen || Visibility != Visibility.Visible))
             Visibility = Visibility.Visible;
-        }
     }
 
     private void Reliability_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)

@@ -1,5 +1,5 @@
 // WinNotch.Core/Services/MediaSessionService.cs
-// Event-driven SMTC integration with capability-aware playback controls.
+// Event-driven SMTC integration with stable, playback-aware session selection.
 
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -55,13 +55,9 @@ public sealed class MediaSessionService : IDisposable
                 return;
             }
 
-            _sessionManager.CurrentSessionChanged += OnCurrentSessionChanged;
-
-            GlobalSystemMediaTransportControlsSession? session = SelectBestSession(_sessionManager);
-            if (session != null)
-                AttachSession(session);
-            else
-                NotifyNoSession();
+            _sessionManager.CurrentSessionChanged += OnManagerSessionChanged;
+            _sessionManager.SessionsChanged += OnManagerSessionsChanged;
+            ReselectSession(_sessionManager, clearWhenEmpty: true);
         }
         catch (Exception ex)
         {
@@ -71,64 +67,109 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
-    private void OnCurrentSessionChanged(
+    private void OnManagerSessionChanged(
         GlobalSystemMediaTransportControlsSessionManager sender,
         CurrentSessionChangedEventArgs args)
     {
-        if (_disposed) return;
-
-        GlobalSystemMediaTransportControlsSession? session = SelectBestSession(sender);
-        if (session != null)
-            AttachSession(session);
-        else
-        {
-            DetachSession();
-            NotifyNoSession();
-        }
+        // CurrentSessionChanged is also raised for foreground/focus churn. During
+        // that transition GetSessions can briefly be empty, which is not evidence
+        // that the selected media ended.
+        ReselectSession(sender, clearWhenEmpty: false);
     }
 
-    private static GlobalSystemMediaTransportControlsSession? SelectBestSession(
+    private void OnManagerSessionsChanged(
+        GlobalSystemMediaTransportControlsSessionManager sender,
+        SessionsChangedEventArgs args)
+        => ReselectSession(sender, clearWhenEmpty: true);
+
+    private void ReselectSession(
+        GlobalSystemMediaTransportControlsSessionManager manager,
+        bool clearWhenEmpty)
+    {
+        if (_disposed) return;
+
+        GlobalSystemMediaTransportControlsSession? session = SelectBestSession(manager);
+        if (session != null)
+        {
+            AttachSession(session);
+            return;
+        }
+
+        if (!clearWhenEmpty && _currentSession != null)
+            return;
+
+        DetachSession();
+        NotifyNoSession();
+    }
+
+    private GlobalSystemMediaTransportControlsSession? SelectBestSession(
         GlobalSystemMediaTransportControlsSessionManager manager)
     {
         try
         {
-            GlobalSystemMediaTransportControlsSession? current = manager.GetCurrentSession();
-            if (current != null)
-                return current;
-
             IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions = manager.GetSessions();
-            GlobalSystemMediaTransportControlsSession? firstValid = null;
+            if (sessions.Count == 0) return null;
 
-            foreach (GlobalSystemMediaTransportControlsSession session in sessions)
+            GlobalSystemMediaTransportControlsSession? managerCurrent = manager.GetCurrentSession();
+            GlobalSystemMediaTransportControlsSession? retained = FindSession(sessions, _currentSession);
+            GlobalSystemMediaTransportControlsSession? current = FindSession(sessions, managerCurrent);
+
+            // Foreground changes also change SMTC's "current" session. They must not
+            // evict media which is still playing. Prefer playing sessions, retaining
+            // the selected one to avoid title/art flicker between equivalent sessions.
+            if (current != null && IsPlaying(current)) return current;
+            if (retained != null && IsPlaying(retained)) return retained;
+
+            foreach (GlobalSystemMediaTransportControlsSession candidate in sessions)
             {
-                firstValid ??= session;
-                try
-                {
-                    if (session.GetPlaybackInfo().PlaybackStatus ==
-                        GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
-                    {
-                        return session;
-                    }
-                }
-                catch
-                {
-                    // A session can disappear while the manager is enumerating it.
-                }
+                if (IsPlaying(candidate)) return candidate;
             }
 
-            return firstValid;
+            // A paused session is still actionable media. Keep it selected until it
+            // actually disappears from the manager rather than tying it to focus.
+            return retained ?? current ?? sessions[0];
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MediaSessionService] Session selection failed: {ex.Message}");
+            return _currentSession;
+        }
+    }
+
+    private static GlobalSystemMediaTransportControlsSession? FindSession(
+        IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions,
+        GlobalSystemMediaTransportControlsSession? wanted)
+    {
+        if (wanted == null) return null;
+
+        foreach (GlobalSystemMediaTransportControlsSession candidate in sessions)
+        {
+            if (ReferenceEquals(candidate, wanted) || candidate.Equals(wanted))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private static bool IsPlaying(GlobalSystemMediaTransportControlsSession session)
+    {
+        try
+        {
+            return session.GetPlaybackInfo().PlaybackStatus ==
+                   GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
         }
         catch
         {
-            return null;
+            return false;
         }
     }
 
     private void AttachSession(GlobalSystemMediaTransportControlsSession session)
     {
-        if (ReferenceEquals(_currentSession, session))
+        if (ReferenceEquals(_currentSession, session) || _currentSession?.Equals(session) == true)
         {
-            _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
+            _ = UpdateSessionInfoAsync(_currentSession, Interlocked.Increment(ref _updateVersion));
             return;
         }
 
@@ -160,7 +201,7 @@ public sealed class MediaSessionService : IDisposable
         GlobalSystemMediaTransportControlsSession sender,
         MediaPropertiesChangedEventArgs args)
     {
-        if (_disposed || !ReferenceEquals(sender, _currentSession)) return;
+        if (_disposed || !IsSelected(sender)) return;
         _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
     }
 
@@ -168,16 +209,24 @@ public sealed class MediaSessionService : IDisposable
         GlobalSystemMediaTransportControlsSession sender,
         PlaybackInfoChangedEventArgs args)
     {
-        if (_disposed || !ReferenceEquals(sender, _currentSession)) return;
-        _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
+        if (_disposed || !IsSelected(sender)) return;
+
+        // A stop/pause can make another session the best candidate. Re-evaluate the
+        // manager rather than blindly publishing the formerly selected session.
+        if (_sessionManager != null)
+            ReselectSession(_sessionManager, clearWhenEmpty: false);
+        else
+            _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
     }
+
+    private bool IsSelected(GlobalSystemMediaTransportControlsSession session)
+        => ReferenceEquals(session, _currentSession) || session.Equals(_currentSession);
 
     private void OnTimelinePropertiesChanged(
         GlobalSystemMediaTransportControlsSession sender,
         TimelinePropertiesChangedEventArgs args)
     {
-        if (_disposed || !ReferenceEquals(sender, _currentSession) || _lastInfo == null)
-            return;
+        if (_disposed || !IsSelected(sender) || _lastInfo == null) return;
 
         try
         {
@@ -220,9 +269,7 @@ public sealed class MediaSessionService : IDisposable
         try
         {
             var mediaProperties = await session.TryGetMediaPropertiesAsync();
-            if (_disposed || version != Volatile.Read(ref _updateVersion) ||
-                !ReferenceEquals(session, _currentSession))
-                return;
+            if (!CanPublish(session, version)) return;
 
             var playbackInfo = session.GetPlaybackInfo();
             var controls = playbackInfo.Controls;
@@ -232,9 +279,7 @@ public sealed class MediaSessionService : IDisposable
             if (mediaProperties.Thumbnail != null)
                 albumArt = await ReadThumbnailAsync(mediaProperties.Thumbnail);
 
-            if (_disposed || version != Volatile.Read(ref _updateVersion) ||
-                !ReferenceEquals(session, _currentSession))
-                return;
+            if (!CanPublish(session, version)) return;
 
             var info = new MediaSessionInfo
             {
@@ -262,8 +307,15 @@ public sealed class MediaSessionService : IDisposable
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[MediaSessionService] Error reading session info: {ex.Message}");
+
+            // SessionsChanged/CurrentSessionChanged will reselect if this WinRT
+            // object was removed. Keep the last published info during transient
+            // property-read failures instead of flashing a false no-session state.
         }
     }
+
+    private bool CanPublish(GlobalSystemMediaTransportControlsSession session, long version)
+        => !_disposed && version == Volatile.Read(ref _updateVersion) && IsSelected(session);
 
     private static async Task<BitmapSource?> ReadThumbnailAsync(IRandomAccessStreamReference streamRef)
     {
@@ -361,7 +413,8 @@ public sealed class MediaSessionService : IDisposable
 
         if (_sessionManager != null)
         {
-            _sessionManager.CurrentSessionChanged -= OnCurrentSessionChanged;
+            _sessionManager.CurrentSessionChanged -= OnManagerSessionChanged;
+            _sessionManager.SessionsChanged -= OnManagerSessionsChanged;
             _sessionManager = null;
         }
 

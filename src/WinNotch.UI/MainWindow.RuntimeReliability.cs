@@ -1,6 +1,4 @@
-using System.Windows;
 using WinNotch.Common;
-using WinNotch.Core.Interop;
 
 namespace WinNotch.UI;
 
@@ -50,33 +48,7 @@ public partial class MainWindow
         if (!_initialized)
             return;
 
-        VerifyAutomaticVisibility();
         VerifyPersistentMediaState();
-    }
-
-    private void VerifyAutomaticVisibility()
-    {
-        if (!string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase))
-            return;
-
-        IntPtr foreground = User32.GetForegroundWindow();
-        if (foreground == IntPtr.Zero || foreground == _hWnd)
-            return;
-
-        string className = WindowHookManager.GetWindowClassName(foreground);
-        if (className is "Shell_TrayWnd" or "WorkerW" or "Shell_SecondaryTrayWnd")
-            return;
-
-        bool fullscreen = WindowHookManager.IsWindowFullscreen(foreground);
-        if (fullscreen)
-        {
-            if (Visibility == Visibility.Visible)
-                Visibility = Visibility.Hidden;
-            return;
-        }
-
-        if (!_manuallyHidden && Visibility == Visibility.Hidden)
-            Visibility = Visibility.Visible;
     }
 
     private void VerifyPersistentMediaState()

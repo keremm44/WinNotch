@@ -130,7 +130,8 @@ public sealed class WindowHookManager : IDisposable
 
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
-        if (hWnd == IntPtr.Zero) return false;
+        if (hWnd == IntPtr.Zero || !User32.IsWindowVisible(hWnd) || User32.IsIconic(hWnd))
+            return false;
 
         try
         {
@@ -141,29 +142,58 @@ public sealed class WindowHookManager : IDisposable
             if (!GetMonitorInfo(hMonitor, ref mi)) return false;
 
             const int tolerancePx = 8;
-
-            if (DwmApi.DwmGetWindowAttribute(
+            bool frameCoversMonitor =
+                DwmApi.DwmGetWindowAttribute(
                     hWnd,
                     DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
                     out DwmApi.RECT frameRect,
-                    (uint)Marshal.SizeOf<DwmApi.RECT>()) &&
+                    (uint)Marshal.SizeOf<DwmApi.RECT>()) == 0 &&
                 CoversMonitor(frameRect.Left, frameRect.Top, frameRect.Right, frameRect.Bottom,
-                    mi.rcMonitor, tolerancePx))
-            {
-                return true;
-            }
+                    mi.rcMonitor, tolerancePx);
 
-            // Chromium/DirectComposition transitions can briefly report stale DWM
-            // frame bounds. The top-level window rect is a reliable second source.
-            return User32.GetWindowRect(hWnd, out var windowRect) &&
-                   CoversMonitor(
-                       windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
-                       mi.rcMonitor, tolerancePx);
+            // Chromium/DirectComposition can update DWM bounds one composition after
+            // its HWND. Accept either source, then distinguish ordinary maximize by
+            // checking whether the actual client content fills the monitor.
+            bool windowCoversMonitor = User32.GetWindowRect(hWnd, out var windowRect) &&
+                CoversMonitor(windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
+                    mi.rcMonitor, tolerancePx);
+
+            if (!frameCoversMonitor && !windowCoversMonitor) return false;
+
+            int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
+            const int WS_MAXIMIZE = 0x01000000;
+            const int WS_CAPTION = 0x00C00000;
+            const int WS_THICKFRAME = 0x00040000;
+            bool ordinaryMaximizeCandidate =
+                (style & WS_MAXIMIZE) != 0 && (style & (WS_CAPTION | WS_THICKFRAME)) != 0;
+
+            // A normal maximized window's outer DWM frame can cover rcMonitor too,
+            // especially with an auto-hidden taskbar. Its client content still starts
+            // below the title/tab bar. F11 Chromium/video has a monitor-filling client.
+            if (ordinaryMaximizeCandidate && !ClientCoversMonitor(hWnd, mi.rcMonitor, tolerancePx))
+                return false;
+
+            return true;
         }
         catch
         {
             return false;
         }
+    }
+
+    private static bool ClientCoversMonitor(IntPtr hWnd, User32.RECT monitorBounds, int tolerancePx)
+    {
+        if (!User32.GetClientRect(hWnd, out var client)) return false;
+
+        var topLeft = new User32.POINT { X = client.Left, Y = client.Top };
+        var bottomRight = new User32.POINT { X = client.Right, Y = client.Bottom };
+        if (!User32.ClientToScreen(hWnd, ref topLeft) ||
+            !User32.ClientToScreen(hWnd, ref bottomRight))
+            return false;
+
+        return CoversMonitor(
+            topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y,
+            monitorBounds, tolerancePx);
     }
 
     private static bool CoversMonitor(

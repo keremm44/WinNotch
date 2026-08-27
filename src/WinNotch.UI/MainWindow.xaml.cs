@@ -329,23 +329,24 @@ public partial class MainWindow : Window
 
         if (string.Equals(_settings.VisibilityMode, "Hidden", StringComparison.OrdinalIgnoreCase))
         {
+            _hiddenForFullscreen = false;
             Visibility = Visibility.Hidden;
             return;
         }
 
         if (string.Equals(_settings.VisibilityMode, "AlwaysShow", StringComparison.OrdinalIgnoreCase))
         {
+            _hiddenForFullscreen = false;
             if (!_manuallyHidden)
                 Visibility = Visibility.Visible;
             return;
         }
 
-        _windowHookManager?.RefreshForegroundWindow();
+        VerifyAutomaticFullscreenVisibility();
     }
 
     private bool ShouldShowMediaAmbient()
-        => _hasActiveMediaSession &&
-           !string.Equals(_settings.ReactionLevel, "Quiet", StringComparison.OrdinalIgnoreCase);
+        => _settings.ModuleC_Media && _hasActiveMediaSession;
 
     private void RootGrid_MouseEnter(object sender, MouseEventArgs e)
     {
@@ -528,34 +529,12 @@ public partial class MainWindow : Window
     {
         if (!_initialized) return;
 
-        if (string.Equals(_settings.VisibilityMode, "Hidden", StringComparison.OrdinalIgnoreCase))
-        {
-            Dispatcher.Invoke(() => Visibility = Visibility.Hidden);
-            return;
-        }
-
-        if (string.Equals(_settings.VisibilityMode, "AlwaysShow", StringComparison.OrdinalIgnoreCase))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (!_manuallyHidden)
-                    Visibility = Visibility.Visible;
-            });
-            return;
-        }
-
-        if (e.ClassName is "Shell_TrayWnd" or "WorkerW" or "Shell_SecondaryTrayWnd")
-            return;
-
-        bool isFullscreen = WindowHookManager.IsWindowFullscreen(e.WindowHandle);
-
-        Dispatcher.Invoke(() =>
-        {
-            if (isFullscreen && Visibility == Visibility.Visible)
-                Visibility = Visibility.Hidden;
-            else if (!isFullscreen && Visibility == Visibility.Hidden && !_manuallyHidden)
-                Visibility = Visibility.Visible;
-        });
+        // WinEvent callbacks run outside WPF's dispatcher. Resolve the current
+        // foreground window on the UI turn instead of trusting an event HWND which
+        // may already be stale during Chromium's two-step fullscreen transition.
+        Dispatcher.BeginInvoke(
+            () => VerifyAutomaticFullscreenVisibility(),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void OnClipboardNotification(object? sender, ClipboardNotification e)
@@ -647,6 +626,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            bool hadSession = _hasActiveMediaSession;
             _hasActiveMediaSession = e.Session.HasSession;
 
             if (_hasActiveMediaSession)
@@ -656,32 +636,24 @@ public partial class MainWindow : Window
                     ? "Medya"
                     : e.Session.Title;
 
-                if (!DropZoneView.HasItems && !_isDraggingOut)
-                {
-                    var decision = _attentionPolicy.ClassifyMediaChange(
-                        true,
-                        _settings.ReactionLevel);
+                if (DropZoneView.HasItems || _isDragging || _isDraggingOut ||
+                    !ShouldShowMediaAmbient())
+                    return;
 
-                    if (decision.Level == AttentionLevel.Silent)
-                    {
-                        if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
-                            TransitionToState(NotchState.Idle, force: true);
-                    }
-                    else
-                    {
-                        TransitionToState(
-                            decision.TargetState,
-                            decision.Priority,
-                            decision.Duration,
-                            GetPersistentState());
-                    }
-                }
+                // Timeline/playback/property updates are data updates, not UI state
+                // transitions. In particular they must never collapse MediaActive.
+                // Establish ambient only when media first appears or when an idle-like
+                // state needs reconciliation; left click is the sole ambient expand.
+                if (_currentState is NotchState.Idle or NotchState.Hover)
+                    TransitionToState(NotchState.MediaAmbient, force: true);
+
+                return;
             }
-            else if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
-            {
-                MediaAmbientTitle.Text = "Medya";
+
+            MediaAmbientTitle.Text = "Medya";
+            if (hadSession &&
+                _currentState is (NotchState.MediaActive or NotchState.MediaAmbient))
                 TransitionToState(GetPersistentState(), force: true);
-            }
         });
     }
 

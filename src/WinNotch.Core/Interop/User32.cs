@@ -150,7 +150,19 @@ internal static partial class User32
 
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsWindowVisible(IntPtr hWnd);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsIconic(IntPtr hWnd);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT

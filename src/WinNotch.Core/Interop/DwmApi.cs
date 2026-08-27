@@ -52,9 +52,9 @@ internal static partial class DwmApi
         ref int pvAttribute,
         uint cbAttribute);
 
+    // DWM APIs return HRESULT (S_OK is zero), not a Win32 BOOL.
     [LibraryImport(DllName)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool DwmGetWindowAttribute(
+    public static partial int DwmGetWindowAttribute(
         IntPtr hWnd,
         uint dwAttribute,
         out RECT pvAttribute,
