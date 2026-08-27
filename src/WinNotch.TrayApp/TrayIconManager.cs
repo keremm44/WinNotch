@@ -31,8 +31,8 @@ public sealed class TrayIconManager : IDisposable
     private ModuleSettings _settings;
     private bool _disposed;
 
-    // Event for settings changes
     public event EventHandler<ModuleSettings>? SettingsChanged;
+    public event EventHandler? SettingsRequested;
 
     /// <summary>
     /// Creates the tray icon with context menu.
@@ -47,24 +47,14 @@ public sealed class TrayIconManager : IDisposable
             Visibility = Visibility.Visible
         };
 
-        // Create context menu
         _trayIcon.ContextMenu = CreateContextMenu();
-
-        // Double-click to open settings
-        _trayIcon.DoubleClickCommand = new RelayCommand(() =>
-        {
-            OnSettingsClicked();
-        });
+        _trayIcon.DoubleClickCommand = new RelayCommand(OnSettingsClicked);
     }
 
-    /// <summary>
-    /// Creates the right-click context menu for the tray icon.
-    /// </summary>
     private ContextMenu CreateContextMenu()
     {
         var menu = new ContextMenu();
 
-        // ═══════ App Title ═══════
         var titleItem = new MenuItem
         {
             Header = $"✦ {Constants.AppName}",
@@ -73,7 +63,6 @@ public sealed class TrayIconManager : IDisposable
         menu.Items.Add(titleItem);
         menu.Items.Add(new Separator());
 
-        // ═══════ Module Toggles ═══════
         var moduleMenu = new MenuItem { Header = "📦 Modüller" };
         moduleMenu.Items.Add(CreateModuleToggle("Module A — Sürükle & Bırak", nameof(ModuleSettings.ModuleA_DragDrop)));
         moduleMenu.Items.Add(CreateModuleToggle("Module B — Clipboard Dinleyici", nameof(ModuleSettings.ModuleB_Clipboard)));
@@ -82,7 +71,6 @@ public sealed class TrayIconManager : IDisposable
         moduleMenu.Items.Add(CreateModuleToggle("Module E — Ekran Görüntüsü", nameof(ModuleSettings.ModuleE_Screenshot)));
         menu.Items.Add(moduleMenu);
 
-        // ═══════ Monitor Selection ═══════
         var monitorMenu = new MenuItem { Header = "🖥️ Monitör" };
         var screens = System.Windows.Forms.Screen.AllScreens;
         for (int i = 0; i < screens.Length; i++)
@@ -110,7 +98,6 @@ public sealed class TrayIconManager : IDisposable
 
         menu.Items.Add(new Separator());
 
-        // ═══════ Diagnostics ═══════
         var diagItem = new MenuItem
         {
             Header = "📊 Teşhis Paneli",
@@ -125,12 +112,10 @@ public sealed class TrayIconManager : IDisposable
         };
         menu.Items.Add(diagItem);
 
-        // ═══════ Settings ═══════
         var settingsItem = new MenuItem { Header = "⚙️ Ayarlar" };
         settingsItem.Click += (_, _) => OnSettingsClicked();
         menu.Items.Add(settingsItem);
 
-        // ═══════ Startup ═══════
         var startupItem = new MenuItem
         {
             Header = "🚀 Başlangıca Ekle",
@@ -148,20 +133,13 @@ public sealed class TrayIconManager : IDisposable
 
         menu.Items.Add(new Separator());
 
-        // ═══════ Exit ═══════
         var exitItem = new MenuItem { Header = "✕ Çıkış" };
-        exitItem.Click += (_, _) =>
-        {
-            Application.Current.Shutdown();
-        };
+        exitItem.Click += (_, _) => Application.Current.Shutdown();
         menu.Items.Add(exitItem);
 
         return menu;
     }
 
-    /// <summary>
-    /// Creates a checkable menu item for module toggle.
-    /// </summary>
     private MenuItem CreateModuleToggle(string header, string propertyName)
     {
         bool isEnabled = propertyName switch
@@ -212,9 +190,6 @@ public sealed class TrayIconManager : IDisposable
         return item;
     }
 
-    /// <summary>
-    /// Toggles the auto-start registry entry.
-    /// </summary>
     private static void ToggleAutoStart(bool enable)
     {
         try
@@ -240,9 +215,6 @@ public sealed class TrayIconManager : IDisposable
         }
     }
 
-    /// <summary>
-    /// Updates the tray icon tooltip with current stats.
-    /// </summary>
     public void UpdateTooltip(string text)
     {
         _trayIcon.ToolTipText = text;
@@ -250,8 +222,7 @@ public sealed class TrayIconManager : IDisposable
 
     private void OnSettingsClicked()
     {
-        // Settings window will be opened by the App
-        SettingsChanged?.Invoke(this, _settings);
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnSettingsChanged()
@@ -270,9 +241,6 @@ public sealed class TrayIconManager : IDisposable
     ~TrayIconManager() => Dispose();
 }
 
-/// <summary>
-/// Simple ICommand implementation for tray icon double-click.
-/// </summary>
 internal sealed class RelayCommand : System.Windows.Input.ICommand
 {
     private readonly Action _execute;
