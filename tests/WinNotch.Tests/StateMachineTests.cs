@@ -23,6 +23,39 @@ public class StateMachineTests
     }
 
     [Fact]
+    public void QuickPeek_HasDedicatedPriority_AbovePersistentShelfAndMedia()
+    {
+        Assert.Equal(StatePriority.QuickPeek, NotchStateMachine.PriorityFor(NotchState.QuickPeek));
+        Assert.True(StatePriority.QuickPeek > StatePriority.Shelf);
+        Assert.True(StatePriority.QuickPeek > StatePriority.Media);
+        Assert.True(StatePriority.QuickPeek < StatePriority.Clipboard);
+    }
+
+    [Fact]
+    public void QuickPeek_CanBeInterruptedByActionableNotification()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+
+        var result = sm.TryTransition(NotchState.ScreenshotNotify, StatePriority.Screenshot);
+
+        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.ScreenshotNotify, sm.CurrentState);
+    }
+
+    [Fact]
+    public void QuickPeek_CanBeInterruptedByDragTarget()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+
+        var result = sm.TryTransition(NotchState.DragActive, StatePriority.DropTarget);
+
+        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.DragActive, sm.CurrentState);
+    }
+
+    [Fact]
     public void Transition_SameState_ReturnsShouldApplyFalse()
     {
         var sm = new NotchStateMachine();
@@ -74,6 +107,14 @@ public class StateMachineTests
             timeout: TimeSpan.FromMilliseconds(900));
 
         Assert.Equal(NotchState.ShelfOccupied, result.ReturnState);
+    }
+
+    [Fact]
+    public void QuickPeek_DefaultReturnState_IsIdle()
+    {
+        var sm = new NotchStateMachine();
+        var result = sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+        Assert.Equal(NotchState.Idle, result.ReturnState);
     }
 
     [Fact]
@@ -140,6 +181,7 @@ public class StateMachineTests
     [Theory]
     [InlineData(NotchState.Idle, 100, 22)]
     [InlineData(NotchState.Hover, 118, 28)]
+    [InlineData(NotchState.QuickPeek, 300, 82)]
     [InlineData(NotchState.DragActive, 290, 62)]
     [InlineData(NotchState.DropResult, 340, 100)]
     [InlineData(NotchState.ShelfOccupied, 230, 40)]
