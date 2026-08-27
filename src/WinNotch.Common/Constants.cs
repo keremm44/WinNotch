@@ -1,5 +1,5 @@
 // WinNotch.Common/Constants.cs
-// Central constants for geometry, timing and lightweight resource budgets.
+// Central constants for geometry, timing and lightweight runtime behavior.
 
 namespace WinNotch.Common;
 
@@ -12,45 +12,41 @@ public static class Constants
     public const double NotchHoverWidth = 118;
     public const double NotchHoverHeight = 28;
 
-    public const double NotchClipboardWidth = 220;
-    public const double NotchClipboardHeight = 36;
+    public const double NotchClipboardWidth = 260;
+    public const double NotchClipboardHeight = 40;
 
-    public const double NotchScreenshotWidth = 260;
-    // ClipboardToastView needs ~53 px for text + 32 px thumbnail + margins.
-    // 56 px prevents functional clipping without redesigning the visual layout.
+    public const double NotchScreenshotWidth = 310;
     public const double NotchScreenshotHeight = 56;
 
-    public const double NotchDropTargetWidth = 280;
-    public const double NotchDropTargetHeight = 60;
+    public const double NotchDropTargetWidth = 290;
+    public const double NotchDropTargetHeight = 62;
 
-    public const double NotchDropResultWidth = 320;
-    public const double NotchDropResultHeight = 72;
+    public const double NotchDropResultWidth = 340;
+    public const double NotchDropResultHeight = 70;
 
-    // Persistent file shelf states. Compact by default, actions on hover.
-    public const double NotchShelfWidth = 220;
-    public const double NotchShelfHeight = 36;
-    public const double NotchShelfExpandedWidth = 330;
-    public const double NotchShelfExpandedHeight = 66;
+    public const double NotchShelfWidth = 230;
+    public const double NotchShelfHeight = 40;
+    public const double NotchShelfExpandedWidth = 340;
+    public const double NotchShelfExpandedHeight = 70;
 
-    public const double NotchMediaAmbientWidth = 120;
+    public const double NotchMediaAmbientWidth = 124;
     public const double NotchMediaAmbientHeight = 28;
-    public const double NotchMediaExpandedWidth = 300;
+    public const double NotchMediaExpandedWidth = 336;
     public const double NotchMediaExpandedHeight = 64;
 
-    public const double NotchPinnedWidth = 130;
-    public const double NotchPinnedHeight = 28;
+    public const double NotchPinnedWidth = 150;
+    public const double NotchPinnedHeight = 30;
 
     public const int HitTestPadding = 4;
 
-    public const string BackgroundHex = "#FF000000";
-    public const string AccentHex = "#FF0078D4";
-    public const string LightThemeBorderHex = "#FF404040";
+    public const string BackgroundHex = "#FF0B0B0D";
+    public const string AccentHex = "#FF2D7DFF";
+    public const string LightThemeBorderHex = "#364A4A50";
     public const string TextPrimaryHex = "#FFFFFFFF";
-    public const string ClipboardFlashHex = "#FFFFC107";
 
-    public const int ExpandDurationMs = 250;
-    public const int ContractDelayMs = 400;
-    public const int ContractDurationMs = 200;
+    public const int ExpandDurationMs = 220;
+    public const int ContractDelayMs = 350;
+    public const int ContractDurationMs = 180;
     public const int ClipboardFlashDurationMs = 2000;
     public const int ScreenshotFlashDurationMs = 2500;
     public const int DropResultDisplayDurationMs = 900;
@@ -66,7 +62,4 @@ public static class Constants
     public const string RegistryValueName = "WinNotch";
     public const string AppName = "WinNotch";
     public const int TemporaryHideDurationMs = 3_600_000;
-
-    public const long MaxRamBytes = 15 * 1024 * 1024;
-    public const double MaxCpuPercent = 0.5;
 }
