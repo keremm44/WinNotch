@@ -3,7 +3,8 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- Core surfaces. Runtime personalization overrides these keys at application scope. -->
     <SolidColorBrush x:Key="Brush.Notch.Base" Color="#FF0B0B0D"/>
-    <SolidColorBrush x:Key="Brush.Notch.Handle" Color="#52FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Handle" Color="#C82D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Edge" Color="#3E2D7DFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientSurface" Color="#18FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientGlow" Color="#182D7DFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientIcon" Color="#D8FFFFFF"/>
