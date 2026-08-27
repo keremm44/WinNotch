@@ -85,15 +85,15 @@ public static class PrivacyPreviewFormatter
         if (string.IsNullOrWhiteSpace(path))
             return "Dosya yolu kopyalandı";
 
-        string normalized = path.Replace('/', '\');
-        string[] parts = normalized.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        string normalized = path.Replace('/', Path.DirectorySeparatorChar);
+        string[] parts = normalized.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
             return "Dosya yolu kopyalandı";
 
         if (parts.Length == 1)
-            return $"…\\{parts[0]}";
+            return $"…{Path.DirectorySeparatorChar}{parts[0]}";
 
-        return $"…\\{parts[^2]}\\{parts[^1]}";
+        return $"…{Path.DirectorySeparatorChar}{parts[^2]}{Path.DirectorySeparatorChar}{parts[^1]}";
     }
 
     private static string FallbackLabel(ClipboardContentType type)
