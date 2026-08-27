@@ -4,13 +4,14 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
 using UserControl = System.Windows.Controls.UserControl;
 using Point = System.Windows.Point;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
 using WpfClipboard = System.Windows.Clipboard;
 using WpfDataObject = System.Windows.DataObject;
 using WpfDataFormats = System.Windows.DataFormats;
@@ -41,6 +42,13 @@ public partial class DropZoneView : UserControl
     public DropZoneView()
     {
         InitializeComponent();
+        IsVisibleChanged += DropZoneView_IsVisibleChanged;
+    }
+
+    private void DropZoneView_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+            SurfaceMotion.Reveal(this);
     }
 
     public void SetDroppedPaths(IReadOnlyList<string> paths)
@@ -101,6 +109,12 @@ public partial class DropZoneView : UserControl
             : Visibility.Collapsed;
 
         RenderChips();
+
+        if (expanded && HasItems)
+        {
+            SurfaceMotion.Reveal(ShelfChipsPanel, 1.5, 95);
+            SurfaceMotion.Reveal(ActionButtons, 1.5, 105);
+        }
     }
 
     public void ShowDropTarget()
@@ -184,7 +198,6 @@ public partial class DropZoneView : UserControl
                 BorderBrush = FindBrush("Brush.Border.OnDark"),
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 0, 0),
                 Child = new TextBlock
                 {
                     Text = $"+{hiddenCount}",
