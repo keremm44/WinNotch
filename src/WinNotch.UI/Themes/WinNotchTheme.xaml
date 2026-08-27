@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Core surfaces -->
+    <SolidColorBrush x:Key="Brush.Notch.Base" Color="#FF0B0B0D"/>
+    <SolidColorBrush x:Key="Brush.Window.Base" Color="#FF101012"/>
+    <SolidColorBrush x:Key="Brush.Window.Header" Color="#FF141416"/>
+    <SolidColorBrush x:Key="Brush.Surface.Raised" Color="#FF18181B"/>
+    <SolidColorBrush x:Key="Brush.Surface.Popup" Color="#FF1C1C20"/>
+    <SolidColorBrush x:Key="Brush.Surface.Control" Color="#FF222226"/>
+    <SolidColorBrush x:Key="Brush.Surface.Soft" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Softer" Color="#0CFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Hover" Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="#34FFFFFF"/>
+
+    <!-- Borders -->
+    <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#FF29292E"/>
+    <SolidColorBrush x:Key="Brush.Border.Strong" Color="#FF3A3A42"/>
+    <SolidColorBrush x:Key="Brush.Border.OnDark" Color="#20FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Border.OnDarkStrong" Color="#38FFFFFF"/>
+
+    <!-- Typography -->
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="#FFF5F5F7"/>
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="#FFBDBDC5"/>
+    <SolidColorBrush x:Key="Brush.Text.Muted" Color="#FF8D8D96"/>
+    <SolidColorBrush x:Key="Brush.Text.Faint" Color="#FF777780"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkPrimary" Color="#F4FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkSecondary" Color="#9AFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkMuted" Color="#6CFFFFFF"/>
+
+    <!-- Accent and semantic feedback -->
+    <SolidColorBrush x:Key="Brush.Accent.Primary" Color="#FF2D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#FF438CFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Pressed" Color="#FF216FE8"/>
+    <SolidColorBrush x:Key="Brush.Accent.Subtle" Color="#182D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Border" Color="#482D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Success" Color="#FF35C98A"/>
+    <SolidColorBrush x:Key="Brush.Semantic.SuccessSubtle" Color="#1839B980"/>
+    <SolidColorBrush x:Key="Brush.Semantic.SuccessBorder" Color="#4439B980"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Warning" Color="#FFFFB547"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Danger" Color="#FFFF5D6C"/>
+    <SolidColorBrush x:Key="Brush.Semantic.VioletSubtle" Color="#188C6CFF"/>
+    <SolidColorBrush x:Key="Brush.Semantic.VioletBorder" Color="#448C6CFF"/>
+
+    <!-- Geometry tokens -->
+    <CornerRadius x:Key="Radius.Small">6</CornerRadius>
+    <CornerRadius x:Key="Radius.Medium">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Large">12</CornerRadius>
+    <CornerRadius x:Key="Radius.Notch">0,0,11,11</CornerRadius>
+
+    <Thickness x:Key="Thickness.CardPadding">16</Thickness>
+    <Thickness x:Key="Thickness.CompactPadding">9,4</Thickness>
+</ResourceDictionary>
