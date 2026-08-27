@@ -1,5 +1,6 @@
 // WinNotch.Core/Interop/WindowHookManager.cs
-// Event-driven foreground/fullscreen tracking using WinEvent hooks.
+// Event-first foreground/fullscreen tracking. MainWindow adds a low-frequency
+// foreground verification only while automatic fullscreen hiding is enabled.
 
 using System.Runtime.InteropServices;
 using static WinNotch.Core.Interop.User32;
@@ -26,9 +27,7 @@ public sealed class WindowHookManager : IDisposable
     private bool _disposed;
 
     public event EventHandler<ForegroundChangedEventArgs>? ForegroundWindowChanged;
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
+    public IntPtr CurrentForegroundWindow => _lastForegroundWindow;
 
     public bool StartTracking()
     {
@@ -36,7 +35,7 @@ public sealed class WindowHookManager : IDisposable
 
         _foregroundCallback = OnForegroundChanged;
         _locationCallback = OnLocationChanged;
-        _lastForegroundWindow = GetForegroundWindow();
+        _lastForegroundWindow = User32.GetForegroundWindow();
 
         _foregroundHook = User32.SetWinEventHook(
             User32.EVENT_SYSTEM_FOREGROUND,
@@ -77,7 +76,7 @@ public sealed class WindowHookManager : IDisposable
     {
         if (_disposed) return;
 
-        IntPtr hwnd = GetForegroundWindow();
+        IntPtr hwnd = User32.GetForegroundWindow();
         if (hwnd == IntPtr.Zero) return;
 
         _lastForegroundWindow = hwnd;
@@ -103,7 +102,7 @@ public sealed class WindowHookManager : IDisposable
         if (_disposed || hwnd == IntPtr.Zero) return;
         if (idObject != OBJID_WINDOW || idChild != 0) return;
 
-        IntPtr foreground = GetForegroundWindow();
+        IntPtr foreground = User32.GetForegroundWindow();
         if (foreground != IntPtr.Zero)
             _lastForegroundWindow = foreground;
 
@@ -131,29 +130,51 @@ public sealed class WindowHookManager : IDisposable
 
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
+        if (hWnd == IntPtr.Zero) return false;
+
         try
         {
-            if (!DwmApi.DwmGetWindowAttribute(hWnd, DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
-                out DwmApi.RECT frameRect, (uint)Marshal.SizeOf<DwmApi.RECT>()))
-                return false;
-
-            IntPtr hMonitor = MonitorFromWindow(hWnd, 2);
+            IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
             if (hMonitor == IntPtr.Zero) return false;
 
             var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
             if (!GetMonitorInfo(hMonitor, ref mi)) return false;
 
-            var bounds = mi.rcMonitor;
-            const int tolerancePx = 2;
-            return frameRect.Left <= bounds.Left + tolerancePx &&
-                   frameRect.Top <= bounds.Top + tolerancePx &&
-                   frameRect.Right >= bounds.Right - tolerancePx &&
-                   frameRect.Bottom >= bounds.Bottom - tolerancePx;
+            const int tolerancePx = 8;
+
+            if (DwmApi.DwmGetWindowAttribute(
+                    hWnd,
+                    DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
+                    out DwmApi.RECT frameRect,
+                    (uint)Marshal.SizeOf<DwmApi.RECT>()) &&
+                CoversMonitor(frameRect.Left, frameRect.Top, frameRect.Right, frameRect.Bottom,
+                    mi.rcMonitor, tolerancePx))
+            {
+                return true;
+            }
+
+            // Chromium/DirectComposition transitions can briefly report stale DWM
+            // frame bounds. The top-level window rect is a reliable second source.
+            return User32.GetWindowRect(hWnd, out var windowRect) &&
+                   CoversMonitor(
+                       windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
+                       mi.rcMonitor, tolerancePx);
         }
         catch
         {
             return false;
         }
+    }
+
+    private static bool CoversMonitor(
+        int left, int top, int right, int bottom,
+        User32.RECT monitorBounds,
+        int tolerancePx)
+    {
+        return left <= monitorBounds.Left + tolerancePx &&
+               top <= monitorBounds.Top + tolerancePx &&
+               right >= monitorBounds.Right - tolerancePx &&
+               bottom >= monitorBounds.Bottom - tolerancePx;
     }
 
     public static bool IsWindowMaximized(IntPtr hWnd)
@@ -164,12 +185,20 @@ public sealed class WindowHookManager : IDisposable
                 return false;
 
             int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
-            return (style & 0x01000000) != 0;
+            return (style & 0x01000000) != 0; // WS_MAXIMIZE
         }
         catch
         {
             return false;
         }
+    }
+
+    public static string GetWindowClassName(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return string.Empty;
+        var buffer = new char[256];
+        User32.GetClassName(hWnd, buffer, buffer.Length);
+        return new string(buffer).TrimEnd('\0');
     }
 
     private static string GetWindowTitle(IntPtr hWnd)
@@ -180,13 +209,6 @@ public sealed class WindowHookManager : IDisposable
         var buffer = new char[length + 1];
         User32.GetWindowText(hWnd, buffer, buffer.Length);
         return new string(buffer, 0, length);
-    }
-
-    private static string GetWindowClassName(IntPtr hWnd)
-    {
-        var buffer = new char[256];
-        User32.GetClassName(hWnd, buffer, buffer.Length);
-        return new string(buffer).TrimEnd('\0');
     }
 
     public void StopTracking()
@@ -209,14 +231,9 @@ public sealed class WindowHookManager : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
         StopTracking();
+        _disposed = true;
         ForegroundWindowChanged = null;
         GC.SuppressFinalize(this);
-    }
-
-    ~WindowHookManager()
-    {
-        Dispose();
     }
 }
