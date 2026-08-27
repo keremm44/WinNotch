@@ -36,9 +36,8 @@ public partial class App : Application
                 return;
             }
 
-            // The rebuild helper signals this event before replacing binaries.
-            // That guarantees MainWindow.Close/OnExit run and pinned HWNDs are
-            // demoted from TOPMOST before the process disappears.
+            // The rebuild helper signals this event before replacing binaries so
+            // WPF/native hooks can dispose cleanly instead of being force-killed.
             _shutdownEvent = new EventWaitHandle(
                 false,
                 EventResetMode.AutoReset,
@@ -137,8 +136,6 @@ public partial class App : Application
 
     private void OpenSettingsWindow()
     {
-        if (_mainWindow == null) return;
-
         if (_settingsWindow != null)
         {
             if (_settingsWindow.WindowState == WindowState.Minimized)
@@ -151,10 +148,7 @@ public partial class App : Application
             return;
         }
 
-        // Pass the exact live MainWindow instance. Searching Application.Windows
-        // could return no surface during focus/topmost transitions and made the
-        // pinned-window list appear empty even while the live service held pins.
-        _settingsWindow = new SettingsWindow(_settings, _mainWindow)
+        _settingsWindow = new SettingsWindow(_settings)
         {
             Topmost = true
         };
