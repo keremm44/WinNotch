@@ -34,9 +34,6 @@ public static class Constants
     public const double NotchMediaExpandedWidth = 336;
     public const double NotchMediaExpandedHeight = 64;
 
-    public const double NotchPinnedWidth = 150;
-    public const double NotchPinnedHeight = 30;
-
     public const int HitTestPadding = 4;
 
     public const string BackgroundHex = "#FF0B0B0D";
