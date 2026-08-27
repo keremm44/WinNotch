@@ -8,20 +8,23 @@
              MouseLeave="Surface_MouseLeave">
     <UserControl.Resources>
         <Style x:Key="ContextActionButton" TargetType="Button">
-            <Setter Property="Height" Value="26"/>
-            <Setter Property="Padding" Value="11,0"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="MinWidth" Value="76"/>
+            <Setter Property="Padding" Value="12,0"/>
             <Setter Property="Background" Value="#FF2D7DFF"/>
             <Setter Property="Foreground" Value="#FFFFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontSize" Value="9.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Surface"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="7"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
@@ -40,7 +43,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="10,5">
+    <Grid Margin="9,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -124,9 +127,9 @@
 
         <Border x:Name="ActionPanel"
                 Grid.Row="1"
-                Margin="32,6,0,0"
-                Padding="8,5"
-                CornerRadius="8"
+                Margin="0,4,0,0"
+                Padding="8,4"
+                CornerRadius="9"
                 Background="#10FFFFFF"
                 BorderBrush="#18FFFFFF"
                 BorderThickness="1"
@@ -138,11 +141,11 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="ActionHintText"
                            Text="İçerik için aksiyon hazır"
-                           FontSize="8.5"
-                           Foreground="#78FFFFFF"
+                           FontSize="9"
+                           Foreground="#82FFFFFF"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
-                           Margin="2,0,8,0"/>
+                           Margin="2,0,10,0"/>
                 <Button x:Name="PrimaryActionButton"
                         Grid.Column="1"
                         Style="{StaticResource ContextActionButton}"
