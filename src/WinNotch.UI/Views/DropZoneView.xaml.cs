@@ -18,10 +18,6 @@ using WpfDragDropEffects = System.Windows.DragDropEffects;
 
 namespace WinNotch.UI.Views;
 
-/// <summary>
-/// Persistent lightweight file shelf.
-/// Holds metadata only; file contents are never loaded into WinNotch memory.
-/// </summary>
 public partial class DropZoneView : UserControl
 {
     private HeldItem[] _items = Array.Empty<HeldItem>();
@@ -93,8 +89,8 @@ public partial class DropZoneView : UserControl
         FileIcon.Text = "+";
         DropTargetText.Text = "Dosyayı buraya bırak";
         FileSummaryText.Text = HasItems
-            ? $"{_items.Length} öğeye eklenecek"
-            : "WinNotch burada tutacak";
+            ? $"Mevcut {_items.Length} öğeye eklenecek"
+            : "Geçici rafta tutulacak";
         ActionButtons.Visibility = Visibility.Collapsed;
         RemoveButton.Visibility = Visibility.Collapsed;
     }
@@ -105,7 +101,7 @@ public partial class DropZoneView : UserControl
         {
             FileIcon.Text = "+";
             DropTargetText.Text = "Dosyayı buraya bırak";
-            FileSummaryText.Text = "WinNotch burada tutacak";
+            FileSummaryText.Text = "Geçici rafta tutulacak";
             RemoveButton.Visibility = Visibility.Collapsed;
             return;
         }
@@ -115,34 +111,34 @@ public partial class DropZoneView : UserControl
         if (_items.Length == 1)
         {
             HeldItem item = _items[0];
-            FileIcon.Text = item.IsDirectory ? "D" : GetExtensionLabel(item.SourcePath);
+            FileIcon.Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath);
             DropTargetText.Text = item.DisplayName;
             FileSummaryText.Text = item.Exists
                 ? FormatSummary(item)
-                : "Source unavailable";
+                : "Kaynak artık bulunamıyor";
             return;
         }
 
         FileIcon.Text = _items.Length.ToString();
-        DropTargetText.Text = $"{_items.Length} items";
+        DropTargetText.Text = $"{_items.Length} öğe";
 
         long knownBytes = _items.Where(i => i.SizeBytes.HasValue).Sum(i => i.SizeBytes!.Value);
         FileSummaryText.Text = knownBytes > 0
-            ? $"{FormatSize(knownBytes)} · drag out or copy"
-            : "drag out or copy";
+            ? $"{FormatSize(knownBytes)} · sürükle veya kopyala"
+            : "Sürükle veya kopyala";
     }
 
     private static string FormatSummary(HeldItem item)
     {
-        if (item.IsDirectory) return "folder · drag out or copy";
-        if (item.SizeBytes is long size) return $"{FormatSize(size)} · drag out or copy";
-        return "drag out or copy";
+        if (item.IsDirectory) return "Klasör · sürükle veya kopyala";
+        if (item.SizeBytes is long size) return $"{FormatSize(size)} · sürükle veya kopyala";
+        return "Sürükle veya kopyala";
     }
 
     private static string GetExtensionLabel(string path)
     {
         string ext = Path.GetExtension(path).TrimStart('.');
-        if (string.IsNullOrWhiteSpace(ext)) return "F";
+        if (string.IsNullOrWhiteSpace(ext)) return "DOS";
         return ext.Length <= 3 ? ext.ToUpperInvariant() : ext[..3].ToUpperInvariant();
     }
 
@@ -151,7 +147,7 @@ public partial class DropZoneView : UserControl
         string[] validPaths = GetValidPaths();
         if (validPaths.Length == 0)
         {
-            ShowActionFeedback("Source unavailable");
+            ShowActionFeedback("Kaynak bulunamıyor");
             return;
         }
 
@@ -160,12 +156,12 @@ public partial class DropZoneView : UserControl
             var files = new StringCollection();
             files.AddRange(validPaths);
             WpfClipboard.SetFileDropList(files);
-            ShowActionFeedback("Copied · Ctrl+V to paste");
+            ShowActionFeedback("Kopyalandı · Ctrl+V ile yapıştır");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[FileShelf] File clipboard copy failed: {ex.Message}");
-            ShowActionFeedback("Copy failed");
+            ShowActionFeedback("Kopyalama başarısız");
         }
     }
 
@@ -181,12 +177,12 @@ public partial class DropZoneView : UserControl
             else if (File.Exists(item.SourcePath))
                 Shell32.OpenFileInExplorer(item.SourcePath);
             else
-                ShowActionFeedback("Source unavailable");
+                ShowActionFeedback("Kaynak bulunamıyor");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[FileShelf] Open failed: {ex.Message}");
-            ShowActionFeedback("Open failed");
+            ShowActionFeedback("Açılamadı");
         }
     }
 
@@ -196,15 +192,15 @@ public partial class DropZoneView : UserControl
 
         var menu = new ContextMenu();
 
-        var copyPath = new MenuItem { Header = "Copy path" };
+        var copyPath = new MenuItem { Header = "Yolları metin olarak kopyala" };
         copyPath.Click += (_, _) => CopyPathsAsText();
         menu.Items.Add(copyPath);
 
-        var terminal = new MenuItem { Header = "Open terminal here" };
+        var terminal = new MenuItem { Header = "Terminali burada aç" };
         terminal.Click += (_, _) => OpenTerminalAtFirstItem();
         menu.Items.Add(terminal);
 
-        var clear = new MenuItem { Header = "Remove from shelf" };
+        var clear = new MenuItem { Header = "Raftan kaldır" };
         clear.Click += (_, _) => ResetShelf(notify: true);
         menu.Items.Add(clear);
 
@@ -221,7 +217,7 @@ public partial class DropZoneView : UserControl
         try
         {
             WpfClipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
-            ShowActionFeedback("Path copied");
+            ShowActionFeedback("Yol kopyalandı");
         }
         catch (Exception ex)
         {
@@ -240,7 +236,7 @@ public partial class DropZoneView : UserControl
 
         if (!Directory.Exists(dir))
         {
-            ShowActionFeedback("Source unavailable");
+            ShowActionFeedback("Kaynak bulunamıyor");
             return;
         }
 
@@ -277,7 +273,7 @@ public partial class DropZoneView : UserControl
         string[] validPaths = GetValidPaths();
         if (validPaths.Length == 0)
         {
-            ShowActionFeedback("Source unavailable");
+            ShowActionFeedback("Kaynak bulunamıyor");
             return;
         }
 
