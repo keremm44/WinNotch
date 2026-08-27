@@ -1,7 +1,7 @@
 <UserControl x:Class="WinNotch.UI.Views.DropZoneView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Foreground="#FFFFFFFF"
+             Foreground="{DynamicResource Brush.Text.Primary}"
              SnapsToDevicePixels="True"
              UseLayoutRounding="True">
     <UserControl.Resources>
@@ -10,9 +10,9 @@
             <Setter Property="Padding" Value="10,3"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#20FFFFFF"/>
-            <Setter Property="Background" Value="#12FFFFFF"/>
-            <Setter Property="Foreground" Value="#E8FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -28,11 +28,69 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="#24FFFFFF"/>
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="#38FFFFFF"/>
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDarkStrong}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="#34FFFFFF"/>
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.Surface.Pressed}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ShelfChipButton" TargetType="Button">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="7,0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            <Setter Property="FontSize" Value="8.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ChipSurface"
+                                CornerRadius="7"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChipSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ShelfChipRemoveButton" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkMuted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="RemoveSurface"
+                                CornerRadius="6"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RemoveSurface" Property="Background" Value="#20FF5D6C"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Semantic.Danger}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -41,8 +99,9 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="10,5">
+    <Grid Margin="9,4">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -60,8 +119,8 @@
 
             <Border Width="28" Height="28"
                     CornerRadius="8"
-                    Background="#14FFFFFF"
-                    BorderBrush="#20FFFFFF"
+                    Background="{DynamicResource Brush.Surface.Soft}"
+                    BorderBrush="{DynamicResource Brush.Border.OnDark}"
                     BorderThickness="1"
                     VerticalAlignment="Center">
                 <TextBlock x:Name="FileIcon"
@@ -70,7 +129,7 @@
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           Foreground="#E8FFFFFF"/>
+                           Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             </Border>
 
             <StackPanel Grid.Column="1"
@@ -80,11 +139,11 @@
                            Text="Dosyayı buraya bırak"
                            FontSize="10.5"
                            FontWeight="SemiBold"
-                           Foreground="#F2FFFFFF"
+                           Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
                            TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="FileSummaryText"
                            FontSize="8.5"
-                           Foreground="#86FFFFFF"
+                           Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                            TextTrimming="CharacterEllipsis"
                            Margin="0,1,0,0"/>
             </StackPanel>
@@ -97,18 +156,25 @@
                     Padding="0"
                     BorderThickness="0"
                     Background="Transparent"
-                    Foreground="#88FFFFFF"
+                    Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
                     Visibility="Collapsed"
                     Cursor="Hand"
                     ToolTip="Rafı temizle"
                     Click="RemoveButton_Click"/>
         </Grid>
 
-        <StackPanel x:Name="ActionButtons"
+        <StackPanel x:Name="ShelfChipsPanel"
                     Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Center"
-                    Margin="0,6,0,0"
+                    Margin="0,5,0,0"
+                    Visibility="Collapsed"/>
+
+        <StackPanel x:Name="ActionButtons"
+                    Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,5,0,0"
                     Visibility="Collapsed">
             <Button x:Name="CopyFilesButton"
                     Style="{StaticResource ShelfActionButton}"
@@ -118,7 +184,7 @@
             <Button x:Name="OpenFolderButton"
                     Style="{StaticResource ShelfActionButton}"
                     Content="Göster"
-                    ToolTip="İlk öğeyi Dosya Gezgini'nde göster"
+                    ToolTip="Seçili öğeyi Dosya Gezgini'nde göster"
                     Click="OpenFolderButton_Click"/>
             <Button x:Name="MoreButton"
                     Style="{StaticResource ShelfActionButton}"
