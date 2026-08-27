@@ -2,6 +2,10 @@ using System.Windows;
 using System.Windows.Media;
 using WinNotch.Common;
 
+using WpfApplication = System.Windows.Application;
+using WpfColor = System.Windows.Media.Color;
+using WpfColorConverter = System.Windows.Media.ColorConverter;
+
 namespace WinNotch.UI;
 
 /// <summary>
@@ -13,7 +17,7 @@ public static class AppearanceThemeManager
 {
     public static AppearancePalette Apply(AppearanceSettings settings)
     {
-        ResourceDictionary resources = Application.Current?.Resources
+        ResourceDictionary resources = WpfApplication.Current?.Resources
             ?? throw new InvalidOperationException("Application resources are not available.");
         return Apply(resources, settings);
     }
@@ -106,7 +110,7 @@ public static class AppearanceThemeManager
 
     private static void SetBrush(ResourceDictionary resources, string key, string hex)
     {
-        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        var brush = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(hex));
         brush.Freeze();
         resources[key] = brush;
     }
@@ -115,7 +119,7 @@ public static class AppearanceThemeManager
     {
         try
         {
-            Color color = SystemParameters.WindowGlassColor;
+            WpfColor color = SystemParameters.WindowGlassColor;
             return $"#FF{color.R:X2}{color.G:X2}{color.B:X2}";
         }
         catch
@@ -126,7 +130,7 @@ public static class AppearanceThemeManager
 
     private static string ContrastForeground(string argb)
     {
-        Color color = (Color)ColorConverter.ConvertFromString(argb);
+        WpfColor color = (WpfColor)WpfColorConverter.ConvertFromString(argb);
         // WCAG-style relative luminance is unnecessary for two fixed foregrounds;
         // this weighted luma split keeps cyan/amber/green readable without changing accents.
         double luma = (0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B);
