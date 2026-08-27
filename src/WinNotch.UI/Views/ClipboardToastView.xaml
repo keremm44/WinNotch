@@ -3,73 +3,152 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Foreground="#FFFFFFFF"
              SnapsToDevicePixels="True"
-             UseLayoutRounding="True">
+             UseLayoutRounding="True"
+             MouseEnter="Surface_MouseEnter"
+             MouseLeave="Surface_MouseLeave">
+    <UserControl.Resources>
+        <Style x:Key="ContextActionButton" TargetType="Button">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="11,0"/>
+            <Setter Property="Background" Value="#FF2D7DFF"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="9.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#FF438CFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#FF216FE8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="10,5">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <Border Grid.Column="0"
-                Width="24" Height="24"
-                CornerRadius="7"
-                Background="#14FFFFFF"
-                BorderBrush="#20FFFFFF"
-                BorderThickness="1"
-                VerticalAlignment="Center">
-            <TextBlock x:Name="StatusIcon"
-                       Text="C"
-                       FontFamily="Segoe UI Symbol"
-                       FontSize="10"
-                       FontWeight="SemiBold"
-                       Foreground="#E6FFFFFF"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-        </Border>
+        <Grid x:Name="MainRow" Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <Border x:Name="ImagePreviewBorder"
-                Grid.Column="1"
-                Width="38" Height="38"
-                CornerRadius="7"
-                ClipToBounds="True"
-                BorderBrush="#24FFFFFF"
-                BorderThickness="1"
-                Background="#FF202024"
-                Margin="8,0,0,0"
-                VerticalAlignment="Center"
-                Visibility="Collapsed">
-            <Image x:Name="ImagePreview"
-                   Stretch="UniformToFill"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
-        </Border>
+            <Border x:Name="StatusSurface"
+                    Grid.Column="0"
+                    Width="24" Height="24"
+                    CornerRadius="7"
+                    Background="#14FFFFFF"
+                    BorderBrush="#20FFFFFF"
+                    BorderThickness="1"
+                    VerticalAlignment="Center">
+                <Grid>
+                    <Border x:Name="ColorSwatch"
+                            Margin="4"
+                            CornerRadius="4"
+                            Visibility="Collapsed"/>
+                    <TextBlock x:Name="StatusIcon"
+                               Text="C"
+                               FontFamily="Segoe UI Symbol"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="#E6FFFFFF"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
 
-        <StackPanel Grid.Column="2"
+            <Border x:Name="ImagePreviewBorder"
+                    Grid.Column="1"
+                    Width="38" Height="38"
+                    CornerRadius="8"
+                    ClipToBounds="True"
+                    BorderBrush="#30FFFFFF"
+                    BorderThickness="1"
+                    Background="#FF202024"
+                    Margin="8,0,0,0"
                     VerticalAlignment="Center"
-                    Margin="8,0,8,0">
-            <TextBlock x:Name="PreviewText"
-                       Text="Panoya alındı"
-                       Foreground="#F0FFFFFF"
-                       FontSize="10"
-                       FontWeight="SemiBold"
-                       TextTrimming="CharacterEllipsis"
-                       MaxWidth="170"/>
-            <TextBlock x:Name="DetailText"
-                       Text=""
-                       Foreground="#78FFFFFF"
-                       FontSize="8.5"
-                       Margin="0,1,0,0"
-                       TextTrimming="CharacterEllipsis"
-                       MaxWidth="170"/>
-        </StackPanel>
+                    Visibility="Collapsed">
+                <Image x:Name="ImagePreview"
+                       Stretch="UniformToFill"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Border>
 
-        <TextBlock Grid.Column="3"
-                   x:Name="TimestampText"
-                   Text="şimdi"
-                   Foreground="#58FFFFFF"
-                   FontSize="8"
-                   HorizontalAlignment="Right"
-                   VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Margin="8,0,8,0">
+                <TextBlock x:Name="PreviewText"
+                           Text="Panoya alındı"
+                           Foreground="#F4FFFFFF"
+                           FontSize="10.5"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="180"/>
+                <TextBlock x:Name="DetailText"
+                           Text=""
+                           Foreground="#82FFFFFF"
+                           FontSize="8.5"
+                           Margin="0,1,0,0"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="180"/>
+            </StackPanel>
+
+            <TextBlock Grid.Column="3"
+                       x:Name="TimestampText"
+                       Text="şimdi"
+                       Foreground="#58FFFFFF"
+                       FontSize="8"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <Border x:Name="ActionPanel"
+                Grid.Row="1"
+                Margin="32,6,0,0"
+                Padding="8,5"
+                CornerRadius="8"
+                Background="#10FFFFFF"
+                BorderBrush="#18FFFFFF"
+                BorderThickness="1"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ActionHintText"
+                           Text="İçerik için aksiyon hazır"
+                           FontSize="8.5"
+                           Foreground="#78FFFFFF"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="2,0,8,0"/>
+                <Button x:Name="PrimaryActionButton"
+                        Grid.Column="1"
+                        Style="{StaticResource ContextActionButton}"
+                        Content="Aç"
+                        Click="PrimaryActionButton_Click"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
