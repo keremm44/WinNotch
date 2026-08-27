@@ -57,7 +57,7 @@ public sealed class MediaSessionService : IDisposable
 
             _sessionManager.CurrentSessionChanged += OnCurrentSessionChanged;
 
-            var session = _sessionManager.GetCurrentSession();
+            GlobalSystemMediaTransportControlsSession? session = SelectBestSession(_sessionManager);
             if (session != null)
                 AttachSession(session);
             else
@@ -77,7 +77,7 @@ public sealed class MediaSessionService : IDisposable
     {
         if (_disposed) return;
 
-        var session = sender.GetCurrentSession();
+        GlobalSystemMediaTransportControlsSession? session = SelectBestSession(sender);
         if (session != null)
             AttachSession(session);
         else
@@ -87,8 +87,51 @@ public sealed class MediaSessionService : IDisposable
         }
     }
 
+    private static GlobalSystemMediaTransportControlsSession? SelectBestSession(
+        GlobalSystemMediaTransportControlsSessionManager manager)
+    {
+        try
+        {
+            GlobalSystemMediaTransportControlsSession? current = manager.GetCurrentSession();
+            if (current != null)
+                return current;
+
+            IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions = manager.GetSessions();
+            GlobalSystemMediaTransportControlsSession? firstValid = null;
+
+            foreach (GlobalSystemMediaTransportControlsSession session in sessions)
+            {
+                firstValid ??= session;
+                try
+                {
+                    if (session.GetPlaybackInfo().PlaybackStatus ==
+                        GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+                    {
+                        return session;
+                    }
+                }
+                catch
+                {
+                    // A session can disappear while the manager is enumerating it.
+                }
+            }
+
+            return firstValid;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private void AttachSession(GlobalSystemMediaTransportControlsSession session)
     {
+        if (ReferenceEquals(_currentSession, session))
+        {
+            _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
+            return;
+        }
+
         DetachSession();
 
         _currentSession = session;
