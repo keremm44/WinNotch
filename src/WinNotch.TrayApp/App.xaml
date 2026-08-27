@@ -103,7 +103,7 @@
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsHighlighted" Value="True">
-                                    <Setter TargetName="ItemSurface" Property="Background" Value="#FF29292F"/>
+                                    <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
