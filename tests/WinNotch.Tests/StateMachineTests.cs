@@ -149,7 +149,7 @@ public class StateMachineTests
     [InlineData(NotchState.MediaActive, 300, 64)]
     [InlineData(NotchState.MediaAmbient, 120, 28)]
     [InlineData(NotchState.ClipboardNotify, 220, 36)]
-    [InlineData(NotchState.ScreenshotNotify, 260, 40)]
+    [InlineData(NotchState.ScreenshotNotify, 260, 56)]
     [InlineData(NotchState.WindowPinned, 130, 28)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
