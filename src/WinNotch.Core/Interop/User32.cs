@@ -100,6 +100,7 @@ internal static partial class User32
 
     public const uint GW_HWNDNEXT = 2;
     public const uint GA_ROOT = 2;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
 
     [LibraryImport(DllName)]
     public static partial IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);

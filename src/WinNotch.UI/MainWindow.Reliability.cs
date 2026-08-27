@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using WinNotch.Common;
 using WinNotch.Core.Interop;
 
 using WpfApplication = System.Windows.Application;
@@ -57,7 +58,14 @@ public partial class MainWindow
             return;
 
         IntPtr foreground = User32.GetForegroundWindow();
-        bool fullscreen = foreground != IntPtr.Zero && foreground != _hWnd &&
+        IntPtr foregroundMonitor = foreground == IntPtr.Zero
+            ? IntPtr.Zero
+            : User32.MonitorFromWindow(foreground, User32.MONITOR_DEFAULTTONEAREST);
+        IntPtr notchMonitor = _hWnd == IntPtr.Zero
+            ? IntPtr.Zero
+            : User32.MonitorFromWindow(_hWnd, User32.MONITOR_DEFAULTTONEAREST);
+        bool sameMonitor = foregroundMonitor != IntPtr.Zero && foregroundMonitor == notchMonitor;
+        bool fullscreen = foreground != IntPtr.Zero && foreground != _hWnd && sameMonitor &&
                           WindowHookManager.IsWindowFullscreen(foreground);
         ApplyAutomaticFullscreenVisibility(fullscreen);
     }
@@ -70,6 +78,14 @@ public partial class MainWindow
         if (fullscreen)
         {
             _hiddenForFullscreen = true;
+
+            // Hiding a hovered window does not reliably produce MouseLeave. Normalize
+            // hover-only states now so fullscreen exit restores the compact persistent
+            // surface rather than a stranded expanded media/hover surface.
+            if (_currentState is NotchState.MediaActive or NotchState.Hover)
+            {
+                TransitionToState(GetPersistentState(), force: true);
+            }
 
             // Keep WPF and the native HWND synchronized. Geometry animation used to
             // call SetWindowPos(SWP_SHOWWINDOW), making the HWND visible again while

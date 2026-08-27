@@ -39,13 +39,14 @@ public sealed class MediaSessionService : IDisposable
     private static readonly TimeSpan PlayingSessionGracePeriod = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan InactiveSessionGracePeriod = TimeSpan.FromSeconds(3);
 
-    private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
-    private GlobalSystemMediaTransportControlsSession? _currentSession;
+    private readonly object _sessionMutationGate = new();
+    private volatile GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
+    private volatile GlobalSystemMediaTransportControlsSession? _currentSession;
     private MediaSessionInfo? _lastInfo;
     private CancellationTokenSource? _noSessionConfirmation;
     private System.Threading.Timer? _sessionRecoveryTimer;
     private int _recoveryPollRunning;
-    private bool _disposed;
+    private volatile bool _disposed;
     private long _updateVersion;
 
     public event EventHandler<MediaSessionChangedEventArgs>? SessionChanged;
@@ -115,9 +116,15 @@ public sealed class MediaSessionService : IDisposable
     private void ScheduleNoSessionConfirmation(
         GlobalSystemMediaTransportControlsSessionManager manager)
     {
-        CancelNoSessionConfirmation();
         var cancellation = new CancellationTokenSource();
-        _noSessionConfirmation = cancellation;
+        CancellationTokenSource? previous =
+            Interlocked.Exchange(ref _noSessionConfirmation, cancellation);
+        if (previous != null)
+        {
+            previous.Cancel();
+            previous.Dispose();
+        }
+
         _ = ConfirmNoSessionAsync(manager, cancellation);
     }
 
@@ -240,33 +247,48 @@ public sealed class MediaSessionService : IDisposable
 
     private void AttachSession(GlobalSystemMediaTransportControlsSession session)
     {
-        StopSessionRecovery();
-
-        if (ReferenceEquals(_currentSession, session) || _currentSession?.Equals(session) == true)
+        lock (_sessionMutationGate)
         {
-            _ = UpdateSessionInfoAsync(_currentSession, Interlocked.Increment(ref _updateVersion));
-            return;
+            if (_disposed) return;
+            StopSessionRecovery();
+
+            GlobalSystemMediaTransportControlsSession? selected = _currentSession;
+            if (ReferenceEquals(selected, session) || selected?.Equals(session) == true)
+            {
+                _ = UpdateSessionInfoAsync(selected!, Interlocked.Increment(ref _updateVersion));
+                return;
+            }
+
+            DetachSessionCore();
+
+            _currentSession = session;
+            session.MediaPropertiesChanged += OnSessionPropertyChanged;
+            session.PlaybackInfoChanged += OnPlaybackInfoChanged;
+            session.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
+
+            // A recovery callback may have crossed Dispose before acquiring this
+            // mutation gate. The first check above prevents post-dispose attachment.
+            _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
         }
-
-        DetachSession();
-
-        _currentSession = session;
-        _currentSession.MediaPropertiesChanged += OnSessionPropertyChanged;
-        _currentSession.PlaybackInfoChanged += OnPlaybackInfoChanged;
-        _currentSession.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
-        _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
     }
 
     private void DetachSession()
     {
+        lock (_sessionMutationGate)
+            DetachSessionCore();
+    }
+
+    private void DetachSessionCore()
+    {
         Interlocked.Increment(ref _updateVersion);
 
-        if (_currentSession != null)
+        GlobalSystemMediaTransportControlsSession? session = _currentSession;
+        _currentSession = null;
+        if (session != null)
         {
-            _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
-            _currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-            _currentSession.TimelinePropertiesChanged -= OnTimelinePropertiesChanged;
-            _currentSession = null;
+            session.MediaPropertiesChanged -= OnSessionPropertyChanged;
+            session.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+            session.TimelinePropertiesChanged -= OnTimelinePropertiesChanged;
         }
 
         _lastInfo = null;

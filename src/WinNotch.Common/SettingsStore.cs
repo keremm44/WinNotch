@@ -80,8 +80,16 @@ public static class SettingsStore
             File.WriteAllText(tempPath, json);
 
             if (File.Exists(path))
-                File.Delete(path);
-            File.Move(tempPath, path);
+            {
+                // Replace in one filesystem operation. Deleting the destination first
+                // created a crash window in which a valid settings file was lost.
+                File.Replace(tempPath, path, destinationBackupFileName: null,
+                    ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(tempPath, path);
+            }
         }
         catch (Exception ex)
         {

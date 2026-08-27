@@ -46,8 +46,7 @@ public class PrimaryInteractionTests
     [Theory]
     [InlineData(NotchState.QuickPeek)]
     [InlineData(NotchState.ShelfExpanded)]
-    [InlineData(NotchState.MediaActive)]
-    public void ExpandedStates_CollapseToPersistent(NotchState state)
+    public void ClickDrivenExpandedStates_CollapseToPersistent(NotchState state)
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
         Assert.Equal(PrimaryInteractionKind.CollapseToPersistent, decision.Kind);
@@ -55,9 +54,10 @@ public class PrimaryInteractionTests
     }
 
     [Theory]
+    [InlineData(NotchState.MediaActive)]
     [InlineData(NotchState.DragActive)]
     [InlineData(NotchState.ShelfDraggingOut)]
-    public void DragStates_IgnorePrimaryClick(NotchState state)
+    public void HoverAndDragStates_IgnorePrimaryClick(NotchState state)
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);
         Assert.Equal(PrimaryInteractionKind.None, decision.Kind);

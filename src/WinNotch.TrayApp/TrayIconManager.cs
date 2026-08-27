@@ -196,11 +196,11 @@ public sealed class TrayIconManager : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        // TaskbarIcon is a managed WPF object and must only be disposed by the UI
+        // lifecycle. A finalizer would run this code on the finalizer thread.
         _trayIcon.Dispose();
         GC.SuppressFinalize(this);
     }
-
-    ~TrayIconManager() => Dispose();
 }
 
 internal sealed class RelayCommand : System.Windows.Input.ICommand

@@ -143,7 +143,7 @@ public sealed class WindowHookManager : IDisposable
 
         try
         {
-            IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+            IntPtr hMonitor = MonitorFromWindow(hWnd, User32.MONITOR_DEFAULTTONEAREST);
             if (hMonitor == IntPtr.Zero) return false;
 
             var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };

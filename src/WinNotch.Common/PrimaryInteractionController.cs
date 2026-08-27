@@ -22,8 +22,13 @@ public static class PrimaryInteractionController
         NotchState.ClipboardNotify or NotchState.ScreenshotNotify
             => new(PrimaryInteractionKind.ExpandContextAction, state),
 
-        NotchState.QuickPeek or NotchState.ShelfExpanded or NotchState.MediaActive
+        NotchState.QuickPeek or NotchState.ShelfExpanded
             => new(PrimaryInteractionKind.CollapseToPersistent, null),
+
+        // Media is entirely hover-driven. Background clicks neither expand nor
+        // collapse it; transport buttons remain independently interactive.
+        NotchState.MediaActive
+            => new(PrimaryInteractionKind.None, null),
 
         _ => new(PrimaryInteractionKind.None, null)
     };
