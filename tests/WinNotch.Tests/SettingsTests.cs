@@ -13,7 +13,6 @@ public class ModuleSettingsTests
         Assert.True(settings.ModuleA_DragDrop);
         Assert.True(settings.ModuleB_Clipboard);
         Assert.False(settings.ModuleC_Media);
-        Assert.True(settings.ModuleD_WindowPin);
         Assert.True(settings.ModuleE_Screenshot);
     }
 
@@ -40,7 +39,6 @@ public class ModuleSettingsTests
         Assert.True(settings.ModuleA_DragDrop);
         Assert.False(settings.ModuleB_Clipboard);
         Assert.False(settings.ModuleC_Media);
-        Assert.True(settings.ModuleD_WindowPin);
         Assert.True(settings.ModuleE_Screenshot);
     }
 
@@ -52,14 +50,12 @@ public class ModuleSettingsTests
             ModuleA_DragDrop = false,
             ModuleB_Clipboard = false,
             ModuleC_Media = false,
-            ModuleD_WindowPin = false,
             ModuleE_Screenshot = false
         };
 
         Assert.False(settings.ModuleA_DragDrop);
         Assert.False(settings.ModuleB_Clipboard);
         Assert.False(settings.ModuleC_Media);
-        Assert.False(settings.ModuleD_WindowPin);
         Assert.False(settings.ModuleE_Screenshot);
     }
 
