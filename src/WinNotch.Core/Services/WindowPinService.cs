@@ -37,6 +37,17 @@ public sealed class WindowPinService : IDisposable
         return _pinnedWindows.Contains(hWnd);
     }
 
+    /// <summary>
+    /// Returns the actual native TOPMOST bit, regardless of whether this service
+    /// owns the bookkeeping entry. This is used only for explicit recovery UI.
+    /// </summary>
+    public bool IsNativeTopmost(IntPtr hWnd)
+    {
+        if (_disposed || hWnd == IntPtr.Zero || !IsValidWindow(hWnd)) return false;
+        int exStyle = User32.GetWindowLong(hWnd, User32.GWL_EXSTYLE);
+        return (exStyle & User32.WS_EX_TOPMOST) != 0;
+    }
+
     public IReadOnlyList<PinnedWindowInfo> GetPinnedWindows()
     {
         if (_disposed) return Array.Empty<PinnedWindowInfo>();
@@ -51,6 +62,12 @@ public sealed class WindowPinService : IDisposable
     public bool PinWindow(IntPtr hWnd)
     {
         if (_disposed || hWnd == IntPtr.Zero || !IsValidWindow(hWnd)) return false;
+
+        // A maximized/fullscreen TOPMOST window can cover the entire desktop and
+        // make every subsequently opened normal window appear to be broken. The
+        // feature is intended for floating utility windows, so reject that case.
+        if (WindowHookManager.IsWindowFullscreen(hWnd) || WindowHookManager.IsWindowMaximized(hWnd))
+            return false;
 
         try
         {
@@ -138,8 +155,6 @@ public sealed class WindowPinService : IDisposable
         foreach (IntPtr hWnd in _pinnedWindows.ToArray())
             UnpinWindow(hWnd);
 
-        // If a native call failed because the target disappeared mid-loop, do not
-        // retain stale bookkeeping after an explicit clear request.
         PruneClosedWindows();
     }
 
@@ -172,8 +187,6 @@ public sealed class WindowPinService : IDisposable
     {
         if (_disposed) return;
 
-        // Unpin BEFORE marking disposed; UnpinWindow intentionally refuses work
-        // after disposal. The previous order left windows stuck as TOPMOST.
         UnpinAll();
         _disposed = true;
         _pinnedWindows.Clear();
