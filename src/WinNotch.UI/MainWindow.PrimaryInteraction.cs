@@ -6,6 +6,7 @@ using WinNotch.Common;
 using WinNotch.Core.Services;
 
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfCursors = System.Windows.Input.Cursors;
 
 namespace WinNotch.UI;
 
@@ -32,7 +33,8 @@ public partial class MainWindow
         if (_isDragging || _isDraggingOut)
             return;
 
-        SetIdleHoverAffordance(false);
+        if (_currentState is NotchState.Idle or NotchState.Hover)
+            SetIdleHoverAffordance(false);
 
         if (_currentState == NotchState.Hover)
             TransitionToState(GetPersistentState(), force: true);
@@ -86,6 +88,10 @@ public partial class MainWindow
 
     private void MainWindow_PrimarySizeChanged(object sender, SizeChangedEventArgs e)
     {
+        // SizeChanged can fire while XAML is still constructing named children.
+        if (QuickPeekView == null || RootGrid == null)
+            return;
+
         bool quickPeek = _currentState == NotchState.QuickPeek;
         QuickPeekView.Visibility = quickPeek ? Visibility.Visible : Visibility.Collapsed;
         if (quickPeek)
@@ -173,8 +179,8 @@ public partial class MainWindow
     private void UpdatePrimaryCursor(NotchState state)
     {
         RootGrid.Cursor = state is NotchState.DragActive or NotchState.ShelfDraggingOut
-            ? Cursors.Arrow
-            : Cursors.Hand;
+            ? WpfCursors.Arrow
+            : WpfCursors.Hand;
     }
 
     private static bool IsInteractiveChild(DependencyObject? source)
