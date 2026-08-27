@@ -25,7 +25,7 @@ public partial class ClipboardToastView : UserControl
     public ClipboardToastView()
     {
         InitializeComponent();
-        IsVisibleChanged += ClipboardToastView_IsVisibleChanged;
+        IsVisibleChanged += ClipboardToastView_RevealVisibilityChanged;
     }
 
     public void SetNotification(
@@ -101,7 +101,7 @@ public partial class ClipboardToastView : UserControl
 
     private MainWindow? GetHostWindow() => Window.GetWindow(this) as MainWindow;
 
-    private void ClipboardToastView_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    private void ClipboardToastView_RevealVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is true)
             SurfaceMotion.Reveal(this);
