@@ -20,6 +20,7 @@ public partial class MainWindow
                 ? (Constants.NotchScreenshotActionWidth, Constants.NotchScreenshotActionHeight)
                 : (Constants.NotchClipboardActionWidth, Constants.NotchClipboardActionHeight);
 
+            (width, height) = ResolveAppearanceContextDimensions(width, height);
             ApplyContextDimensions(width, height);
             return;
         }
@@ -38,10 +39,14 @@ public partial class MainWindow
             switch (result)
             {
                 case ScreenshotSaveResult.Saved:
-                    ClipboardToastView.ShowActionFeedback(action.SuccessMessage ?? "Kaydedildi");
+                    ClipboardToastView.ShowActionFeedback(
+                        action.SuccessMessage ?? "Kaydedildi",
+                        succeeded: true);
                     break;
                 case ScreenshotSaveResult.Failed:
-                    ClipboardToastView.ShowActionFeedback(error ?? "Kaydetme başarısız");
+                    ClipboardToastView.ShowActionFeedback(
+                        error ?? "Kaydetme başarısız",
+                        succeeded: false);
                     break;
                 case ScreenshotSaveResult.Cancelled:
                     break;
@@ -53,7 +58,8 @@ public partial class MainWindow
         ClipboardToastView.ShowActionFeedback(
             succeeded
                 ? action.SuccessMessage ?? "Açıldı"
-                : executionError ?? "Aksiyon açılamadı");
+                : executionError ?? "Aksiyon açılamadı",
+            succeeded);
     }
 
     private void ApplyContextDimensions(double width, double height)
