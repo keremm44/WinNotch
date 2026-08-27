@@ -26,9 +26,12 @@ public partial class ClipboardToastView : UserControl
     private static readonly Brush ScreenshotSurface = CreateBrush("#183BA9FF");
     private static readonly Brush ScreenshotBorder = CreateBrush("#443BA9FF");
 
+    private const int HoverGraceMs = 280;
+
     private ContextAction? _currentAction;
     private BitmapSource? _currentImage;
     private bool _isExpanded;
+    private System.Windows.Threading.DispatcherTimer? _collapseGraceTimer;
 
     public ClipboardToastView()
     {
@@ -179,6 +182,8 @@ public partial class ClipboardToastView : UserControl
 
     private void Surface_MouseEnter(object sender, MouseEventArgs e)
     {
+        CancelCollapseGrace();
+
         if (_currentAction == null || _isExpanded)
             return;
 
@@ -188,10 +193,45 @@ public partial class ClipboardToastView : UserControl
     }
 
     private void Surface_MouseLeave(object sender, MouseEventArgs e)
-        => CollapseActions(notify: true);
+        => ScheduleCollapseGrace();
+
+    private void ScheduleCollapseGrace()
+    {
+        CancelCollapseGrace();
+
+        _collapseGraceTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(HoverGraceMs)
+        };
+
+        EventHandler? handler = null;
+        handler = (_, _) =>
+        {
+            if (_collapseGraceTimer != null && handler != null)
+                _collapseGraceTimer.Tick -= handler;
+            _collapseGraceTimer?.Stop();
+            _collapseGraceTimer = null;
+
+            if (IsMouseOver || ActionPanel.IsMouseOver || PrimaryActionButton.IsMouseOver)
+                return;
+
+            CollapseActions(notify: true);
+        };
+
+        _collapseGraceTimer.Tick += handler;
+        _collapseGraceTimer.Start();
+    }
+
+    private void CancelCollapseGrace()
+    {
+        _collapseGraceTimer?.Stop();
+        _collapseGraceTimer = null;
+    }
 
     private void CollapseActions(bool notify)
     {
+        CancelCollapseGrace();
+
         if (!_isExpanded)
         {
             ActionPanel.Visibility = Visibility.Collapsed;
@@ -210,6 +250,7 @@ public partial class ClipboardToastView : UserControl
         if (_currentAction == null)
             return;
 
+        CancelCollapseGrace();
         e.Handled = true;
         GetHostWindow()?.ExecuteContextAction(_currentAction, _currentImage);
     }
