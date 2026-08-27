@@ -20,8 +20,6 @@ public partial class MainWindow
         if (_reliabilityLayerInitialized) return;
         _reliabilityLayerInitialized = true;
 
-        // Preview handles the event before the legacy MouseRightButtonUp handler,
-        // so the themed/managed menu below becomes the single context menu path.
         RootGrid.PreviewMouseRightButtonUp += Reliability_PreviewMouseRightButtonUp;
 
         _fullscreenFallbackTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -31,7 +29,6 @@ public partial class MainWindow
         _fullscreenFallbackTimer.Tick += FullscreenFallbackTimer_Tick;
         _fullscreenFallbackTimer.Start();
 
-        // Do not wait for the first interval after startup.
         VerifyAutomaticFullscreenVisibility();
     }
 
@@ -101,12 +98,39 @@ public partial class MainWindow
         {
             if (foreground != IntPtr.Zero && foreground != _hWnd)
             {
-                bool pinned = _windowPinService.IsPinned(foreground);
-                var pinItem = new MenuItem
+                bool tracked = _windowPinService.IsPinned(foreground);
+                bool nativeTopmost = _windowPinService.IsNativeTopmost(foreground);
+                bool fullscreen = WindowHookManager.IsWindowFullscreen(foreground);
+                bool maximized = WindowHookManager.IsWindowMaximized(foreground);
+
+                MenuItem pinItem;
+                if (tracked || nativeTopmost)
                 {
-                    Header = pinned ? "Aktif pencerenin sabitlemesini kaldır" : "Aktif pencereyi sabitle"
-                };
-                pinItem.Click += (_, _) => _windowPinService.TogglePin(foreground);
+                    // nativeTopmost + !tracked is the recovery path for a window
+                    // left TOPMOST by an older force-killed WinNotch process.
+                    pinItem = new MenuItem
+                    {
+                        Header = tracked
+                            ? "Aktif pencerenin sabitlemesini kaldır"
+                            : "Aktif pencerenin üstte kalmasını kaldır"
+                    };
+                    pinItem.Click += (_, _) => _windowPinService.UnpinWindow(foreground);
+                }
+                else if (fullscreen || maximized)
+                {
+                    pinItem = new MenuItem
+                    {
+                        Header = "Maksimize / tam ekran pencere sabitlenemez",
+                        IsEnabled = false,
+                        ToolTip = "Önce pencereyi normal boyuta getir. Tam ekran TOPMOST pencereler diğer uygulamaları örtebilir."
+                    };
+                }
+                else
+                {
+                    pinItem = new MenuItem { Header = "Aktif pencereyi sabitle" };
+                    pinItem.Click += (_, _) => _windowPinService.PinWindow(foreground);
+                }
+
                 menu.Items.Add(pinItem);
             }
 
