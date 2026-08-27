@@ -33,28 +33,17 @@ public partial class App : Application
     private TrayIconManager? _trayIcon;
     private MainWindow? _mainWindow;
     private SettingsWindow? _settingsWindow;
-    private ModuleSettings _settings = null!; // Loaded from disk in OnStartup
+    private ModuleSettings _settings = null!;
 
-    /// <summary>
-    /// Application startup — single instance check and initialization.
-    /// </summary>
     private void OnStartup(object sender, StartupEventArgs e)
     {
         try
         {
             Debug.WriteLine("[WinNotch] OnStartup starting...");
 
-            // ═══════════════════════════════════════════════════════════
-            // STEP 0: Load settings from disk
-            // WHY: Must load BEFORE creating MainWindow so module flags
-            // are available for service initialization.
-            // ═══════════════════════════════════════════════════════════
             _settings = SettingsStore.Load();
             Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}");
 
-            // ═══════════════════════════════════════════════════════════
-            // STEP 1: Single Instance Enforcement
-            // ═══════════════════════════════════════════════════════════
             _mutex = new Mutex(true, Constants.MutexName, out bool createdNew);
 
             if (!createdNew)
@@ -66,22 +55,18 @@ public partial class App : Application
 
             Debug.WriteLine("[WinNotch] Mutex acquired.");
 
-            // ═══════════════════════════════════════════════════════════
-            // STEP 2: Create Main Window (Notch Widget)
-            // ═══════════════════════════════════════════════════════════
             Debug.WriteLine("[WinNotch] Creating MainWindow...");
             _mainWindow = new MainWindow();
             _mainWindow.SetSettings(_settings);
+            _mainWindow.SettingsRequested += OnSettingsRequested;
             Debug.WriteLine("[WinNotch] Showing MainWindow...");
             _mainWindow.Show();
             Debug.WriteLine("[WinNotch] MainWindow shown.");
 
-            // ═══════════════════════════════════════════════════════════
-            // STEP 3: Create Tray Icon
-            // ═══════════════════════════════════════════════════════════
             Debug.WriteLine("[WinNotch] Creating TrayIcon...");
             _trayIcon = new TrayIconManager(_settings);
             _trayIcon.SettingsChanged += OnTraySettingsChanged;
+            _trayIcon.SettingsRequested += OnSettingsRequested;
             Debug.WriteLine("[WinNotch] TrayIcon created.");
 
             Debug.WriteLine("[WinNotch] Startup complete!");
@@ -103,66 +88,95 @@ public partial class App : Application
         }
     }
 
-    /// <summary>
-    /// Application exit — clean up ALL resources.
-    /// WHY: MUST unpin all windows, remove all hooks, dispose all services.
-    /// This is the last chance to clean up before process termination.
-    /// </summary>
     private void OnExit(object sender, ExitEventArgs e)
     {
-        // Save settings one final time
         SettingsStore.Save(_settings);
 
-        // Dispose tray icon
-        _trayIcon?.Dispose();
+        if (_trayIcon != null)
+        {
+            _trayIcon.SettingsChanged -= OnTraySettingsChanged;
+            _trayIcon.SettingsRequested -= OnSettingsRequested;
+            _trayIcon.Dispose();
+            _trayIcon = null;
+        }
 
-        // Close settings window if open
-        _settingsWindow?.Close();
-        _settingsWindow = null;
+        if (_settingsWindow != null)
+        {
+            _settingsWindow.SettingsChanged -= OnSettingsWindowChanged;
+            _settingsWindow.Close();
+            _settingsWindow = null;
+        }
 
-        // Close main window (triggers MainWindow_Closing which disposes services)
-        _mainWindow?.Close();
-        _mainWindow = null;
+        if (_mainWindow != null)
+        {
+            _mainWindow.SettingsRequested -= OnSettingsRequested;
+            _mainWindow.Close();
+            _mainWindow = null;
+        }
 
-        // Release mutex
         _mutex?.ReleaseMutex();
         _mutex?.Dispose();
         _mutex = null;
-
-        // NOTE: We do NOT call GC.Collect() here.
-        // .NET's Workstation GC + Concurrent mode handles cleanup efficiently.
-        // Manual GC.Collect() would cause a noticeable pause.
     }
 
-    /// <summary>
-    /// Handles settings changes from the tray icon.
-    /// </summary>
     private void OnTraySettingsChanged(object? sender, ModuleSettings settings)
     {
+        ApplySettings(settings);
+    }
+
+    private void OnSettingsWindowChanged(object? sender, ModuleSettings settings)
+    {
+        ApplySettings(settings);
+    }
+
+    private void ApplySettings(ModuleSettings settings)
+    {
         _settings = settings;
-
-        // Persist to disk immediately
         SettingsStore.Save(_settings);
-
-        // Notify MainWindow to recreate/destroy module services
         _mainWindow?.OnSettingsChanged();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // GLOBAL ERROR HANDLING
-    // ═══════════════════════════════════════════════════════════════
+    private void OnSettingsRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(OpenSettingsWindow);
+    }
 
-    /// <summary>
-    /// Handles unhandled exceptions.
-    /// WHY: Prevents the app from crashing silently.
-    /// Shows a tray notification and attempts to continue.
-    /// </summary>
+    private void OpenSettingsWindow()
+    {
+        if (_settingsWindow != null)
+        {
+            if (_settingsWindow.WindowState == WindowState.Minimized)
+                _settingsWindow.WindowState = WindowState.Normal;
+
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
+            _settingsWindow.Topmost = true;
+            _settingsWindow.Topmost = false;
+            _settingsWindow.Focus();
+            return;
+        }
+
+        _settingsWindow = new SettingsWindow(_settings);
+        _settingsWindow.SettingsChanged += OnSettingsWindowChanged;
+        _settingsWindow.Closed += OnSettingsWindowClosed;
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
+    }
+
+    private void OnSettingsWindowClosed(object? sender, EventArgs e)
+    {
+        if (_settingsWindow == null) return;
+
+        _settingsWindow.SettingsChanged -= OnSettingsWindowChanged;
+        _settingsWindow.Closed -= OnSettingsWindowClosed;
+        _settingsWindow = null;
+    }
+
     private void OnDispatcherUnhandledException(object sender,
         System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
         Debug.WriteLine($"[WinNotch] Unhandled exception: {e.Exception}");
 
-        // Log the error
         try
         {
             string logPath = System.IO.Path.Combine(
@@ -176,21 +190,11 @@ public partial class App : Application
         }
         catch
         {
-            // If logging fails, just continue
         }
 
-        // Mark as handled — don't crash the app
         e.Handled = true;
-
-        // DON'T restart automatically — causes infinite loop
-        // Just log and continue. User can restart from tray.
     }
 
-    /// <summary>
-    /// Attempts to restart the application after a crash.
-    /// WHY: Power users expect resilience. If the notch crashes,
-    /// automatically restart it rather than requiring manual intervention.
-    /// </summary>
     private void RestartApplication()
     {
         try
