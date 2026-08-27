@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
@@ -22,6 +23,8 @@ public partial class DropZoneView : UserControl
 {
     private HeldItem[] _items = Array.Empty<HeldItem>();
     private Point _dragStart;
+    private int _selectedIndex = -1;
+    private bool _isExpanded;
 
     public event EventHandler? ShelfCleared;
     public event EventHandler? DragOutStarted;
@@ -29,6 +32,11 @@ public partial class DropZoneView : UserControl
 
     public bool HasItems => _items.Length > 0;
     public IReadOnlyList<HeldItem> Items => _items;
+
+    private HeldItem? SelectedItem
+        => _selectedIndex >= 0 && _selectedIndex < _items.Length
+            ? _items[_selectedIndex]
+            : _items.FirstOrDefault();
 
     public DropZoneView()
     {
@@ -57,14 +65,19 @@ public partial class DropZoneView : UserControl
         }
 
         _items = merged.ToArray();
+        _selectedIndex = _items.Length > 0 ? _items.Length - 1 : -1;
         RenderShelf();
     }
 
     public void ResetShelf(bool notify = false)
     {
         _items = Array.Empty<HeldItem>();
-        RenderShelf();
+        _selectedIndex = -1;
+        _isExpanded = false;
+        ShelfChipsPanel.Children.Clear();
+        ShelfChipsPanel.Visibility = Visibility.Collapsed;
         ActionButtons.Visibility = Visibility.Collapsed;
+        RenderShelf();
 
         if (notify)
             ShelfCleared?.Invoke(this, EventArgs.Empty);
@@ -72,60 +85,217 @@ public partial class DropZoneView : UserControl
 
     public void SetExpanded(bool expanded)
     {
+        _isExpanded = expanded;
+
         if (HasItems)
             RenderShelf();
 
         ActionButtons.Visibility = expanded && HasItems
             ? Visibility.Visible
             : Visibility.Collapsed;
-
+        ShelfChipsPanel.Visibility = expanded && HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         RemoveButton.Visibility = HasItems
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+        RenderChips();
     }
 
     public void ShowDropTarget()
     {
+        _isExpanded = false;
         FileIcon.Text = "+";
         DropTargetText.Text = "Dosyayı buraya bırak";
         FileSummaryText.Text = HasItems
             ? $"Mevcut {_items.Length} öğeye eklenecek"
             : "Geçici rafta tutulacak";
+        ShelfChipsPanel.Visibility = Visibility.Collapsed;
         ActionButtons.Visibility = Visibility.Collapsed;
         RemoveButton.Visibility = Visibility.Collapsed;
     }
 
     private void RenderShelf()
     {
+        EnsureSelection();
+
         if (_items.Length == 0)
         {
             FileIcon.Text = "+";
             DropTargetText.Text = "Dosyayı buraya bırak";
             FileSummaryText.Text = "Geçici rafta tutulacak";
             RemoveButton.Visibility = Visibility.Collapsed;
+            ShelfChipsPanel.Visibility = Visibility.Collapsed;
+            ActionButtons.Visibility = Visibility.Collapsed;
             return;
         }
 
         RemoveButton.Visibility = Visibility.Visible;
+        HeldItem item = SelectedItem ?? _items[0];
+        FileIcon.Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath);
+        DropTargetText.Text = item.DisplayName;
 
-        if (_items.Length == 1)
+        if (!item.Exists)
         {
-            HeldItem item = _items[0];
-            FileIcon.Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath);
-            DropTargetText.Text = item.DisplayName;
-            FileSummaryText.Text = item.Exists
-                ? FormatSummary(item)
+            FileSummaryText.Text = _items.Length > 1
+                ? $"{_items.Length} öğe · seçili kaynak bulunamıyor"
                 : "Kaynak artık bulunamıyor";
+        }
+        else if (_items.Length == 1)
+        {
+            FileSummaryText.Text = FormatSummary(item);
+        }
+        else
+        {
+            long knownBytes = _items.Where(i => i.SizeBytes.HasValue).Sum(i => i.SizeBytes!.Value);
+            string sizeText = knownBytes > 0 ? $" · {FormatSize(knownBytes)}" : string.Empty;
+            FileSummaryText.Text = $"{_items.Length} öğe{sizeText} · seçili";
+        }
+
+        if (_isExpanded)
+            RenderChips();
+    }
+
+    private void RenderChips()
+    {
+        ShelfChipsPanel.Children.Clear();
+
+        if (!_isExpanded || _items.Length == 0)
+        {
+            ShelfChipsPanel.Visibility = Visibility.Collapsed;
             return;
         }
 
-        FileIcon.Text = _items.Length.ToString();
-        DropTargetText.Text = $"{_items.Length} öğe";
+        ShelfChipsPanel.Visibility = Visibility.Visible;
 
-        long knownBytes = _items.Where(i => i.SizeBytes.HasValue).Sum(i => i.SizeBytes!.Value);
-        FileSummaryText.Text = knownBytes > 0
-            ? $"{FormatSize(knownBytes)} · sürükle veya kopyala"
-            : "Sürükle veya kopyala";
+        int firstVisible = Math.Max(0, _items.Length - 2);
+        for (int index = firstVisible; index < _items.Length; index++)
+            ShelfChipsPanel.Children.Add(CreateChip(index));
+
+        int hiddenCount = firstVisible;
+        if (hiddenCount > 0)
+        {
+            var overflow = new Border
+            {
+                Height = 24,
+                CornerRadius = new CornerRadius(7),
+                Background = FindBrush("Brush.Surface.Soft"),
+                BorderBrush = FindBrush("Brush.Border.OnDark"),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 0, 0),
+                Child = new TextBlock
+                {
+                    Text = $"+{hiddenCount}",
+                    FontSize = 8.5,
+                    Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            ShelfChipsPanel.Children.Add(overflow);
+        }
+    }
+
+    private FrameworkElement CreateChip(int index)
+    {
+        HeldItem item = _items[index];
+        var container = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 5, 0)
+        };
+
+        var content = new StackPanel { Orientation = Orientation.Horizontal };
+        content.Children.Add(new TextBlock
+        {
+            Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath),
+            FontSize = 7.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 5, 0)
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = item.DisplayName,
+            FontSize = 8.5,
+            MaxWidth = 88,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Foreground = FindBrush("Brush.Text.OnDarkPrimary"),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var selectButton = new Button
+        {
+            Tag = index,
+            Content = content,
+            Style = (Style)FindResource("ShelfChipButton")
+        };
+        if (index == _selectedIndex)
+        {
+            selectButton.Background = FindBrush("Brush.Accent.Subtle");
+            selectButton.BorderBrush = FindBrush("Brush.Accent.Border");
+        }
+        selectButton.Click += ShelfChip_Select;
+
+        var removeButton = new Button
+        {
+            Tag = index,
+            Content = "×",
+            ToolTip = "Bu öğeyi raftan çıkar",
+            Style = (Style)FindResource("ShelfChipRemoveButton")
+        };
+        removeButton.Click += ShelfChip_Remove;
+
+        container.Children.Add(selectButton);
+        container.Children.Add(removeButton);
+        return container;
+    }
+
+    private void ShelfChip_Select(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int index } || index < 0 || index >= _items.Length)
+            return;
+
+        _selectedIndex = index;
+        RenderShelf();
+        RenderChips();
+    }
+
+    private void ShelfChip_Remove(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int index } || index < 0 || index >= _items.Length)
+            return;
+
+        var list = _items.ToList();
+        list.RemoveAt(index);
+        _items = list.ToArray();
+        _selectedIndex = _items.Length == 0 ? -1 : Math.Min(index, _items.Length - 1);
+
+        if (_items.Length == 0)
+        {
+            ResetShelf(notify: true);
+            return;
+        }
+
+        RenderShelf();
+        RenderChips();
+    }
+
+    private Brush FindBrush(string key)
+        => TryFindResource(key) as Brush ?? Brushes.Transparent;
+
+    private void EnsureSelection()
+    {
+        if (_items.Length == 0)
+        {
+            _selectedIndex = -1;
+            return;
+        }
+
+        if (_selectedIndex < 0 || _selectedIndex >= _items.Length)
+            _selectedIndex = _items.Length - 1;
     }
 
     private static string FormatSummary(HeldItem item)
@@ -167,7 +337,7 @@ public partial class DropZoneView : UserControl
 
     private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        HeldItem? item = _items.FirstOrDefault();
+        HeldItem? item = SelectedItem;
         if (item == null) return;
 
         try
@@ -196,11 +366,11 @@ public partial class DropZoneView : UserControl
         copyPath.Click += (_, _) => CopyPathsAsText();
         menu.Items.Add(copyPath);
 
-        var terminal = new MenuItem { Header = "Terminali burada aç" };
-        terminal.Click += (_, _) => OpenTerminalAtFirstItem();
+        var terminal = new MenuItem { Header = "Terminali seçili öğede aç" };
+        terminal.Click += (_, _) => OpenTerminalAtSelectedItem();
         menu.Items.Add(terminal);
 
-        var clear = new MenuItem { Header = "Raftan kaldır" };
+        var clear = new MenuItem { Header = "Rafı temizle" };
         clear.Click += (_, _) => ResetShelf(notify: true);
         menu.Items.Add(clear);
 
@@ -217,7 +387,7 @@ public partial class DropZoneView : UserControl
         try
         {
             WpfClipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
-            ShowActionFeedback("Yol kopyalandı");
+            ShowActionFeedback("Yollar kopyalandı");
         }
         catch (Exception ex)
         {
@@ -225,9 +395,9 @@ public partial class DropZoneView : UserControl
         }
     }
 
-    private void OpenTerminalAtFirstItem()
+    private void OpenTerminalAtSelectedItem()
     {
-        HeldItem? item = _items.FirstOrDefault();
+        HeldItem? item = SelectedItem;
         if (item == null) return;
 
         string dir = item.IsDirectory
@@ -300,7 +470,6 @@ public partial class DropZoneView : UserControl
 
     private void ShowActionFeedback(string text)
     {
-        string original = FileSummaryText.Text;
         FileSummaryText.Text = text;
 
         var timer = new System.Windows.Threading.DispatcherTimer
@@ -313,7 +482,7 @@ public partial class DropZoneView : UserControl
         {
             timer.Stop();
             if (handler != null) timer.Tick -= handler;
-            if (HasItems) FileSummaryText.Text = original;
+            if (HasItems) RenderShelf();
         };
 
         timer.Tick += handler;
