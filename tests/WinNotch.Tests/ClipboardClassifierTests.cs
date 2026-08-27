@@ -33,9 +33,19 @@ public class ClipboardClassifierTests
     [InlineData("\\\\server\\share\\file.txt", ClipboardContentType.FilePath)]
     [InlineData("~/Documents/note.txt", ClipboardContentType.FilePath)]
     [InlineData("./relative/path.cs", ClipboardContentType.FilePath)]
+    [InlineData("\"C:\\Users\\test\\file.cs\"", ClipboardContentType.FilePath)]
+    [InlineData("\"D:/projects/app/main.cs\"", ClipboardContentType.FilePath)]
+    [InlineData("\"C:\\Users\\test\\a-very-long-file-name-that-is-truncated...", ClipboardContentType.FilePath)]
     public void Classify_FilePaths_ReturnsFilePath(string text, ClipboardContentType expected)
     {
         Assert.Equal(expected, ClipboardClassifier.Classify(text));
+    }
+
+    [Fact]
+    public void Classify_MultipleCopyAsPathValues_DoesNotPretendTheyAreOneFile()
+    {
+        string multiplePaths = "\"C:\\one.txt\"\r\n\"C:\\two.txt\"";
+        Assert.Equal(ClipboardContentType.Text, ClipboardClassifier.Classify(multiplePaths));
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -8,91 +8,110 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        Background="#FF000000"
+        Background="{DynamicResource Brush.Notch.Base}"
         AllowsTransparency="False"
         Cursor="Arrow"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
         Closing="MainWindow_Closing"
-        Loaded="MainWindow_Loaded">
+        Loaded="MainWindow_Loaded"
+        SizeChanged="MainWindow_PrimarySizeChanged">
 
-    <!--
-        IMPORTANT DESIGN DECISIONS:
-        1. AllowsTransparency="False" — We use WS_EX_LAYERED + DWM for native transparency.
-           Setting AllowsTransparency="True" would use software blending and waste CPU/GPU.
-
-        2. Background="#FF000000" — 100% opaque black. DWM handles the transparency
-           through DwmExtendFrameIntoClientArea + SetWindowRgn for the pill shape.
-
-        3. Topmost="True" — Always on top. Combined with WS_EX_TOOLWINDOW (set in code-behind),
-           this creates a persistent widget that doesn't appear in Alt+Tab.
-
-        4. ShowInTaskbar="False" — Hidden from taskbar.
-
-        5. ResizeMode="NoResize" — Fixed size, no user resize.
-    -->
-
-    <Grid x:Name="RootGrid" Background="Transparent"
-          MouseEnter="RootGrid_MouseEnter"
-          MouseLeave="RootGrid_MouseLeave"
+    <Grid x:Name="RootGrid"
+          Background="Transparent"
+          MouseEnter="RootGrid_PrimaryMouseEnter"
+          MouseLeave="RootGrid_PrimaryMouseLeave"
+          PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp"
           AllowDrop="True"
           Drop="RootGrid_Drop"
           DragEnter="RootGrid_DragEnter"
           DragLeave="RootGrid_DragLeave"
-          DragOver="RootGrid_DragOver"
-          MouseRightButtonUp="RootGrid_MouseRightButtonUp">
+          DragOver="RootGrid_DragOver">
 
-        <!-- Main Notch Container with animation support -->
         <Border x:Name="NotchBorder"
-                Background="#FF000000"
-                CornerRadius="11"
+                Background="{DynamicResource Brush.Notch.Base}"
+                BorderBrush="{DynamicResource Brush.Notch.Edge}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="{DynamicResource Radius.Notch}"
                 ClipToBounds="True"
-                Width="100" Height="22"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top">
-
-            <Border.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform x:Name="NotchScale" ScaleX="1" ScaleY="1" CenterX="65" CenterY="14"/>
-                    <TranslateTransform x:Name="NotchTranslate" X="0" Y="0"/>
-                </TransformGroup>
-            </Border.RenderTransform>
-
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
             <Grid>
-                <!-- Default Idle Content -->
-                <StackPanel x:Name="IdleContent"
+                <Grid x:Name="IdleContent"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+                    <Border x:Name="IdleAmbientGlow"
+                            Width="34" Height="12"
+                            CornerRadius="6"
+                            Background="{DynamicResource Brush.Notch.AmbientGlow}"
+                            Opacity="0.55"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"/>
+                    <Border x:Name="IdleLine"
+                            Width="18" Height="3"
+                            CornerRadius="1.5"
+                            Background="{DynamicResource Brush.Notch.Handle}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    <StackPanel x:Name="IdleDots"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel x:Name="MediaAmbientContent"
                             Orientation="Horizontal"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Opacity="1">
-
-                    <!-- Minimal notch indicator — just a subtle mark, no text branding -->
-                    <TextBlock Text="•"
-                               Foreground="#66FFFFFF"
-                               FontSize="10"
+                            Visibility="Collapsed">
+                    <Border Width="16" Height="16"
+                            CornerRadius="8"
+                            Background="{DynamicResource Brush.Notch.AmbientSurface}"
+                            Margin="0,0,5,0">
+                        <TextBlock Text="▶"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="7"
+                                   Foreground="{DynamicResource Brush.Notch.AmbientIcon}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="1,0,0,0"/>
+                    </Border>
+                    <TextBlock x:Name="MediaAmbientTitle"
+                               Text="Medya"
+                               FontSize="9"
+                               Foreground="{DynamicResource Brush.Notch.AmbientText}"
+                               MaxWidth="82"
+                               TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Drop Zone Content (Module A) -->
+                <views:QuickPeekView x:Name="QuickPeekView"
+                                     Visibility="Collapsed"
+                                     ContextRequested="OnQuickPeekContextRequested"/>
+
                 <views:DropZoneView x:Name="DropZoneView"
                                     Visibility="Collapsed"/>
 
-                <!-- Media Widget Content (Module C) -->
                 <views:MediaWidgetView x:Name="MediaWidgetView"
                                        Visibility="Collapsed"/>
 
-                <!-- Clipboard Toast Content (Module B/E) -->
                 <views:ClipboardToastView x:Name="ClipboardToastView"
-                                          Visibility="Collapsed"/>
+                                          Visibility="Collapsed"
+                                          MeaningfulContextAvailable="ClipboardToastView_MeaningfulContextAvailable"/>
             </Grid>
         </Border>
 
-        <!-- Theme Border (shown when Windows uses light theme) -->
         <Border x:Name="ThemeBorder"
-                BorderBrush="#FF404040"
-                BorderThickness="1"
-                CornerRadius="11"
-                Width="100" Height="22"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
+                BorderBrush="{DynamicResource Brush.Border.LightTheme}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="{DynamicResource Radius.Notch}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 IsHitTestVisible="False"
                 Visibility="Collapsed"/>
     </Grid>

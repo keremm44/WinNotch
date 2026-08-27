@@ -1,57 +1,79 @@
-# WinNotch 🎯
+# WinNotch
 
-**Windows Desktop Widget - Always-on-top, Borderless Notch**
+**A contextual action surface for Windows.**
 
-A lightweight, always-on-top widget that sits at the top-center of your screen. Think of it as a software "notch" for your desktop — but smart, extensible, and resource-friendly.
+WinNotch sits at the top-center of the desktop and stays quiet while nothing needs attention. Relevant events can temporarily surface actions or information, then return to the compact idle surface.
 
-## Features
+Core interaction model:
 
-| Module | Description | Status |
-|--------|-------------|--------|
-| **Module A** - Drag & Drop Path Extractor | Drop files/folders to see paths, open in Explorer, copy to clipboard | 🔨 In Progress |
-| **Module B** - Clipboard Sniffer | Passive clipboard monitoring via Win32 API (no polling!) | 🔨 In Progress |
-| **Module C** - Media Companion | SMTC integration - album art, controls, song info | 🔨 In Progress |
-| **Module D** - Window Pinner | Drag title bars to pin windows always-on-top | 🔨 In Progress |
-| **Module E** - Screenshot Bridge | Auto-detect Win+Shift+S screenshots | 🔨 In Progress |
+`EVENT → UNDERSTAND CONTEXT → SHOW RELEVANT ACTION → RETURN`
 
-## Performance Budget
+## Current capabilities
 
-- **RAM**: ≤ 15 MB (idle)
-- **CPU**: ≤ 0.5% (idle), 0% (sleep state)
-- **No polling** - entirely event-driven architecture
+| Capability | What it does |
+|---|---|
+| **File Shelf** | Hold dropped files/folders by path metadata, copy them as real Windows file-drop clipboard items, or drag them back out to another target. |
+| **Smart Clipboard** | Event-driven clipboard monitoring for contextual content such as URLs and file paths. Plain text can remain silent depending on reaction level. |
+| **Media Companion** | Optional SMTC integration for current media information and supported transport controls. Media is opt-in because WinRT media management adds resident memory cost. |
+| **Screenshot Bridge** | Detect images produced through the Windows clipboard/Snipping Tool and surface a compact screenshot notification. |
 
-## Tech Stack
+Window pinning / arbitrary external-window `TOPMOST` management is intentionally not part of WinNotch. It does not fit the contextual-surface scope and can interfere with normal Windows z-order behavior.
 
-- .NET 8 (WPF) + Win32 API (P/Invoke)
-- CommunityToolkit.Mvvm
-- Native Win32 transparency (WS_EX_LAYERED + per-pixel alpha)
-- DWM composited transparency (DwmExtendFrameIntoClientArea)
-- Workstation GC + Concurrent mode
+## Behavior
 
-## Building
+- **Visibility:** Auto, Always Show, or Hidden.
+- **Reaction level:** Quiet, Balanced, or Active.
+- **Fullscreen:** primarily event-driven, with a low-frequency foreground-window reliability check in Auto mode.
+- **Disabled capabilities:** their optional services are not kept alive.
+- **Privacy-aware clipboard:** respects `CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR`.
 
-```bash
-dotnet build WinNotch.sln
+## Performance
+
+WinNotch is designed to do no continuous work while idle beyond the small fullscreen reliability check used in Auto visibility mode. Actual memory depends on the enabled integrations and the WPF/.NET runtime, so the project does not claim a fixed 15 MB process limit.
+
+Use a direct Release build when measuring memory or CPU. The Settings diagnostics panel and Windows CI smoke test can be used for comparison.
+
+## Tech stack
+
+- .NET 8
+- WPF
+- Win32 P/Invoke
+- DWM / native window-region handling
+- Windows SMTC / WinRT for optional media integration
+
+## Build and run
+
+```powershell
+dotnet restore WinNotch.sln
+dotnet build WinNotch.sln -c Release
+.\src\WinNotch.TrayApp\bin\Release\net8.0-windows10.0.19041.0\WinNotch.exe
+```
+
+For local development/retesting, the helper script gracefully closes a running WinNotch instance before rebuilding:
+
+```powershell
+.\scripts\rebuild-release.ps1
 ```
 
 ## Architecture
 
-```
+```text
 WinNotch/
-├── WinNotch.Common/    → Shared constants and types
-├── WinNotch.Core/      → Win32 interop, services, business logic
-├── WinNotch.UI/        → WPF views, animations, converters
-├── WinNotch.TrayApp/   → System tray, settings, module management
-└── WinNotch.Tests/     → Unit tests
+├── src/WinNotch.Common/   shared settings, constants and state logic
+├── src/WinNotch.Core/     Win32 interop and optional services
+├── src/WinNotch.UI/       notch surface, views and motion
+├── src/WinNotch.TrayApp/  application lifecycle, tray and settings
+└── tests/WinNotch.Tests/  regression tests
 ```
 
-## Design Principles
+## Design principles
 
-- **Event-Driven**: No polling. All interactions use Win32 hooks and events.
-- **Native Transparency**: No `AllowsTransparency="True"`. Uses `WS_EX_LAYERED` + `DwmExtendFrameIntoClientArea` for zero-overhead transparency.
-- **Click-Through**: `WM_NCHITTEST` returns `HTTRANSPARENT` outside the notch area — your desktop remains fully interactive.
-- **Module Isolation**: Each module can be independently enabled/disabled. Disabled modules = 0 resource consumption.
-- **Privacy-Aware**: Clipboard listener respects `CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR` for password managers.
+- Contextual rather than dashboard-like.
+- Compact while idle.
+- No arbitrary external-window z-order manipulation.
+- Native hit-testing outside the actual notch surface.
+- Optional integrations should have explicit lifecycle cleanup.
+- Runtime claims should be measured rather than inferred from UI size.
 
 ## License
 

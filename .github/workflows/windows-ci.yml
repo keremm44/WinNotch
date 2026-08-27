@@ -1,0 +1,110 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/file-shelf-transfer
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore WinNotch.sln
+
+      - name: Build Release
+        run: dotnet build WinNotch.sln -c Release --no-restore
+
+      - name: Test Release
+        run: dotnet test tests/WinNotch.Tests/WinNotch.Tests.csproj -c Release --no-build --verbosity normal
+
+      - name: Release idle footprint smoke
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = Resolve-Path "src/WinNotch.TrayApp/bin/Release/net8.0-windows10.0.19041.0/WinNotch.exe" -ErrorAction SilentlyContinue
+          if (-not $exe) {
+            Write-Host "PERF_SMOKE: WinNotch.exe not found; measurement skipped."
+            exit 0
+          }
+
+          $settingsDir = Join-Path $env:LOCALAPPDATA "WinNotch"
+          $settingsPath = Join-Path $settingsDir "settings.json"
+          New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+
+          function Set-WinNotchSettings(
+            [bool]$dragDrop,
+            [bool]$clipboard,
+            [bool]$media,
+            [bool]$screenshot
+          ) {
+            $settings = @{
+              ModuleA_DragDrop = $dragDrop
+              ModuleB_Clipboard = $clipboard
+              ModuleC_Media = $media
+              ModuleE_Screenshot = $screenshot
+              TargetMonitorIndex = 0
+              AutoStart = $false
+              DiagnosticsEnabled = $false
+              VisibilityMode = "Auto"
+              ReactionLevel = "Balanced"
+            } | ConvertTo-Json -Compress
+            Set-Content -Path $settingsPath -Value $settings -Encoding UTF8
+          }
+
+          function Measure-WinNotch([string]$label) {
+            $process = Start-Process $exe -PassThru
+            Start-Sleep -Seconds 5
+            $process.Refresh()
+
+            if ($process.HasExited) {
+              Write-Host "PERF_SMOKE $label ProcessExitedDuringStartup=true"
+              return
+            }
+
+            $logicalCpus = [Environment]::ProcessorCount
+            $cpuStart = $process.TotalProcessorTime.TotalMilliseconds
+            Start-Sleep -Seconds 3
+            $process.Refresh()
+            $cpuEnd = $process.TotalProcessorTime.TotalMilliseconds
+
+            $workingSetMb = [Math]::Round($process.WorkingSet64 / 1MB, 2)
+            $privateMb = [Math]::Round($process.PrivateMemorySize64 / 1MB, 2)
+            $cpuPercent = [Math]::Round((($cpuEnd - $cpuStart) / (3000 * $logicalCpus)) * 100, 3)
+            $threadCount = $process.Threads.Count
+            $handleCount = $process.HandleCount
+
+            Write-Host "PERF_SMOKE $label WorkingSetMB=$workingSetMb PrivateMemoryMB=$privateMb IdleCpuPercent=$cpuPercent Threads=$threadCount Handles=$handleCount"
+
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 700
+          }
+
+          Set-WinNotchSettings $false $false $false $false
+          Measure-WinNotch "Base_AllOff"
+
+          Set-WinNotchSettings $true $false $false $false
+          Measure-WinNotch "DragDropOnly"
+
+          Set-WinNotchSettings $false $true $false $true
+          Measure-WinNotch "ClipboardScreenshotOnly"
+
+          Set-WinNotchSettings $false $false $true $false
+          Measure-WinNotch "MediaOnly"
+
+          Set-WinNotchSettings $true $true $true $true
+          Measure-WinNotch "Default_AllOn"

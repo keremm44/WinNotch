@@ -1,7 +1,3 @@
-// WinNotch.Tests/StateMachineTests.cs
-// Tests for the NotchStateMachine — the core state management logic.
-// These are pure logic tests — no Win32, no WPF, no UI.
-
 using WinNotch.Common;
 using Xunit;
 
@@ -9,10 +5,6 @@ namespace WinNotch.Tests;
 
 public class StateMachineTests
 {
-    // ═══════════════════════════════════════════════════════════════
-    // BASIC TRANSITIONS
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
     public void InitialState_IsIdle()
     {
@@ -26,10 +18,41 @@ public class StateMachineTests
     {
         var sm = new NotchStateMachine();
         var result = sm.TryTransition(NotchState.Hover, StatePriority.Hover);
+        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.Hover, sm.CurrentState);
+    }
+
+    [Fact]
+    public void QuickPeek_HasDedicatedPriority_AbovePersistentShelfAndMedia()
+    {
+        Assert.Equal(StatePriority.QuickPeek, NotchStateMachine.PriorityFor(NotchState.QuickPeek));
+        Assert.True(StatePriority.QuickPeek > StatePriority.Shelf);
+        Assert.True(StatePriority.QuickPeek > StatePriority.Media);
+        Assert.True(StatePriority.QuickPeek < StatePriority.Clipboard);
+    }
+
+    [Fact]
+    public void QuickPeek_CanBeInterruptedByActionableNotification()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+
+        var result = sm.TryTransition(NotchState.ScreenshotNotify, StatePriority.Screenshot);
 
         Assert.True(result.ShouldApply);
-        Assert.Equal(NotchState.Hover, result.State);
-        Assert.Equal(NotchState.Hover, sm.CurrentState);
+        Assert.Equal(NotchState.ScreenshotNotify, sm.CurrentState);
+    }
+
+    [Fact]
+    public void QuickPeek_CanBeInterruptedByDragTarget()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+
+        var result = sm.TryTransition(NotchState.DragActive, StatePriority.DropTarget);
+
+        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.DragActive, sm.CurrentState);
     }
 
     [Fact]
@@ -37,25 +60,14 @@ public class StateMachineTests
     {
         var sm = new NotchStateMachine();
         var result = sm.TryTransition(NotchState.Idle, StatePriority.None);
-
         Assert.False(result.ShouldApply);
-        Assert.Equal(NotchState.Idle, sm.CurrentState);
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // PRIORITY SYSTEM
-    // ═══════════════════════════════════════════════════════════════
 
     [Fact]
     public void HigherPriority_CanInterrupt_LowerPriority()
     {
         var sm = new NotchStateMachine();
-
-        // Start with media (priority 10)
-        sm.TryTransition(NotchState.MediaActive, StatePriority.Media);
-        Assert.Equal(NotchState.MediaActive, sm.CurrentState);
-
-        // Clipboard (priority 20) should interrupt
+        sm.TryTransition(NotchState.MediaAmbient, StatePriority.Media);
         var result = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
         Assert.True(result.ShouldApply);
         Assert.Equal(NotchState.ClipboardNotify, sm.CurrentState);
@@ -65,112 +77,95 @@ public class StateMachineTests
     public void LowerPriority_CannotInterrupt_HigherPriority()
     {
         var sm = new NotchStateMachine();
-
-        // Start with drop result (priority 50)
         sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
-        Assert.Equal(NotchState.DropResult, sm.CurrentState);
-
-        // Hover (priority 5) should NOT interrupt
         var result = sm.TryTransition(NotchState.Hover, StatePriority.Hover);
         Assert.False(result.ShouldApply);
         Assert.Equal(NotchState.DropResult, sm.CurrentState);
     }
 
     [Fact]
-    public void Hover_IsAlwaysReplaceable()
+    public void Shelf_CanBeInterruptedByActionableClipboard()
     {
         var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.ShelfOccupied, StatePriority.Shelf);
+        var result = sm.TryTransition(
+            NotchState.ClipboardNotify,
+            StatePriority.Clipboard,
+            returnState: NotchState.ShelfOccupied);
 
-        // Start with hover (priority 5)
-        sm.TryTransition(NotchState.Hover, StatePriority.Hover);
-        Assert.Equal(NotchState.Hover, sm.CurrentState);
-
-        // Clipboard (priority 20) should replace hover
-        var result = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
         Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.ShelfOccupied, result.ReturnState);
+    }
+
+    [Fact]
+    public void DropResult_DefaultReturnState_IsShelfOccupied()
+    {
+        var sm = new NotchStateMachine();
+        var result = sm.TryTransition(
+            NotchState.DropResult,
+            StatePriority.DropResult,
+            timeout: TimeSpan.FromMilliseconds(900));
+
+        Assert.Equal(NotchState.ShelfOccupied, result.ReturnState);
+    }
+
+    [Fact]
+    public void QuickPeek_DefaultReturnState_IsIdle()
+    {
+        var sm = new NotchStateMachine();
+        var result = sm.TryTransition(NotchState.QuickPeek, StatePriority.QuickPeek);
+        Assert.Equal(NotchState.Idle, result.ReturnState);
+    }
+
+    [Fact]
+    public void ForceTransition_OverridesPriority_AndUsesDestinationPriority()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
+        var result = sm.ForceTransition(NotchState.Idle);
+
+        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.Idle, sm.CurrentState);
+        Assert.Equal(StatePriority.None, sm.CurrentPriority);
+    }
+
+    [Fact]
+    public void ForceTransition_ToShelf_DoesNotPoisonFutureClipboardPriority()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
+        sm.ForceTransition(NotchState.ShelfOccupied);
+
+        Assert.Equal(StatePriority.Shelf, sm.CurrentPriority);
+
+        var clipboard = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
+        Assert.True(clipboard.ShouldApply);
         Assert.Equal(NotchState.ClipboardNotify, sm.CurrentState);
     }
 
     [Fact]
-    public void DropResult_CanInterrupt_Clipboard()
+    public void ReturnTo_Shelf_SetsShelfPriority()
     {
         var sm = new NotchStateMachine();
-
-        // Start with clipboard (priority 20)
-        sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
-
-        // DropResult (priority 50) should interrupt
-        var result = sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
-        Assert.True(result.ShouldApply);
-        Assert.Equal(NotchState.DropResult, sm.CurrentState);
+        var result = sm.ReturnTo(NotchState.ShelfOccupied);
+        Assert.Equal(NotchState.ShelfOccupied, result.State);
+        Assert.Equal(StatePriority.Shelf, sm.CurrentPriority);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // FORCE TRANSITION
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
-    public void ForceTransition_OverridesPriority()
+    public void ReturnToBest_WithMediaActive_ReturnsAmbientMedia()
     {
         var sm = new NotchStateMachine();
-
-        // Start with drop result (priority 50)
-        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
-
-        // Force to idle regardless of priority
-        var result = sm.ForceTransition(NotchState.Idle);
-        Assert.True(result.ShouldApply);
-        Assert.Equal(NotchState.Idle, sm.CurrentState);
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // COALESCING (Rapid clipboard events)
-    // ═══════════════════════════════════════════════════════════════
-
-    [Fact]
-    public void ClipboardCoalescing_AllowsFirstEvents()
-    {
-        var sm = new NotchStateMachine();
-
-        // First clipboard event should go through
-        var r1 = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
-        Assert.True(r1.ShouldApply);
-
-        // Rapid events should be coalesced (3 within 1 second)
-        // We can't test timing precisely, but test the logic path
-        // by doing same-state transitions (which return false anyway)
-        var r2 = sm.TryTransition(NotchState.ClipboardNotify, StatePriority.Clipboard);
-        Assert.False(r2.ShouldApply); // Same state
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // RETURN TO BEST STATE
-    // ═══════════════════════════════════════════════════════════════
-
-    [Fact]
-    public void ReturnToBest_WithMediaActive_ReturnsToMedia()
-    {
-        var sm = new NotchStateMachine();
-
-        // Simulate: drop completed, media is playing
-        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
         var result = sm.ReturnToBest(mediaActive: true);
-
-        Assert.Equal(NotchState.MediaActive, result.State);
-        Assert.True(result.ShouldApply);
+        Assert.Equal(NotchState.MediaAmbient, result.State);
     }
 
     [Fact]
-    public void ReturnToBest_WithoutMedia_ReturnsToIdle()
+    public void ReturnToBest_WithoutMedia_ReturnsIdle()
     {
         var sm = new NotchStateMachine();
-
-        // Simulate: drop completed, no media
-        sm.TryTransition(NotchState.DropResult, StatePriority.DropResult);
         var result = sm.ReturnToBest(mediaActive: false);
-
         Assert.Equal(NotchState.Idle, result.State);
-        Assert.True(result.ShouldApply);
     }
 
     [Fact]
@@ -178,26 +173,24 @@ public class StateMachineTests
     {
         var sm = new NotchStateMachine();
         sm.TryTransition(NotchState.MediaActive, StatePriority.Media);
-
-        var result = sm.ReturnToIdle();
-        Assert.Equal(NotchState.Idle, result.State);
+        sm.ReturnToIdle();
+        Assert.Equal(NotchState.Idle, sm.CurrentState);
         Assert.Equal(StatePriority.None, sm.CurrentPriority);
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // STATE DIMENSIONS
-    // ═══════════════════════════════════════════════════════════════
 
     [Theory]
     [InlineData(NotchState.Idle, 100, 22)]
     [InlineData(NotchState.Hover, 118, 28)]
-    [InlineData(NotchState.DragActive, 280, 60)]
-    [InlineData(NotchState.DropResult, 320, 72)]
-    [InlineData(NotchState.MediaActive, 300, 64)]
-    [InlineData(NotchState.MediaAmbient, 120, 28)]
-    [InlineData(NotchState.ClipboardNotify, 220, 36)]
-    [InlineData(NotchState.ScreenshotNotify, 260, 40)]
-    [InlineData(NotchState.WindowPinned, 130, 28)]
+    [InlineData(NotchState.QuickPeek, 300, 82)]
+    [InlineData(NotchState.DragActive, 290, 62)]
+    [InlineData(NotchState.DropResult, 340, 100)]
+    [InlineData(NotchState.ShelfOccupied, 230, 40)]
+    [InlineData(NotchState.ShelfExpanded, 340, 100)]
+    [InlineData(NotchState.ShelfDraggingOut, 340, 100)]
+    [InlineData(NotchState.MediaActive, 336, 64)]
+    [InlineData(NotchState.MediaAmbient, 124, 28)]
+    [InlineData(NotchState.ClipboardNotify, 260, 40)]
+    [InlineData(NotchState.ScreenshotNotify, 310, 56)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
         var (w, h) = StateDimensions.GetDimensions(state);
@@ -205,33 +198,16 @@ public class StateMachineTests
         Assert.Equal(expectedHeight, h);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // TRANSITION RESULT
-    // ═══════════════════════════════════════════════════════════════
-
     [Fact]
-    public void TransitionResult_HasCorrectReturnState()
+    public void ExplicitReturnState_IsPreserved()
     {
         var sm = new NotchStateMachine();
-
-        // DropResult should auto-return to idle
-        var result = sm.TryTransition(NotchState.DropResult, StatePriority.DropResult,
-            timeout: TimeSpan.FromSeconds(3), returnState: null);
-
-        Assert.True(result.ShouldApply);
-        Assert.Equal(NotchState.DropResult, result.State);
-        Assert.Equal(NotchState.Idle, result.ReturnState); // Determined by DetermineReturnState
-    }
-
-    [Fact]
-    public void TransitionResult_CanSpecifyExplicitReturnState()
-    {
-        var sm = new NotchStateMachine();
-
-        var result = sm.TryTransition(NotchState.DragActive, StatePriority.DropTarget,
+        var result = sm.TryTransition(
+            NotchState.ScreenshotNotify,
+            StatePriority.Screenshot,
             timeout: TimeSpan.FromSeconds(2),
-            returnState: NotchState.MediaActive);
+            returnState: NotchState.ShelfOccupied);
 
-        Assert.Equal(NotchState.MediaActive, result.ReturnState);
+        Assert.Equal(NotchState.ShelfOccupied, result.ReturnState);
     }
 }

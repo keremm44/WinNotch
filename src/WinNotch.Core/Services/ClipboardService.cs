@@ -85,6 +85,7 @@ public sealed class ClipboardService : IDisposable
             string? text = ReadClipboardText();
             NotificationRequested?.Invoke(this, new ClipboardNotification
             {
+                RawText = text,
                 PreviewText = text?.Length > 50 ? text[..50] + "..." : text,
                 Timestamp = DateTime.Now,
                 IsImage = false
@@ -141,9 +142,11 @@ public sealed class ClipboardService : IDisposable
 
 /// <summary>
 /// Clipboard notification data for text content.
+/// RawText is kept separately from PreviewText so actions never operate on a truncated value.
 /// </summary>
 public sealed class ClipboardNotification
 {
+    public string? RawText { get; init; }
     public string? PreviewText { get; init; }
     public DateTime Timestamp { get; init; }
     public bool IsImage { get; init; }

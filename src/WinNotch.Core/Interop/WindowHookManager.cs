@@ -1,61 +1,41 @@
 // WinNotch.Core/Interop/WindowHookManager.cs
-// WHY: SetWinEventHook provides efficient foreground window tracking.
-// Instead of polling with timers, Windows calls our callback when
-// the foreground window changes. This is the event-driven approach.
-//
-// PERFORMANCE NOTE: Zero CPU cost when no window changes occur.
-// The hook is OUTOFCONTEXT — no DLL injection, no cross-process overhead.
-//
-// USAGE:
-// - Detect fullscreen apps → auto-hide notch (Module: Fullscreen detection)
-// - Track active window → optional focus-aware display
-// - Detect pin-eligible windows → Module D (Window Pinner)
+// Event-first foreground/fullscreen tracking. MainWindow adds a low-frequency
+// foreground verification only while automatic fullscreen hiding is enabled.
 
 using System.Runtime.InteropServices;
 using static WinNotch.Core.Interop.User32;
 
 namespace WinNotch.Core.Interop;
 
-/// <summary>
-/// Event args for foreground window change notifications.
-/// </summary>
 public sealed class ForegroundChangedEventArgs : EventArgs
 {
-    /// <summary>Handle of the new foreground window.</summary>
     public IntPtr WindowHandle { get; init; }
-
-    /// <summary>Title of the new foreground window.</summary>
     public string WindowTitle { get; init; } = string.Empty;
-
-    /// <summary>Class name of the new foreground window.</summary>
     public string ClassName { get; init; } = string.Empty;
 }
 
-/// <summary>
-/// Manages Win32 event hooks for window focus tracking.
-/// Implements IDisposable to properly clean up hooks.
-/// </summary>
 public sealed class WindowHookManager : IDisposable
 {
+    private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+    private const int OBJID_WINDOW = 0;
+
     private IntPtr _foregroundHook;
+    private IntPtr _locationHook;
     private User32.WinEventDelegate? _foregroundCallback;
+    private User32.WinEventDelegate? _locationCallback;
+    private IntPtr _lastForegroundWindow;
     private bool _disposed;
 
-    /// <summary>
-    /// Fired when the foreground window changes.
-    /// Used for fullscreen detection and focus-aware features.
-    /// </summary>
     public event EventHandler<ForegroundChangedEventArgs>? ForegroundWindowChanged;
+    public IntPtr CurrentForegroundWindow => _lastForegroundWindow;
 
-    /// <summary>
-    /// Starts monitoring foreground window changes.
-    /// </summary>
     public bool StartTracking()
     {
         if (_foregroundHook != IntPtr.Zero) return true;
 
-        // Keep delegate alive to prevent GC from collecting it
         _foregroundCallback = OnForegroundChanged;
+        _locationCallback = OnLocationChanged;
+        _lastForegroundWindow = User32.GetForegroundWindow();
 
         _foregroundHook = User32.SetWinEventHook(
             User32.EVENT_SYSTEM_FOREGROUND,
@@ -69,16 +49,40 @@ public sealed class WindowHookManager : IDisposable
         {
             int error = Marshal.GetLastWin32Error();
             System.Diagnostics.Debug.WriteLine(
-                $"[WindowHookManager] SetWinEventHook failed. Win32 error: {error}");
+                $"[WindowHookManager] Foreground hook failed. Win32 error: {error}");
             return false;
         }
 
+        _locationHook = User32.SetWinEventHook(
+            EVENT_OBJECT_LOCATIONCHANGE,
+            EVENT_OBJECT_LOCATIONCHANGE,
+            IntPtr.Zero,
+            _locationCallback,
+            0, 0,
+            User32.WINEVENT_OUTOFCONTEXT);
+
+        if (_locationHook == IntPtr.Zero)
+        {
+            int error = Marshal.GetLastWin32Error();
+            System.Diagnostics.Debug.WriteLine(
+                $"[WindowHookManager] Location hook failed. Win32 error: {error}");
+        }
+
+        RefreshForegroundWindow();
         return true;
     }
 
-    /// <summary>
-    /// Callback invoked by Windows when foreground window changes.
-    /// </summary>
+    public void RefreshForegroundWindow()
+    {
+        if (_disposed) return;
+
+        IntPtr hwnd = User32.GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        _lastForegroundWindow = hwnd;
+        RaiseWindowChanged(hwnd);
+    }
+
     private void OnForegroundChanged(
         IntPtr hWinEventHook, uint eventType,
         IntPtr hwnd, int idObject, int idChild,
@@ -86,78 +90,100 @@ public sealed class WindowHookManager : IDisposable
     {
         if (_disposed || hwnd == IntPtr.Zero) return;
 
+        _lastForegroundWindow = hwnd;
+        RaiseWindowChanged(hwnd);
+    }
+
+    private void OnLocationChanged(
+        IntPtr hWinEventHook, uint eventType,
+        IntPtr hwnd, int idObject, int idChild,
+        uint dwEventThread, uint dwmsEventTime)
+    {
+        if (_disposed || hwnd == IntPtr.Zero) return;
+        if (idObject != OBJID_WINDOW || idChild != 0) return;
+
+        IntPtr foreground = User32.GetForegroundWindow();
+        if (foreground != IntPtr.Zero)
+            _lastForegroundWindow = foreground;
+
+        if (hwnd != _lastForegroundWindow) return;
+        RaiseWindowChanged(hwnd);
+    }
+
+    private void RaiseWindowChanged(IntPtr hwnd)
+    {
         try
         {
-            string title = GetWindowTitle(hwnd);
-            string className = GetWindowClassName(hwnd);
-
             ForegroundWindowChanged?.Invoke(this, new ForegroundChangedEventArgs
             {
                 WindowHandle = hwnd,
-                WindowTitle = title,
-                ClassName = className
+                WindowTitle = GetWindowTitle(hwnd),
+                ClassName = GetWindowClassName(hwnd)
             });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(
-                $"[WindowHookManager] Error in foreground callback: {ex.Message}");
+                $"[WindowHookManager] Error raising window change: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Checks if a window is in TRUE fullscreen mode (borderless, occupies entire monitor).
-    /// Distinguishes from maximized windows which have title bars and respect work area.
-    /// </summary>
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
+        if (hWnd == IntPtr.Zero) return false;
+
         try
         {
-            // Get extended frame bounds (DWM-aware, respects fullscreen)
-            if (DwmApi.DwmGetWindowAttribute(hWnd, DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
-                out DwmApi.RECT frameRect, (uint)Marshal.SizeOf<DwmApi.RECT>()))
+            IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+            if (hMonitor == IntPtr.Zero) return false;
+
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (!GetMonitorInfo(hMonitor, ref mi)) return false;
+
+            const int tolerancePx = 8;
+
+            if (DwmApi.DwmGetWindowAttribute(
+                    hWnd,
+                    DwmApi.DWMWA_EXTENDED_FRAME_BOUNDS,
+                    out DwmApi.RECT frameRect,
+                    (uint)Marshal.SizeOf<DwmApi.RECT>()) &&
+                CoversMonitor(frameRect.Left, frameRect.Top, frameRect.Right, frameRect.Bottom,
+                    mi.rcMonitor, tolerancePx))
             {
-                // Get monitor bounds via Win32 GetMonitorInfo (avoids WinForms dependency)
-                IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
-                if (hMonitor != IntPtr.Zero)
-                {
-                    var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-                    if (GetMonitorInfo(hMonitor, ref mi))
-                    {
-                        var bounds = mi.rcMonitor;
-                        bool coversFullMonitor = frameRect.Left <= bounds.Left &&
-                               frameRect.Top <= bounds.Top &&
-                               frameRect.Right >= bounds.Right &&
-                               frameRect.Bottom >= bounds.Bottom;
-
-                        // Additional check: true fullscreen usually has no title bar
-                        // WS_CAPTION = 0x00C00000, WS_BORDER = 0x00800000
-                        int style = GetWindowLong(hWnd, GWL_STYLE);
-                        bool hasTitleBar = (style & 0x00C00000) != 0;
-
-                        // Covers full monitor AND has no title bar → true fullscreen
-                        // Covers full monitor BUT has title bar → maximized (keep visible)
-                        return coversFullMonitor && !hasTitleBar;
-                    }
-                }
+                return true;
             }
+
+            // Chromium/DirectComposition transitions can briefly report stale DWM
+            // frame bounds. The top-level window rect is a reliable second source.
+            return User32.GetWindowRect(hWnd, out var windowRect) &&
+                   CoversMonitor(
+                       windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
+                       mi.rcMonitor, tolerancePx);
         }
         catch
         {
-            // Ignore errors — assume not fullscreen
+            return false;
         }
-
-        return false;
     }
 
-    /// <summary>
-    /// Checks if a window is maximized (has title bar, occupies work area).
-    /// This is NOT the same as fullscreen — maximized windows should NOT trigger suppression.
-    /// </summary>
+    private static bool CoversMonitor(
+        int left, int top, int right, int bottom,
+        User32.RECT monitorBounds,
+        int tolerancePx)
+    {
+        return left <= monitorBounds.Left + tolerancePx &&
+               top <= monitorBounds.Top + tolerancePx &&
+               right >= monitorBounds.Right - tolerancePx &&
+               bottom >= monitorBounds.Bottom - tolerancePx;
+    }
+
     public static bool IsWindowMaximized(IntPtr hWnd)
     {
         try
         {
+            if (IsWindowFullscreen(hWnd))
+                return false;
+
             int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
             return (style & 0x01000000) != 0; // WS_MAXIMIZE
         }
@@ -167,9 +193,14 @@ public sealed class WindowHookManager : IDisposable
         }
     }
 
-    /// <summary>
-    /// Gets the title text of a window.
-    /// </summary>
+    public static string GetWindowClassName(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return string.Empty;
+        var buffer = new char[256];
+        User32.GetClassName(hWnd, buffer, buffer.Length);
+        return new string(buffer).TrimEnd('\0');
+    }
+
     private static string GetWindowTitle(IntPtr hWnd)
     {
         int length = User32.GetWindowTextLength(hWnd);
@@ -180,38 +211,29 @@ public sealed class WindowHookManager : IDisposable
         return new string(buffer, 0, length);
     }
 
-    /// <summary>
-    /// Gets the window class name.
-    /// </summary>
-    private static string GetWindowClassName(IntPtr hWnd)
-    {
-        var buffer = new char[256];
-        User32.GetClassName(hWnd, buffer, buffer.Length);
-        return new string(buffer).TrimEnd('\0');
-    }
-
-    /// <summary>
-    /// Stops tracking and cleans up hooks.
-    /// </summary>
     public void StopTracking()
     {
+        if (_locationHook != IntPtr.Zero)
+        {
+            User32.UnhookWinEvent(_locationHook);
+            _locationHook = IntPtr.Zero;
+        }
+
         if (_foregroundHook != IntPtr.Zero)
         {
             User32.UnhookWinEvent(_foregroundHook);
             _foregroundHook = IntPtr.Zero;
         }
+
+        _lastForegroundWindow = IntPtr.Zero;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
         StopTracking();
+        _disposed = true;
+        ForegroundWindowChanged = null;
         GC.SuppressFinalize(this);
-    }
-
-    ~WindowHookManager()
-    {
-        Dispose();
     }
 }
