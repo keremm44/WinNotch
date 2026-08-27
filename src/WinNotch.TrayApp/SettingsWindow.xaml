@@ -2,159 +2,331 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WinNotch Ayarları"
-        Width="400" Height="500"
+        Width="560" Height="720"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
         ResizeMode="NoResize"
-        Background="#FF1E1E1E"
-        Foreground="#FFFFFFFF">
+        ShowInTaskbar="False"
+        Background="#FF101012"
+        Foreground="#FFF5F5F7"
+        FontFamily="Segoe UI"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
 
-    <!--
-        Settings Window
-        Dark theme to match the notch aesthetic.
-        Provides module toggles, monitor selection, and diagnostics.
-    -->
+    <Window.Resources>
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="#FF18181B"/>
+            <Setter Property="BorderBrush" Value="#FF29292E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFF2F2F4"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="✦ WinNotch Ayarları"
-                       FontSize="20"
-                       FontWeight="Bold"
-                       Foreground="#FFFFFFFF"/>
-            <TextBlock Text="Modülleri aç/kapat, monitör seç, ayarları yapılandır"
-                       FontSize="11"
-                       Foreground="#99FFFFFF"
-                       Margin="0,4,0,0"/>
-        </StackPanel>
+        <Style x:Key="SectionDescription" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Foreground" Value="#FF8D8D96"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,13"/>
+        </Style>
 
-        <!-- Settings Content -->
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto">
-            <StackPanel>
+        <Style x:Key="ModernCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFE2E2E6"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="Box"
+                                    Width="18" Height="18"
+                                    CornerRadius="5"
+                                    Background="#FF222227"
+                                    BorderBrush="#FF3A3A42"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Center">
+                                <TextBlock x:Name="Tick"
+                                           Text="✓"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           Visibility="Collapsed"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter Grid.Column="1"
+                                              Margin="9,0,0,0"
+                                              VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="#FF2D7DFF"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#FF2D7DFF"/>
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#FF6A6A75"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                <!-- Module Toggles -->
-                <TextBlock Text="📦 MODÜLLER"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="#FF0078D4"
-                           Margin="0,0,0,8"/>
+        <Style x:Key="ModernCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Background" Value="#FF222226"/>
+            <Setter Property="Foreground" Value="#FFF2F2F4"/>
+            <Setter Property="BorderBrush" Value="#FF34343B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
 
-                <CheckBox x:Name="ModuleACheckBox"
-                          Content="Module A — Sürükle &amp; Bırak Yolu Çıkarma"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,8"
-                          Checked="ModuleCheckBox_Changed"
-                          Unchecked="ModuleCheckBox_Changed"/>
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Background" Value="#FF2D7DFF"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface"
+                                CornerRadius="8"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF438CFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF216FE8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
-                <CheckBox x:Name="ModuleBCheckBox"
-                          Content="Module B — Clipboard Dinleyici"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,8"
-                          Checked="ModuleCheckBox_Changed"
-                          Unchecked="ModuleCheckBox_Changed"/>
+    <Border BorderBrush="#FF2A2A30" BorderThickness="1" Background="#FF101012">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="64"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="58"/>
+            </Grid.RowDefinitions>
 
-                <CheckBox x:Name="ModuleCCheckBox"
-                          Content="Module C — Medya Oynatıcı (SMTC)"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,8"
-                          Checked="ModuleCheckBox_Changed"
-                          Unchecked="ModuleCheckBox_Changed"/>
+            <!-- Custom dark title area -->
+            <Grid Grid.Row="0"
+                  Background="#FF141416"
+                  MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="52"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="20,12,0,0">
+                    <TextBlock Text="WinNotch"
+                               FontSize="17"
+                               FontWeight="SemiBold"
+                               Foreground="#FFF7F7F8"/>
+                    <TextBlock Text="Ayarlar"
+                               FontSize="10"
+                               Foreground="#FF777780"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="×"
+                        FontSize="20"
+                        Foreground="#FFB8B8BF"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Click="CloseButton_Click"/>
+                <Border Grid.RowSpan="1"
+                        VerticalAlignment="Bottom"
+                        Height="1"
+                        Background="#FF242429"/>
+            </Grid>
 
-                <CheckBox x:Name="ModuleDCheckBox"
-                          Content="Module D — Pencere Sabitleyici"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,8"
-                          Checked="ModuleCheckBox_Changed"
-                          Unchecked="ModuleCheckBox_Changed"/>
+            <ScrollViewer Grid.Row="1"
+                          Margin="18,18,8,0"
+                          Padding="0,0,10,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Özellikler"/>
+                            <TextBlock Style="{StaticResource SectionDescription}"
+                                       Text="Yalnız kullandığın özellikleri açık tut. Medya entegrasyonu ek bellek kullanır."/>
 
-                <CheckBox x:Name="ModuleECheckBox"
-                          Content="Module E — Ekran Görüntüsü Köprüsü"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,16"/>
+                            <CheckBox x:Name="ModuleACheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Dosya Rafı — dosyaları tut, kopyala ve yeniden sürükle"
+                                      Checked="ModuleCheckBox_Changed"
+                                      Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleBCheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Akıllı Pano — URL, yol ve anlamlı içerikleri yakala"
+                                      Checked="ModuleCheckBox_Changed"
+                                      Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleCCheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Medya Kontrolleri — sistem medya oturumunu göster"
+                                      Checked="ModuleCheckBox_Changed"
+                                      Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleDCheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Pencere Sabitleme — aktif pencereyi üstte tut"
+                                      Checked="ModuleCheckBox_Changed"
+                                      Unchecked="ModuleCheckBox_Changed"/>
+                            <CheckBox x:Name="ModuleECheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Ekran Görüntüleri — Snipping Tool sonucunu yüzeyde göster"
+                                      Margin="0"
+                                      Checked="ModuleCheckBox_Changed"
+                                      Unchecked="ModuleCheckBox_Changed"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Monitor Selection -->
-                <TextBlock Text="🖥️ MONİTÖR"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="#FF0078D4"
-                           Margin="0,0,0,8"/>
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Davranış"/>
+                            <TextBlock Style="{StaticResource SectionDescription}"
+                                       Text="Yüzeyin ne zaman görüneceğini ve ne kadar tepki vereceğini belirle."/>
 
-                <ComboBox x:Name="MonitorComboBox"
-                          Background="#FF2D2D2D"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,16"
-                          SelectionChanged="MonitorComboBox_SelectionChanged"/>
+                            <TextBlock Text="Görünürlük"
+                                       Foreground="#FFBDBDC5"
+                                       FontSize="10.5"
+                                       Margin="0,0,0,6"/>
+                            <ComboBox x:Name="VisibilityModeComboBox"
+                                      Style="{StaticResource ModernCombo}"
+                                      Margin="0,0,0,12"
+                                      SelectionChanged="VisibilityModeComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Otomatik — tam ekranda gizle" Tag="Auto"/>
+                                <ComboBoxItem Content="Her zaman göster" Tag="AlwaysShow"/>
+                                <ComboBoxItem Content="Gizli" Tag="Hidden"/>
+                            </ComboBox>
 
-                <!-- Startup -->
-                <TextBlock Text="🚀 BAŞLANGIÇ"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="#FF0078D4"
-                           Margin="0,0,0,8"/>
+                            <TextBlock Text="Tepki seviyesi"
+                                       Foreground="#FFBDBDC5"
+                                       FontSize="10.5"
+                                       Margin="0,0,0,6"/>
+                            <ComboBox x:Name="ReactionLevelComboBox"
+                                      Style="{StaticResource ModernCombo}"
+                                      SelectionChanged="ReactionLevelComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Sessiz — yalnız doğrudan aksiyonlar" Tag="Quiet"/>
+                                <ComboBoxItem Content="Dengeli — önerilen" Tag="Balanced"/>
+                                <ComboBoxItem Content="Aktif — daha fazla bağlamsal bildirim" Tag="Active"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
 
-                <CheckBox x:Name="AutoStartCheckBox"
-                          Content="Windows ile otomatik başlat"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,16"
-                          Checked="AutoStartCheckBox_Changed"
-                          Unchecked="AutoStartCheckBox_Changed"/>
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Ekran ve başlangıç"/>
+                            <TextBlock Style="{StaticResource SectionDescription}"
+                                       Text="WinNotch'un hangi monitöre bağlanacağını ve Windows ile başlayıp başlamayacağını seç."/>
 
-                <!-- Diagnostics -->
-                <TextBlock Text="📊 TEŞHİS"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="#FF0078D4"
-                           Margin="0,0,0,8"/>
+                            <ComboBox x:Name="MonitorComboBox"
+                                      Style="{StaticResource ModernCombo}"
+                                      Margin="0,0,0,12"
+                                      SelectionChanged="MonitorComboBox_SelectionChanged"/>
+                            <CheckBox x:Name="AutoStartCheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Windows ile otomatik başlat"
+                                      Margin="0"
+                                      Checked="AutoStartCheckBox_Changed"
+                                      Unchecked="AutoStartCheckBox_Changed"/>
+                        </StackPanel>
+                    </Border>
 
-                <CheckBox x:Name="DiagnosticsCheckBox"
-                          Content="Teşhis panelini göster (Debug modu)"
-                          Foreground="#CCFFFFFF"
-                          Margin="0,0,0,8"
-                          Checked="DiagnosticsCheckBox_Changed"
-                          Unchecked="DiagnosticsCheckBox_Changed"/>
+                    <Border Style="{StaticResource SectionCard}" Margin="0,0,0,4">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Teşhis"/>
+                            <TextBlock Style="{StaticResource SectionDescription}"
+                                       Text="Geliştirme sırasında anlık process kullanımını göster. Kapalıyken sayaç çalışmaz."/>
+                            <CheckBox x:Name="DiagnosticsCheckBox"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      Content="Performans panelini göster"
+                                      Checked="DiagnosticsCheckBox_Changed"
+                                      Unchecked="DiagnosticsCheckBox_Changed"/>
 
-                <!-- Performance Stats -->
-                <Border Background="#FF2D2D2D"
-                        CornerRadius="8"
-                        Padding="12"
-                        Margin="0,8,0,0">
-                    <StackPanel>
-                        <TextBlock Text="Performans Durumu"
-                                   FontWeight="SemiBold"
-                                   Foreground="#CCFFFFFF"
-                                   Margin="0,0,0,8"/>
-                        <TextBlock x:Name="RamUsageText"
-                                   Text="RAM: Hesaplanıyor..."
-                                   Foreground="#99FFFFFF"
-                                   FontSize="11"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock x:Name="CpuUsageText"
-                                   Text="CPU: Hesaplanıyor..."
-                                   Foreground="#99FFFFFF"
-                                   FontSize="11"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
+                            <Border x:Name="PerformancePanel"
+                                    Visibility="Collapsed"
+                                    Background="#FF202024"
+                                    BorderBrush="#FF303036"
+                                    BorderThickness="1"
+                                    CornerRadius="9"
+                                    Padding="12"
+                                    Margin="0,2,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Bellek"
+                                                   FontSize="9.5"
+                                                   Foreground="#FF777780"/>
+                                        <TextBlock x:Name="RamUsageText"
+                                                   Text="—"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#FFEDEDF0"
+                                                   Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="CPU"
+                                                   FontSize="9.5"
+                                                   Foreground="#FF777780"/>
+                                        <TextBlock x:Name="CpuUsageText"
+                                                   Text="—"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#FFEDEDF0"
+                                                   Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
 
-        <!-- Footer -->
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,16,0,0">
-            <Button Content="Kapat"
-                    Padding="20,8"
-                    Background="#FF0078D4"
-                    Foreground="#FFFFFFFF"
-                    BorderThickness="0"
-                    Click="CloseButton_Click"
-                    Cursor="Hand"/>
-        </StackPanel>
-    </Grid>
+            <Grid Grid.Row="2" Background="#FF141416">
+                <Border VerticalAlignment="Top" Height="1" Background="#FF242429"/>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,18,0">
+                    <Button Content="Bitti"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="CloseButton_Click"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>
