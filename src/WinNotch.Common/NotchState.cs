@@ -1,6 +1,5 @@
 // WinNotch.Common/NotchState.cs
-// WHY: Central state enum drives the entire UI transition system.
-// Each state maps to a specific visual configuration and behavior set.
+// Central state enum for contextual surface transitions.
 
 namespace WinNotch.Common;
 
@@ -16,6 +15,5 @@ public enum NotchState
     MediaActive,
     MediaAmbient,
     ClipboardNotify,
-    ScreenshotNotify,
-    WindowPinned
+    ScreenshotNotify
 }
