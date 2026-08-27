@@ -14,6 +14,7 @@ namespace WinNotch.TrayApp;
 public partial class SettingsWindow : Window
 {
     private readonly ModuleSettings _settings;
+    private readonly MainWindow _mainSurface;
     private readonly System.Windows.Threading.DispatcherTimer _statsTimer;
     private bool _isLoadingSettings;
     private TimeSpan _lastCpuTime;
@@ -21,10 +22,11 @@ public partial class SettingsWindow : Window
 
     public event EventHandler<ModuleSettings>? SettingsChanged;
 
-    public SettingsWindow(ModuleSettings settings)
+    public SettingsWindow(ModuleSettings settings, MainWindow mainSurface)
     {
         InitializeComponent();
         _settings = settings;
+        _mainSurface = mainSurface;
 
         _statsTimer = new System.Windows.Threading.DispatcherTimer
         {
@@ -39,9 +41,6 @@ public partial class SettingsWindow : Window
         Activated += SettingsWindow_Activated;
         Closed += SettingsWindow_Closed;
     }
-
-    private MainWindow? MainSurface
-        => Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
 
     private void SettingsWindow_Activated(object? sender, EventArgs e)
         => RefreshPinnedWindows();
@@ -173,8 +172,7 @@ public partial class SettingsWindow : Window
         PinnedWindowsCard.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         if (!enabled) return;
 
-        IReadOnlyList<PinnedWindowInfo> pinned = MainSurface?.GetPinnedWindows()
-            ?? Array.Empty<PinnedWindowInfo>();
+        IReadOnlyList<PinnedWindowInfo> pinned = _mainSurface.GetPinnedWindows();
 
         PinnedWindowsPanel.Children.Clear();
         PinnedEmptyText.Visibility = pinned.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -228,13 +226,13 @@ public partial class SettingsWindow : Window
     private void PinnedWindowRemove_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: IntPtr handle }) return;
-        MainSurface?.UnpinWindow(handle);
+        _mainSurface.UnpinWindow(handle);
         RefreshPinnedWindows();
     }
 
     private void ClearAllPinnedButton_Click(object sender, RoutedEventArgs e)
     {
-        MainSurface?.UnpinAllPinnedWindows();
+        _mainSurface.UnpinAllPinnedWindows();
         RefreshPinnedWindows();
     }
 
