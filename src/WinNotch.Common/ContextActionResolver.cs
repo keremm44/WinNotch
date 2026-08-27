@@ -34,11 +34,7 @@ public static class ContextActionResolver
         return contentType switch
         {
             ClipboardContentType.Url => ResolveUrl(value),
-            ClipboardContentType.FilePath => new ContextAction(
-                ContextActionKind.ShowInExplorer,
-                "Explorer'da göster",
-                value,
-                "Explorer açıldı"),
+            ClipboardContentType.FilePath => ResolveFilePath(value),
             ClipboardContentType.Email => ResolveEmail(value),
             _ => null
         };
@@ -66,6 +62,25 @@ public static class ContextActionResolver
             "Aç",
             uri.AbsoluteUri,
             "Bağlantı açıldı");
+    }
+
+    private static ContextAction? ResolveFilePath(string value)
+    {
+        if (value.Contains('\r') || value.Contains('\n'))
+            return null;
+
+        string normalized = value;
+        if (normalized.Length >= 2 && normalized[0] == '"' && normalized[^1] == '"')
+            normalized = normalized[1..^1].Trim();
+
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        return new ContextAction(
+            ContextActionKind.ShowInExplorer,
+            "Explorer'da göster",
+            normalized,
+            "Explorer açıldı");
     }
 
     private static ContextAction? ResolveEmail(string value)
