@@ -14,6 +14,7 @@ public sealed class MediaSessionInfo
     public string Title { get; init; } = string.Empty;
     public string Artist { get; init; } = string.Empty;
     public string AlbumTitle { get; init; } = string.Empty;
+    public string SourceAppId { get; init; } = string.Empty;
     public BitmapSource? AlbumArt { get; init; }
     public bool IsPlaying { get; init; }
     public bool HasSession { get; init; }
@@ -21,6 +22,9 @@ public sealed class MediaSessionInfo
     public bool CanPause { get; init; }
     public bool CanSkipNext { get; init; }
     public bool CanSkipPrevious { get; init; }
+    public TimeSpan TimelineStart { get; init; }
+    public TimeSpan TimelineEnd { get; init; }
+    public TimeSpan Position { get; init; }
 }
 
 public sealed class MediaSessionChangedEventArgs : EventArgs
@@ -34,6 +38,7 @@ public sealed class MediaSessionService : IDisposable
 
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
     private GlobalSystemMediaTransportControlsSession? _currentSession;
+    private MediaSessionInfo? _lastInfo;
     private bool _disposed;
     private long _updateVersion;
 
@@ -89,6 +94,7 @@ public sealed class MediaSessionService : IDisposable
         _currentSession = session;
         _currentSession.MediaPropertiesChanged += OnSessionPropertyChanged;
         _currentSession.PlaybackInfoChanged += OnPlaybackInfoChanged;
+        _currentSession.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
         _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
     }
 
@@ -96,11 +102,15 @@ public sealed class MediaSessionService : IDisposable
     {
         Interlocked.Increment(ref _updateVersion);
 
-        if (_currentSession == null) return;
+        if (_currentSession != null)
+        {
+            _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
+            _currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+            _currentSession.TimelinePropertiesChanged -= OnTimelinePropertiesChanged;
+            _currentSession = null;
+        }
 
-        _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
-        _currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-        _currentSession = null;
+        _lastInfo = null;
     }
 
     private void OnSessionPropertyChanged(
@@ -119,6 +129,45 @@ public sealed class MediaSessionService : IDisposable
         _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
     }
 
+    private void OnTimelinePropertiesChanged(
+        GlobalSystemMediaTransportControlsSession sender,
+        TimelinePropertiesChangedEventArgs args)
+    {
+        if (_disposed || !ReferenceEquals(sender, _currentSession) || _lastInfo == null)
+            return;
+
+        try
+        {
+            var timeline = sender.GetTimelineProperties();
+            MediaSessionInfo previous = _lastInfo;
+            var updated = new MediaSessionInfo
+            {
+                Title = previous.Title,
+                Artist = previous.Artist,
+                AlbumTitle = previous.AlbumTitle,
+                SourceAppId = previous.SourceAppId,
+                AlbumArt = previous.AlbumArt,
+                IsPlaying = previous.IsPlaying,
+                HasSession = previous.HasSession,
+                CanPlay = previous.CanPlay,
+                CanPause = previous.CanPause,
+                CanSkipNext = previous.CanSkipNext,
+                CanSkipPrevious = previous.CanSkipPrevious,
+                TimelineStart = timeline.StartTime,
+                TimelineEnd = timeline.EndTime,
+                Position = timeline.Position
+            };
+
+            _lastInfo = updated;
+            SessionChanged?.Invoke(this, new MediaSessionChangedEventArgs { Session = updated });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MediaSessionService] Timeline update failed: {ex.Message}");
+        }
+    }
+
     private async Task UpdateSessionInfoAsync(
         GlobalSystemMediaTransportControlsSession session,
         long version)
@@ -134,6 +183,7 @@ public sealed class MediaSessionService : IDisposable
 
             var playbackInfo = session.GetPlaybackInfo();
             var controls = playbackInfo.Controls;
+            var timeline = session.GetTimelineProperties();
 
             BitmapSource? albumArt = null;
             if (mediaProperties.Thumbnail != null)
@@ -148,6 +198,7 @@ public sealed class MediaSessionService : IDisposable
                 Title = mediaProperties.Title ?? "Bilinmeyen medya",
                 Artist = mediaProperties.Artist ?? string.Empty,
                 AlbumTitle = mediaProperties.AlbumTitle ?? string.Empty,
+                SourceAppId = session.SourceAppUserModelId ?? string.Empty,
                 AlbumArt = albumArt,
                 IsPlaying = playbackInfo.PlaybackStatus ==
                     GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
@@ -155,9 +206,13 @@ public sealed class MediaSessionService : IDisposable
                 CanPlay = controls?.IsPlayEnabled == true,
                 CanPause = controls?.IsPauseEnabled == true,
                 CanSkipNext = controls?.IsNextEnabled == true,
-                CanSkipPrevious = controls?.IsPreviousEnabled == true
+                CanSkipPrevious = controls?.IsPreviousEnabled == true,
+                TimelineStart = timeline.StartTime,
+                TimelineEnd = timeline.EndTime,
+                Position = timeline.Position
             };
 
+            _lastInfo = info;
             SessionChanged?.Invoke(this, new MediaSessionChangedEventArgs { Session = info });
         }
         catch (Exception ex)
@@ -246,6 +301,7 @@ public sealed class MediaSessionService : IDisposable
     private void NotifyNoSession()
     {
         if (_disposed) return;
+        _lastInfo = null;
         SessionChanged?.Invoke(this, new MediaSessionChangedEventArgs
         {
             Session = new MediaSessionInfo { HasSession = false }
