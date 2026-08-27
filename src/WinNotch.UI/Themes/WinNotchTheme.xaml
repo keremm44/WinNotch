@@ -2,6 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Core surfaces -->
     <SolidColorBrush x:Key="Brush.Notch.Base" Color="#FF0B0B0D"/>
+    <SolidColorBrush x:Key="Brush.Notch.Handle" Color="#52FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientSurface" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientIcon" Color="#D8FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientText" Color="#C8FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Window.Base" Color="#FF101012"/>
     <SolidColorBrush x:Key="Brush.Window.Header" Color="#FF141416"/>
     <SolidColorBrush x:Key="Brush.Surface.Raised" Color="#FF18181B"/>
@@ -17,6 +21,7 @@
     <SolidColorBrush x:Key="Brush.Border.Strong" Color="#FF3A3A42"/>
     <SolidColorBrush x:Key="Brush.Border.OnDark" Color="#20FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Border.OnDarkStrong" Color="#38FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Border.LightTheme" Color="#364A4A50"/>
 
     <!-- Typography -->
     <SolidColorBrush x:Key="Brush.Text.Primary" Color="#FFF5F5F7"/>
