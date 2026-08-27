@@ -14,9 +14,13 @@ public static class Constants
 
     public const double NotchClipboardWidth = 260;
     public const double NotchClipboardHeight = 40;
+    public const double NotchClipboardActionWidth = 300;
+    public const double NotchClipboardActionHeight = 74;
 
     public const double NotchScreenshotWidth = 310;
     public const double NotchScreenshotHeight = 56;
+    public const double NotchScreenshotActionWidth = 330;
+    public const double NotchScreenshotActionHeight = 88;
 
     public const double NotchDropTargetWidth = 290;
     public const double NotchDropTargetHeight = 62;
@@ -46,6 +50,7 @@ public static class Constants
     public const int ContractDurationMs = 180;
     public const int ClipboardFlashDurationMs = 2000;
     public const int ScreenshotFlashDurationMs = 2500;
+    public const int ContextActionLeaveDelayMs = 900;
     public const int DropResultDisplayDurationMs = 900;
     public const int MediaAmbientFlashDurationMs = 4000;
     public const int MaxAttentionEventsPerMinute = 5;
