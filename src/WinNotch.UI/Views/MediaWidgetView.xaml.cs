@@ -1,11 +1,4 @@
 // WinNotch.UI/Views/MediaWidgetView.xaml.cs
-// WHY: Displays media session info from SMTC and provides playback controls.
-// This view is ONLY visible when an active media session exists.
-// When media stops, the notch returns to idle.
-//
-// PERFORMANCE: No timers, no polling. All updates come from
-// MediaSessionService events (SMTC callbacks).
-// When hidden (Collapsed), zero layout/render cost.
 
 using System.Windows;
 using WinNotch.Core.Services;
@@ -14,10 +7,6 @@ using UserControl = System.Windows.Controls.UserControl;
 
 namespace WinNotch.UI.Views;
 
-/// <summary>
-/// Interaction logic for MediaWidgetView.xaml.
-/// Displays album art, song info, and playback controls.
-/// </summary>
 public partial class MediaWidgetView : UserControl
 {
     private MediaSessionInfo? _currentSession;
@@ -37,9 +26,15 @@ public partial class MediaWidgetView : UserControl
 
         Dispatcher.Invoke(() =>
         {
-            TitleText.Text = session.Title;
-            ArtistText.Text = session.Artist;
+            TitleText.Text = string.IsNullOrWhiteSpace(session.Title) ? "Medya" : session.Title;
+            ArtistText.Text = string.IsNullOrWhiteSpace(session.Artist)
+                ? session.AlbumTitle
+                : session.Artist;
+
             PlayPauseButton.Content = session.IsPlaying ? "⏸" : "▶";
+            PlayPauseButton.IsEnabled = session.IsPlaying ? session.CanPause : session.CanPlay;
+            PrevButton.IsEnabled = session.CanSkipPrevious;
+            NextButton.IsEnabled = session.CanSkipNext;
             AlbumArtImage.Source = session.AlbumArt;
         });
     }
@@ -48,8 +43,6 @@ public partial class MediaWidgetView : UserControl
 
     private void PlayPauseButton_Click(object sender, RoutedEventArgs e)
     {
-        // Keep the public events for future consumers, but make the current
-        // WinNotch view functional even when no external handler is attached.
         GetHostWindow()?.MediaService?.TogglePlayPause();
         PlayPauseRequested?.Invoke(this, EventArgs.Empty);
     }
