@@ -50,14 +50,12 @@ jobs:
             [bool]$dragDrop,
             [bool]$clipboard,
             [bool]$media,
-            [bool]$windowPin,
             [bool]$screenshot
           ) {
             $settings = @{
               ModuleA_DragDrop = $dragDrop
               ModuleB_Clipboard = $clipboard
               ModuleC_Media = $media
-              ModuleD_WindowPin = $windowPin
               ModuleE_Screenshot = $screenshot
               TargetMonitorIndex = 0
               AutoStart = $false
@@ -96,23 +94,17 @@ jobs:
             Start-Sleep -Milliseconds 700
           }
 
-          # Baseline shell/tray with no optional service instantiated.
-          Set-WinNotchSettings $false $false $false $false $false
+          Set-WinNotchSettings $false $false $false $false
           Measure-WinNotch "Base_AllOff"
 
-          # Incremental one-module-at-a-time measurements.
-          Set-WinNotchSettings $true $false $false $false $false
+          Set-WinNotchSettings $true $false $false $false
           Measure-WinNotch "DragDropOnly"
 
-          Set-WinNotchSettings $false $true $false $false $true
+          Set-WinNotchSettings $false $true $false $true
           Measure-WinNotch "ClipboardScreenshotOnly"
 
-          Set-WinNotchSettings $false $false $true $false $false
+          Set-WinNotchSettings $false $false $true $false
           Measure-WinNotch "MediaOnly"
 
-          Set-WinNotchSettings $false $false $false $true $false
-          Measure-WinNotch "WindowPinOnly"
-
-          # Clean-install/default configuration for comparison.
-          Set-WinNotchSettings $true $true $true $true $true
+          Set-WinNotchSettings $true $true $true $true
           Measure-WinNotch "Default_AllOn"
