@@ -111,8 +111,10 @@ public static class AppearanceResolver
 
         return settings.ThemePreset switch
         {
+            // Aurora must read as a deliberate blue-black surface on the real notch,
+            // not as an almost-identical neutral black next to Obsidian.
             "Aurora" => new AppearancePalette(
-                "#FF090B12", "#FF0E111A", "#FF121622", "#FF151A26", "#FF19202E", "#FF202735",
+                "#FF0A1020", "#FF0E111A", "#FF121622", "#FF151A26", "#FF19202E", "#FF202735",
                 "#16FFFFFF", "#0CFFFFFF", "#26FFFFFF", "#36FFFFFF",
                 "#FF283142", "#FF3A465A", "#22FFFFFF", "#3AFFFFFF",
                 "#FFF4F5FA", "#FFBCC2D0", "#FF8C94A5", "#FF727A89",
@@ -131,8 +133,10 @@ public static class AppearanceResolver
                 "#FF228A5C", "#FFB56B13", "#FFC93D4F",
                 "#FF168AA5", "#FF7559D9", "#FFC27816", "#FF23845C", true),
 
+            // Monochrome is intentionally truly neutral. Its user accent is suppressed,
+            // but the notch base is now visibly darker than Obsidian.
             "Monochrome" => new AppearancePalette(
-                "#FF090909", "#FF101010", "#FF141414", "#FF181818", "#FF1D1D1D", "#FF232323",
+                "#FF050505", "#FF101010", "#FF141414", "#FF181818", "#FF1D1D1D", "#FF232323",
                 "#14FFFFFF", "#0BFFFFFF", "#22FFFFFF", "#32FFFFFF",
                 "#FF2A2A2A", "#FF3B3B3B", "#20FFFFFF", "#36FFFFFF",
                 "#FFF3F3F3", "#FFBDBDBD", "#FF8C8C8C", "#FF737373",
@@ -151,6 +155,32 @@ public static class AppearanceResolver
                 "#FF35C98A", "#FFFFB547", "#FFFF5D6C",
                 "#FF2FAFC7", "#FF8C6CFF", "#FFE5A13A", "#FF35B982", false)
         };
+    }
+
+    /// <summary>
+    /// The selected accent is part of the physical notch signature even in Line/Dot idle modes.
+    /// Monochrome remains neutral by contract.
+    /// </summary>
+    public static string ResolveNotchHandleColor(AppearanceSettings settings, AppearancePalette palette)
+    {
+        NormalizeInPlace(settings);
+        if (string.Equals(settings.ThemePreset, "Monochrome", StringComparison.OrdinalIgnoreCase))
+            return "#8CFFFFFF";
+
+        return WithAlpha(palette.AccentPrimary, palette.IsLightTheme ? (byte)0xE0 : (byte)0xC8);
+    }
+
+    /// <summary>
+    /// A restrained accent edge makes accent changes visible on the real notch shell
+    /// without turning the whole surface into a colored pill.
+    /// </summary>
+    public static string ResolveNotchEdgeColor(AppearanceSettings settings, AppearancePalette palette)
+    {
+        NormalizeInPlace(settings);
+        if (string.Equals(settings.ThemePreset, "Monochrome", StringComparison.OrdinalIgnoreCase))
+            return "#30FFFFFF";
+
+        return WithAlpha(palette.AccentPrimary, palette.IsLightTheme ? (byte)0x34 : (byte)0x3E);
     }
 
     public static string ResolveStateColor(
