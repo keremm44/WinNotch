@@ -58,6 +58,7 @@ public static class Constants
     public const int MaxShelfItems = 20;
 
     public const string MutexName = "WinNotch_SingleInstance_{8A3F2B1C-5D4E-6F7A-8B9C-0D1E2F3A4B5C}";
+    public const string ShutdownEventName = "WinNotch_GracefulShutdown_{8A3F2B1C-5D4E-6F7A-8B9C-0D1E2F3A4B5C}";
     public const string RegistryRunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     public const string RegistryValueName = "WinNotch";
     public const string AppName = "WinNotch";
