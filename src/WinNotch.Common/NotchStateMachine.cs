@@ -155,17 +155,13 @@ public static class ClipboardClassifier
 
         text = text.Trim();
 
+        if (LooksLikeFilePath(text))
+            return ClipboardContentType.FilePath;
+
         if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             text.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
             text.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
             return ClipboardContentType.Url;
-
-        if (text.Length >= 3 && text[1] == ':' && (text[2] == '\\' || text[2] == '/'))
-            return ClipboardContentType.FilePath;
-        if (text.StartsWith("\\\\", StringComparison.Ordinal) ||
-            text.StartsWith("~/", StringComparison.Ordinal) ||
-            text.StartsWith("./", StringComparison.Ordinal))
-            return ClipboardContentType.FilePath;
 
         if (text.Length is 4 or 7 or 9 && text[0] == '#')
         {
@@ -173,7 +169,7 @@ public static class ClipboardClassifier
             for (int i = 1; i < text.Length; i++)
             {
                 char c = text[i];
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
                 {
                     isHex = false;
                     break;
@@ -198,6 +194,31 @@ public static class ClipboardClassifier
             return ClipboardContentType.Phone;
 
         return ClipboardContentType.Text;
+    }
+
+    private static bool LooksLikeFilePath(string text)
+    {
+        if (text.Contains('\r') || text.Contains('\n'))
+            return false;
+
+        string candidate = text;
+        if (candidate.StartsWith('"'))
+        {
+            candidate = candidate[1..];
+            if (candidate.EndsWith('"'))
+                candidate = candidate[..^1];
+            candidate = candidate.Trim();
+        }
+
+        if (candidate.Length >= 3 && candidate[1] == ':' &&
+            (candidate[2] == '\\' || candidate[2] == '/'))
+            return true;
+
+        return candidate.StartsWith("\\\\", StringComparison.Ordinal) ||
+               candidate.StartsWith("~/", StringComparison.Ordinal) ||
+               candidate.StartsWith("~\\", StringComparison.Ordinal) ||
+               candidate.StartsWith("./", StringComparison.Ordinal) ||
+               candidate.StartsWith(".\\", StringComparison.Ordinal);
     }
 }
 
