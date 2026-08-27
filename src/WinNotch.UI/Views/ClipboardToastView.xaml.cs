@@ -8,6 +8,7 @@ using UserControl = System.Windows.Controls.UserControl;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
+using Geometry = System.Windows.Media.Geometry;
 using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
@@ -19,6 +20,7 @@ public partial class ClipboardToastView : UserControl
 
     private ContextAction? _currentAction;
     private BitmapSource? _currentImage;
+    private AppearanceSettings _appearance = new();
     private bool _isExpanded;
     private System.Windows.Threading.DispatcherTimer? _collapseGraceTimer;
 
@@ -26,6 +28,26 @@ public partial class ClipboardToastView : UserControl
     {
         InitializeComponent();
         IsVisibleChanged += ClipboardToastView_RevealVisibilityChanged;
+    }
+
+    public void ApplyAppearance(AppearanceSettings settings)
+    {
+        _appearance = settings ?? new AppearanceSettings();
+        AppearanceResolver.NormalizeInPlace(_appearance);
+        DensityProfile density = AppearanceResolver.ResolveDensity(_appearance);
+
+        PreviewText.FontSize = 10.5 * density.FontScale;
+        DetailText.FontSize = 8.5 * density.FontScale;
+        TimestampText.FontSize = 8.0 * density.FontScale;
+        ActionHintText.FontSize = 9.0 * density.FontScale;
+        PrimaryActionButton.FontSize = 9.5 * density.FontScale;
+
+        if (_currentImage != null)
+        {
+            bool showThumbnail = PrivacyPreviewFormatter.ShouldShowScreenshotThumbnail(_appearance);
+            ImagePreview.Source = showThumbnail ? _currentImage : null;
+            ImagePreviewBorder.Visibility = showThumbnail ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     public void SetNotification(
@@ -40,9 +62,11 @@ public partial class ClipboardToastView : UserControl
             string? rawText = notification.RawText ?? notification.PreviewText;
             ApplyClipboardAppearance(contentType, rawText);
 
-            PreviewText.Text = string.IsNullOrWhiteSpace(notification.PreviewText)
-                ? "Panoya alındı"
-                : notification.PreviewText;
+            PreviewText.Text = PrivacyPreviewFormatter.Format(
+                contentType,
+                rawText,
+                notification.PreviewText,
+                _appearance);
 
             DetailText.Text = contentType switch
             {
@@ -70,18 +94,21 @@ public partial class ClipboardToastView : UserControl
             CollapseActions(notify: false);
             _currentImage = notification.Image;
 
-            StatusIcon.Text = "▣";
-            StatusIcon.Visibility = Visibility.Visible;
+            SetStatusIcon("Icon.Screenshot");
+            StatusIconPath.Visibility = Visibility.Visible;
             ColorSwatch.Visibility = Visibility.Collapsed;
-            StatusSurface.Background = FindBrush("Brush.Accent.Subtle");
-            StatusSurface.BorderBrush = FindBrush("Brush.Accent.Border");
+            StatusSurface.Background = FindBrush("Brush.State.Screenshot.Subtle");
+            StatusSurface.BorderBrush = FindBrush("Brush.State.Screenshot.Border");
 
             PreviewText.Text = "Ekran görüntüsü hazır";
-            DetailText.Text = "Panoya alındı";
-            ImagePreview.Source = notification.Image;
-            ImagePreviewBorder.Visibility = notification.Image != null
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            DetailText.Text = string.Equals(_appearance.PrivacyPreviewMode, "Full", StringComparison.OrdinalIgnoreCase)
+                ? "Panoya alındı"
+                : "Önizleme gizlendi";
+
+            bool showThumbnail = notification.Image != null &&
+                                 PrivacyPreviewFormatter.ShouldShowScreenshotThumbnail(_appearance);
+            ImagePreview.Source = showThumbnail ? notification.Image : null;
+            ImagePreviewBorder.Visibility = showThumbnail ? Visibility.Visible : Visibility.Collapsed;
             TimestampText.Text = FormatTimestamp(notification.Timestamp);
 
             SetAction(notification.Image != null
@@ -90,11 +117,19 @@ public partial class ClipboardToastView : UserControl
         });
     }
 
-    public void ShowActionFeedback(string message)
+    public void ShowActionFeedback(string message, bool succeeded)
     {
         Dispatcher.Invoke(() =>
         {
-            DetailText.Text = message;
+            PreviewText.Text = message;
+            DetailText.Text = succeeded ? "İşlem tamamlandı" : "İşlem tamamlanamadı";
+            SetStatusIcon(succeeded ? "Icon.Check" : "Icon.Error");
+            StatusIconPath.Visibility = Visibility.Visible;
+            ColorSwatch.Visibility = Visibility.Collapsed;
+            StatusSurface.Background = FindBrush(
+                succeeded ? "Brush.Semantic.SuccessSubtle" : "Brush.Semantic.DangerSubtle");
+            StatusSurface.BorderBrush = FindBrush(
+                succeeded ? "Brush.Semantic.SuccessBorder" : "Brush.Semantic.DangerBorder");
             CollapseActions(notify: true);
         });
     }
@@ -109,50 +144,48 @@ public partial class ClipboardToastView : UserControl
 
     private void ApplyClipboardAppearance(ClipboardContentType contentType, string? rawText)
     {
-        StatusIcon.Visibility = Visibility.Visible;
+        StatusIconPath.Visibility = Visibility.Visible;
         ColorSwatch.Visibility = Visibility.Collapsed;
         StatusSurface.Background = FindBrush("Brush.Surface.Soft");
         StatusSurface.BorderBrush = FindBrush("Brush.Border.OnDark");
+        SetStatusIcon("Icon.Copy");
 
         switch (contentType)
         {
             case ClipboardContentType.Url:
-                StatusIcon.Text = "↗";
-                StatusSurface.Background = FindBrush("Brush.Accent.Subtle");
-                StatusSurface.BorderBrush = FindBrush("Brush.Accent.Border");
+                SetStatusIcon("Icon.Link");
+                StatusSurface.Background = FindBrush("Brush.State.Clipboard.Subtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.State.Clipboard.Border");
                 break;
 
             case ClipboardContentType.FilePath:
-                StatusIcon.Text = "F";
-                StatusSurface.Background = FindBrush("Brush.Semantic.SuccessSubtle");
-                StatusSurface.BorderBrush = FindBrush("Brush.Semantic.SuccessBorder");
+                SetStatusIcon("Icon.File");
+                StatusSurface.Background = FindBrush("Brush.State.File.Subtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.State.File.Border");
                 break;
 
             case ClipboardContentType.Color:
-                StatusIcon.Visibility = Visibility.Collapsed;
+                StatusIconPath.Visibility = Visibility.Collapsed;
                 ColorSwatch.Visibility = Visibility.Visible;
                 ColorSwatch.Background = TryCreateColorBrush(rawText) ?? FindBrush("Brush.Surface.Soft");
                 break;
 
             case ClipboardContentType.Email:
-                StatusIcon.Text = "@";
-                StatusSurface.Background = FindBrush("Brush.Semantic.VioletSubtle");
-                StatusSurface.BorderBrush = FindBrush("Brush.Semantic.VioletBorder");
+                SetStatusIcon("Icon.Mail");
+                StatusSurface.Background = FindBrush("Brush.State.Clipboard.Subtle");
+                StatusSurface.BorderBrush = FindBrush("Brush.State.Clipboard.Border");
                 break;
 
             case ClipboardContentType.Phone:
-                StatusIcon.Text = "☎";
-                break;
-
             case ClipboardContentType.Text:
-                StatusIcon.Text = "C";
-                break;
-
             default:
-                StatusIcon.Text = "C";
+                SetStatusIcon("Icon.Copy");
                 break;
         }
     }
+
+    private void SetStatusIcon(string resourceKey)
+        => StatusIconPath.Data = TryFindResource(resourceKey) as Geometry;
 
     private void SetAction(ContextAction? action)
     {
