@@ -64,7 +64,10 @@
                                 <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Brush.Text.Muted}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}"/>
+                                <!-- The selection belongs to this preset, not to the mutable
+                                     application-wide accent resource. -->
+                                <Setter TargetName="Ring" Property="BorderBrush"
+                                        Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"/>
                                 <Setter TargetName="Ring" Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -145,7 +148,7 @@
                              Style="{StaticResource AccentRadio}" Background="#FF35B982"
                              ToolTip="Yeşil" Checked="AppearanceRadio_Checked"/>
                 <RadioButton x:Name="AccentSystemRadio" GroupName="AccentPreset" Tag="System"
-                             Style="{StaticResource AccentRadio}" Background="{DynamicResource Brush.Accent.Primary}"
+                             Style="{StaticResource AccentRadio}" Background="{DynamicResource Brush.Accent.System}"
                              ToolTip="Windows sistem rengi" Checked="AppearanceRadio_Checked"/>
                 <TextBlock Text="Sistem"
                            VerticalAlignment="Center"

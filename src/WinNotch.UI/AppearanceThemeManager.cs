@@ -61,6 +61,9 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Text.OnDarkMuted", palette.TextOnDarkMuted);
 
         SetBrush(resources, "Brush.Accent.Primary", palette.AccentPrimary);
+        // The System choice in the selector must retain the real Windows color while
+        // Primary follows whichever preset is currently selected.
+        SetBrush(resources, "Brush.Accent.System", systemAccent ?? "#FF0078D4");
         SetBrush(resources, "Brush.Accent.Foreground", ContrastForeground(palette.AccentPrimary));
         SetBrush(resources, "Brush.Accent.Hover", palette.AccentHover);
         SetBrush(resources, "Brush.Accent.Pressed", palette.AccentPressed);

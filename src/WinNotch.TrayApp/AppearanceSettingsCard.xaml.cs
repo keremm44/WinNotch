@@ -60,6 +60,12 @@ public partial class AppearanceSettingsCard : UserControl
                 _appearance.ThemePreset = value;
                 break;
             case "AccentPreset":
+                // Do not leave exclusivity to a visual template/resource refresh.
+                // Explicitly clear every previous selection before the global theme
+                // resources are replaced by the live-preview update.
+                SelectTaggedRadio(value,
+                    AccentBlueRadio, AccentVioletRadio, AccentCyanRadio,
+                    AccentAmberRadio, AccentGreenRadio, AccentSystemRadio);
                 _appearance.AccentPreset = value;
                 break;
             case "DensityMode":
@@ -91,6 +97,11 @@ public partial class AppearanceSettingsCard : UserControl
         RadioButton selected = radios.FirstOrDefault(r =>
             string.Equals(r.Tag?.ToString(), value, StringComparison.OrdinalIgnoreCase))
             ?? radios[0];
-        selected.IsChecked = true;
+
+        // Setting only the new radio to true normally relies on WPF GroupName to
+        // clear its peer. Be explicit so reloads and resource-driven re-templating
+        // cannot preserve a stale checked visual on an old container.
+        foreach (RadioButton radio in radios)
+            radio.IsChecked = ReferenceEquals(radio, selected);
     }
 }

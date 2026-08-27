@@ -37,6 +37,8 @@
 
     <!-- Accent and semantic feedback -->
     <SolidColorBrush x:Key="Brush.Accent.Primary" Color="#FF2D7DFF"/>
+    <!-- Independent selector token; unlike Primary this never follows the chosen preset. -->
+    <SolidColorBrush x:Key="Brush.Accent.System" Color="#FF0078D4"/>
     <SolidColorBrush x:Key="Brush.Accent.Foreground" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#FF438CFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Pressed" Color="#FF216FE8"/>
