@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using WinNotch.Common;
 
 namespace WinNotch.TrayApp;
@@ -23,6 +22,8 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         _settings = settings;
+        _settings.Appearance ??= new AppearanceSettings();
+        AppearanceResolver.NormalizeInPlace(_settings.Appearance);
 
         double availableHeight = Math.Max(560, SystemParameters.WorkArea.Height - 32);
         MaxHeight = availableHeight;
@@ -70,6 +71,8 @@ public partial class SettingsWindow : Window
                 ReactionQuietRadio,
                 ReactionBalancedRadio,
                 ReactionActiveRadio);
+
+            AppearanceCard.LoadAppearance(_settings.Appearance);
 
             MonitorComboBox.Items.Clear();
             var screens = System.Windows.Forms.Screen.AllScreens;
@@ -140,6 +143,13 @@ public partial class SettingsWindow : Window
         OnSettingsChanged();
     }
 
+    private void AppearanceCard_AppearanceChanged(object? sender, AppearanceSettings appearance)
+    {
+        if (_isLoadingSettings) return;
+        _settings.Appearance = appearance;
+        OnSettingsChanged();
+    }
+
     private void MonitorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoadingSettings || MonitorComboBox.SelectedIndex < 0) return;
@@ -201,10 +211,10 @@ public partial class SettingsWindow : Window
 
             RamUsageText.Text = $"{ramMB:F1} MB";
             CpuUsageText.Text = $"{cpuPercent:F2}%";
-            RamUsageText.Foreground = Brushes.WhiteSmoke;
-            CpuUsageText.Foreground = cpuPercent <= 1.0
-                ? Brushes.LightGreen
-                : Brushes.WhiteSmoke;
+            RamUsageText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text.Primary");
+            CpuUsageText.SetResourceReference(
+                TextBlock.ForegroundProperty,
+                cpuPercent <= 1.0 ? "Brush.Semantic.Success" : "Brush.Text.Primary");
         }
         catch
         {
