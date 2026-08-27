@@ -20,6 +20,8 @@ public partial class MainWindow
         if (_reliabilityLayerInitialized) return;
         _reliabilityLayerInitialized = true;
 
+        // This is the single right-click path. MainWindow.xaml no longer wires the
+        // legacy bubbling MouseRightButtonUp handler.
         RootGrid.PreviewMouseRightButtonUp += Reliability_PreviewMouseRightButtonUp;
 
         _fullscreenFallbackTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -29,6 +31,7 @@ public partial class MainWindow
         _fullscreenFallbackTimer.Tick += FullscreenFallbackTimer_Tick;
         _fullscreenFallbackTimer.Start();
 
+        EnforcePinnedWindowSafety();
         VerifyAutomaticFullscreenVisibility();
     }
 
@@ -46,7 +49,18 @@ public partial class MainWindow
     }
 
     private void FullscreenFallbackTimer_Tick(object? sender, EventArgs e)
-        => VerifyAutomaticFullscreenVisibility();
+    {
+        // Pin safety is independent of VisibilityMode. A window pinned while small
+        // can later be maximized/fullscreen and must then lose TOPMOST immediately.
+        EnforcePinnedWindowSafety();
+        VerifyAutomaticFullscreenVisibility();
+    }
+
+    private void EnforcePinnedWindowSafety()
+    {
+        if (_windowPinService?.UnpinUnsafeWindows() > 0)
+            ReassertNotchTopmost();
+    }
 
     private void VerifyAutomaticFullscreenVisibility()
     {
@@ -71,17 +85,44 @@ public partial class MainWindow
         else if (Visibility == Visibility.Hidden)
         {
             Visibility = Visibility.Visible;
+            ReassertNotchTopmost();
         }
     }
+
+    private void ReassertNotchTopmost()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+
+        User32.SetWindowPos(
+            _hWnd,
+            User32.HWND_TOPMOST,
+            0, 0, 0, 0,
+            User32.SWP_NOMOVE |
+            User32.SWP_NOSIZE |
+            User32.SWP_NOACTIVATE |
+            User32.SWP_SHOWWINDOW);
+    }
+
+    private void ReassertNotchTopmostDeferred()
+        => Dispatcher.BeginInvoke(
+            ReassertNotchTopmost,
+            DispatcherPriority.Background);
 
     public IReadOnlyList<PinnedWindowInfo> GetPinnedWindows()
         => _windowPinService?.GetPinnedWindows() ?? Array.Empty<PinnedWindowInfo>();
 
     public bool UnpinWindow(IntPtr hWnd)
-        => _windowPinService?.UnpinWindow(hWnd) == true;
+    {
+        bool result = _windowPinService?.UnpinWindow(hWnd) == true;
+        ReassertNotchTopmostDeferred();
+        return result;
+    }
 
     public void UnpinAllPinnedWindows()
-        => _windowPinService?.UnpinAll();
+    {
+        _windowPinService?.UnpinAll();
+        ReassertNotchTopmostDeferred();
+    }
 
     private void Reliability_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -106,15 +147,17 @@ public partial class MainWindow
                 MenuItem pinItem;
                 if (tracked || nativeTopmost)
                 {
-                    // nativeTopmost + !tracked is the recovery path for a window
-                    // left TOPMOST by an older force-killed WinNotch process.
                     pinItem = new MenuItem
                     {
                         Header = tracked
                             ? "Aktif pencerenin sabitlemesini kaldır"
                             : "Aktif pencerenin üstte kalmasını kaldır"
                     };
-                    pinItem.Click += (_, _) => _windowPinService.UnpinWindow(foreground);
+                    pinItem.Click += (_, _) =>
+                    {
+                        _windowPinService.UnpinWindow(foreground);
+                        ReassertNotchTopmostDeferred();
+                    };
                 }
                 else if (fullscreen || maximized)
                 {
@@ -128,7 +171,14 @@ public partial class MainWindow
                 else
                 {
                     pinItem = new MenuItem { Header = "Aktif pencereyi sabitle" };
-                    pinItem.Click += (_, _) => _windowPinService.PinWindow(foreground);
+                    pinItem.Click += (_, _) =>
+                    {
+                        _windowPinService.PinWindow(foreground);
+                        // SetWindowPos(HWND_TOPMOST) places the target at the front
+                        // of the TOPMOST band. Put WinNotch back above it after the
+                        // context-menu click completes so the notch remains usable.
+                        ReassertNotchTopmostDeferred();
+                    };
                 }
 
                 menu.Items.Add(pinItem);
@@ -150,13 +200,21 @@ public partial class MainWindow
                         ToolTip = info.WindowTitle
                     };
                     IntPtr handle = info.WindowHandle;
-                    windowItem.Click += (_, _) => _windowPinService.UnpinWindow(handle);
+                    windowItem.Click += (_, _) =>
+                    {
+                        _windowPinService.UnpinWindow(handle);
+                        ReassertNotchTopmostDeferred();
+                    };
                     pinnedMenu.Items.Add(windowItem);
                 }
 
                 pinnedMenu.Items.Add(new Separator());
                 var clearAll = new MenuItem { Header = "Tüm sabitlemeleri kaldır" };
-                clearAll.Click += (_, _) => _windowPinService.UnpinAll();
+                clearAll.Click += (_, _) =>
+                {
+                    _windowPinService.UnpinAll();
+                    ReassertNotchTopmostDeferred();
+                };
                 pinnedMenu.Items.Add(clearAll);
                 menu.Items.Add(pinnedMenu);
             }
