@@ -54,9 +54,6 @@ public sealed class WindowHookManager : IDisposable
             return false;
         }
 
-        // F11/browser-video fullscreen normally changes the geometry of the same
-        // foreground HWND, so EVENT_SYSTEM_FOREGROUND alone never fires. Listen
-        // for location changes and filter strictly to the current foreground HWND.
         _locationHook = User32.SetWinEventHook(
             EVENT_OBJECT_LOCATIONCHANGE,
             EVENT_OBJECT_LOCATIONCHANGE,
@@ -72,11 +69,19 @@ public sealed class WindowHookManager : IDisposable
                 $"[WindowHookManager] Location hook failed. Win32 error: {error}");
         }
 
-        // Evaluate the window that was already foreground when tracking started.
-        if (_lastForegroundWindow != IntPtr.Zero)
-            RaiseWindowChanged(_lastForegroundWindow);
-
+        RefreshForegroundWindow();
         return true;
+    }
+
+    public void RefreshForegroundWindow()
+    {
+        if (_disposed) return;
+
+        IntPtr hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        _lastForegroundWindow = hwnd;
+        RaiseWindowChanged(hwnd);
     }
 
     private void OnForegroundChanged(
@@ -98,7 +103,6 @@ public sealed class WindowHookManager : IDisposable
         if (_disposed || hwnd == IntPtr.Zero) return;
         if (idObject != OBJID_WINDOW || idChild != 0) return;
 
-        // Re-query because fullscreen transitions can race the foreground hook.
         IntPtr foreground = GetForegroundWindow();
         if (foreground != IntPtr.Zero)
             _lastForegroundWindow = foreground;
@@ -125,10 +129,6 @@ public sealed class WindowHookManager : IDisposable
         }
     }
 
-    /// <summary>
-    /// True fullscreen is defined by the DWM frame occupying the complete monitor,
-    /// not by focus changes or a particular browser window style.
-    /// </summary>
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
         try
@@ -137,7 +137,7 @@ public sealed class WindowHookManager : IDisposable
                 out DwmApi.RECT frameRect, (uint)Marshal.SizeOf<DwmApi.RECT>()))
                 return false;
 
-            IntPtr hMonitor = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+            IntPtr hMonitor = MonitorFromWindow(hWnd, 2);
             if (hMonitor == IntPtr.Zero) return false;
 
             var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
@@ -156,10 +156,6 @@ public sealed class WindowHookManager : IDisposable
         }
     }
 
-    /// <summary>
-    /// A full-monitor window must not be treated as ordinary maximized merely
-    /// because a browser keeps WS_MAXIMIZE set while entering F11/video fullscreen.
-    /// </summary>
     public static bool IsWindowMaximized(IntPtr hWnd)
     {
         try
@@ -168,7 +164,7 @@ public sealed class WindowHookManager : IDisposable
                 return false;
 
             int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
-            return (style & 0x01000000) != 0; // WS_MAXIMIZE
+            return (style & 0x01000000) != 0;
         }
         catch
         {
