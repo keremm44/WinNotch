@@ -53,6 +53,14 @@ public partial class MainWindow
         // Pin safety is independent of VisibilityMode. A window pinned while small
         // can later be maximized/fullscreen and must then lose TOPMOST immediately.
         EnforcePinnedWindowSafety();
+
+        // Activating a TOPMOST target can move it ahead of WinNotch inside the
+        // TOPMOST z-band. While we own at least one pin, keep the notch itself at
+        // the front without activating it so its click/right-click surface cannot
+        // disappear behind the pinned window.
+        if (_windowPinService?.PinnedCount > 0)
+            ReassertNotchTopmost();
+
         VerifyAutomaticFullscreenVisibility();
     }
 
