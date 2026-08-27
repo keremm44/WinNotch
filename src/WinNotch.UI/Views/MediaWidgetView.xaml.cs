@@ -54,7 +54,10 @@ public partial class MediaWidgetView : UserControl
             string source = FormatSourceLabel(session.SourceAppId);
             SubtitleText.Text = JoinSecondary(creator, source);
 
-            PlayPauseButton.Content = session.IsPlaying ? "⏸" : "▶";
+            PlayPauseIcon.SetResourceReference(
+                System.Windows.Shapes.Path.DataProperty,
+                session.IsPlaying ? "Icon.Pause" : "Icon.Play");
+            PlayPauseIcon.Margin = session.IsPlaying ? new Thickness(0) : new Thickness(1, 0, 0, 0);
             PlayPauseButton.IsEnabled = session.IsPlaying ? session.CanPause : session.CanPlay;
             PrevButton.IsEnabled = session.CanSkipPrevious;
             NextButton.IsEnabled = session.CanSkipNext;

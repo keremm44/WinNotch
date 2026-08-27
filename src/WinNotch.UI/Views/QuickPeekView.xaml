@@ -10,6 +10,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -57,7 +58,7 @@
                            Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             </StackPanel>
             <TextBlock Text="Hızlı görünüm"
-                       FontSize="8"
+                       FontSize="9"
                        Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
                        HorizontalAlignment="Right"
                        VerticalAlignment="Top"/>
@@ -108,7 +109,7 @@
                                MaxWidth="215"/>
                     <TextBlock x:Name="ContextKindText"
                                Text="Son pano"
-                               FontSize="8.5"
+                               FontSize="9.5"
                                Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                                Margin="0,1,0,0"/>
                 </StackPanel>
@@ -134,11 +135,18 @@
                            Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Anlamlı bağlam burada görünür"
-                           FontSize="8"
+                           FontSize="9"
                            Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
                            HorizontalAlignment="Center"
                            Margin="0,2,0,0"/>
             </StackPanel>
         </Grid>
+        <Border x:Name="QuickPeekStateIndicator"
+                Height="1"
+                VerticalAlignment="Bottom"
+                Margin="8,0"
+                Background="{DynamicResource Brush.Accent.Primary}"
+                Opacity="0.55"
+                IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

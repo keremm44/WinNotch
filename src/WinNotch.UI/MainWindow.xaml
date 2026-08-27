@@ -73,13 +73,13 @@
                             CornerRadius="8"
                             Background="{DynamicResource Brush.Notch.AmbientSurface}"
                             Margin="0,0,5,0">
-                        <TextBlock Text="▶"
-                                   FontFamily="Segoe UI Symbol"
-                                   FontSize="7"
-                                   Foreground="{DynamicResource Brush.Notch.AmbientIcon}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Margin="1,0,0,0"/>
+                        <Path Data="{DynamicResource Icon.Play}"
+                              Width="7" Height="7"
+                              Stretch="Uniform"
+                              Fill="{DynamicResource Brush.Notch.AmbientIcon}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Margin="1,0,0,0"/>
                     </Border>
                     <TextBlock x:Name="MediaAmbientTitle"
                                Text="Medya"
@@ -111,17 +111,11 @@
                         CornerRadius="0,0,10,10"
                         Margin="1,0,1,1"
                         IsHitTestVisible="False"/>
-                <Border Height="10"
+                <Border Height="3"
+                        Margin="2,0"
                         VerticalAlignment="Top"
                         Background="{DynamicResource Brush.Notch.Highlight}"
-                        IsHitTestVisible="False">
-                    <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#A0FFFFFF" Offset="0"/>
-                            <GradientStop Color="#00FFFFFF" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.OpacityMask>
-                </Border>
+                        IsHitTestVisible="False"/>
             </Grid>
         </Border>
 

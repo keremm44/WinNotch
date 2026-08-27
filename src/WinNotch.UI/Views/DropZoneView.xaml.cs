@@ -122,7 +122,7 @@ public partial class DropZoneView : UserControl
     public void ShowDropTarget()
     {
         _isExpanded = false;
-        FileIcon.Text = "+";
+        ShowAddIcon();
         DropTargetText.Text = "Dosyayı buraya bırak";
         FileSummaryText.Text = HasItems
             ? $"Mevcut {_items.Length} öğeye eklenecek"
@@ -132,13 +132,19 @@ public partial class DropZoneView : UserControl
         RemoveButton.Visibility = Visibility.Collapsed;
     }
 
+    private void ShowAddIcon()
+    {
+        FileAddIcon.Visibility = Visibility.Visible;
+        FileIcon.Visibility = Visibility.Collapsed;
+    }
+
     private void RenderShelf()
     {
         EnsureSelection();
 
         if (_items.Length == 0)
         {
-            FileIcon.Text = "+";
+            ShowAddIcon();
             DropTargetText.Text = "Dosyayı buraya bırak";
             FileSummaryText.Text = "Geçici rafta tutulacak";
             RemoveButton.Visibility = Visibility.Collapsed;
@@ -149,6 +155,8 @@ public partial class DropZoneView : UserControl
 
         RemoveButton.Visibility = Visibility.Visible;
         HeldItem item = SelectedItem ?? _items[0];
+        FileAddIcon.Visibility = Visibility.Collapsed;
+        FileIcon.Visibility = Visibility.Visible;
         FileIcon.Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath);
         DropTargetText.Text = item.DisplayName;
 
@@ -203,7 +211,7 @@ public partial class DropZoneView : UserControl
                 Child = new TextBlock
                 {
                     Text = $"+{hiddenCount}",
-                    FontSize = 8.5,
+                    FontSize = 9.0,
                     Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
                     VerticalAlignment = VerticalAlignment.Center
                 }
@@ -222,10 +230,27 @@ public partial class DropZoneView : UserControl
         };
 
         var content = new StackPanel { Orientation = Orientation.Horizontal };
+        if (index == _selectedIndex)
+        {
+            var selectedIcon = new System.Windows.Shapes.Path
+            {
+                Width = 9,
+                Height = 9,
+                Stretch = System.Windows.Media.Stretch.Uniform,
+                Stroke = FindBrush("Brush.Accent.Primary"),
+                StrokeThickness = 1.7,
+                StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+                StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
+                Margin = new Thickness(0, 0, 5, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            selectedIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty, "Icon.Check");
+            content.Children.Add(selectedIcon);
+        }
         content.Children.Add(new TextBlock
         {
             Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath),
-            FontSize = 7.5,
+            FontSize = 9,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
             VerticalAlignment = VerticalAlignment.Center,
@@ -234,7 +259,7 @@ public partial class DropZoneView : UserControl
         content.Children.Add(new TextBlock
         {
             Text = item.DisplayName,
-            FontSize = 8.5,
+            FontSize = 9.5,
             MaxWidth = 88,
             TextTrimming = TextTrimming.CharacterEllipsis,
             Foreground = FindBrush("Brush.Text.OnDarkPrimary"),
@@ -254,13 +279,25 @@ public partial class DropZoneView : UserControl
         }
         selectButton.Click += ShelfChip_Select;
 
+        var removeIcon = new System.Windows.Shapes.Path
+        {
+            Width = 9,
+            Height = 9,
+            Stretch = System.Windows.Media.Stretch.Uniform,
+            Stroke = FindBrush("Brush.Text.OnDarkMuted"),
+            StrokeThickness = 1.5,
+            StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+            StrokeEndLineCap = System.Windows.Media.PenLineCap.Round
+        };
+        removeIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty, "Icon.Close");
         var removeButton = new Button
         {
             Tag = index,
-            Content = "×",
+            Content = removeIcon,
             ToolTip = "Bu öğeyi raftan çıkar",
             Style = (Style)FindResource("ShelfChipRemoveButton")
         };
+        System.Windows.Automation.AutomationProperties.SetName(removeButton, $"{item.DisplayName} öğesini raftan çıkar");
         removeButton.Click += ShelfChip_Remove;
 
         container.Children.Add(selectButton);

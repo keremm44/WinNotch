@@ -6,15 +6,18 @@
     <UserControl.Resources>
         <Style x:Key="PreviewModeRadio" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}"/>
-            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontSize" Value="{DynamicResource Metric.Settings.CaptionFontSize}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="Surface"
                                 Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -25,6 +28,7 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.Accent.Selection}"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Border}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -52,7 +56,7 @@
                         Background="{DynamicResource Brush.Border.Subtle}"/>
 
                 <Border x:Name="PreviewNotch"
-                        Width="294" Height="64"
+                        Width="300" Height="74"
                         VerticalAlignment="Top"
                         HorizontalAlignment="Center"
                         Background="{DynamicResource Brush.Notch.Base}"
@@ -112,7 +116,7 @@
                                            FontSize="10.5" FontWeight="SemiBold"
                                            Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
                                 <TextBlock Text="Bağlantı panoya alındı"
-                                           FontSize="8.5"
+                                           FontSize="9.5"
                                            Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                                            Margin="0,1,0,0"/>
                             </StackPanel>
@@ -156,11 +160,11 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="WinNotch Preview"
+                                <TextBlock Text="WinNotch önizleme"
                                            FontSize="10.5" FontWeight="SemiBold"
                                            Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-                                <TextBlock Grid.Row="1" Text="Artist · Spotify"
-                                           FontSize="8.5"
+                                <TextBlock Grid.Row="1" Text="Sanatçı · Spotify"
+                                           FontSize="9.5"
                                            Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                                            Margin="0,1,0,0"/>
                                 <Border Grid.Row="2" Height="3" CornerRadius="1.5"
@@ -171,12 +175,38 @@
                                             Background="{DynamicResource Brush.State.Media}"/>
                                 </Border>
                             </Grid>
-                            <TextBlock Grid.Column="2" Text="▶"
-                                       FontFamily="Segoe UI Symbol"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
-                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Width="24" Height="24" CornerRadius="12"
+                                        Background="{DynamicResource Brush.Surface.Soft}"
+                                        BorderBrush="{DynamicResource Brush.Border.OnDark}" BorderThickness="1">
+                                    <Path Data="{DynamicResource Icon.Previous}" Width="10" Height="10" Stretch="Uniform"
+                                          Fill="{DynamicResource Brush.Text.OnDarkSecondary}"/>
+                                </Border>
+                                <Border Width="28" Height="28" CornerRadius="14" Margin="3,0"
+                                        Background="{DynamicResource Brush.State.Media.Subtle}"
+                                        BorderBrush="{DynamicResource Brush.State.Media.Border}" BorderThickness="1">
+                                    <Path Data="{DynamicResource Icon.Play}" Width="11" Height="11" Stretch="Uniform"
+                                          Fill="{DynamicResource Brush.Text.OnDarkPrimary}" Margin="1,0,0,0"/>
+                                </Border>
+                                <Border Width="24" Height="24" CornerRadius="12"
+                                        Background="{DynamicResource Brush.Surface.Soft}"
+                                        BorderBrush="{DynamicResource Brush.Border.OnDark}" BorderThickness="1">
+                                    <Path Data="{DynamicResource Icon.Next}" Width="10" Height="10" Stretch="Uniform"
+                                          Fill="{DynamicResource Brush.Text.OnDarkSecondary}"/>
+                                </Border>
+                            </StackPanel>
                         </Grid>
+
+                        <!-- Same lightweight shell treatment used by the runtime notch. -->
+                        <Border BorderBrush="{DynamicResource Brush.Notch.InnerEdge}"
+                                BorderThickness="1,0,1,1"
+                                CornerRadius="0,0,10,10"
+                                Margin="1,0,1,1"
+                                IsHitTestVisible="False"/>
+                        <Border Height="3"
+                                VerticalAlignment="Top"
+                                Background="{DynamicResource Brush.Notch.Highlight}"
+                                IsHitTestVisible="False"/>
                     </Grid>
                 </Border>
             </Grid>

@@ -39,6 +39,7 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Notch.InnerEdge", palette.IsLightTheme ? "#18000000" : "#18FFFFFF");
 
         SetBrush(resources, "Brush.Window.Base", palette.WindowBase);
+        SetBrush(resources, "Brush.Window.BackdropTint", WithAlpha(palette.WindowBase, palette.IsLightTheme ? (byte)0xE2 : (byte)0xEA));
         SetBrush(resources, "Brush.Window.Header", palette.WindowHeader);
         SetBrush(resources, "Brush.Surface.Raised", palette.SurfaceRaised);
         SetBrush(resources, "Brush.Surface.Popup", palette.SurfacePopup);
@@ -55,6 +56,9 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Border.OnDarkStrong", palette.BorderOnDarkStrong);
         SetBrush(resources, "Brush.Border.LightTheme", palette.IsLightTheme ? "#26000000" : "#364A4A50");
         SetBrush(resources, "Brush.Border.Premium", palette.IsLightTheme ? "#24000000" : "#28FFFFFF");
+        SetBrush(resources, "Brush.Focus", palette.IsLightTheme ? "#FF005FB8" : "#FF7AA7FF");
+        SetBrush(resources, "Brush.Focus.Inner", palette.WindowBase);
+        SetBrush(resources, "Brush.Shadow", palette.IsLightTheme ? "#38000000" : "#78000000");
 
         SetBrush(resources, "Brush.Text.Primary", palette.TextPrimary);
         SetBrush(resources, "Brush.Text.Secondary", palette.TextSecondary);
@@ -67,7 +71,9 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Accent.Primary", palette.AccentPrimary);
         // The System choice in the selector must retain the real Windows color while
         // Primary follows whichever preset is currently selected.
-        SetBrush(resources, "Brush.Accent.System", systemAccent ?? "#FF0078D4");
+        string resolvedSystemAccent = systemAccent ?? "#FF0078D4";
+        SetBrush(resources, "Brush.Accent.System", resolvedSystemAccent);
+        SetBrush(resources, "Brush.Accent.SystemForeground", ContrastForeground(resolvedSystemAccent));
         SetBrush(resources, "Brush.Accent.Foreground", ContrastForeground(palette.AccentPrimary));
         SetBrush(resources, "Brush.Accent.Hover", palette.AccentHover);
         SetBrush(resources, "Brush.Accent.Pressed", palette.AccentPressed);
@@ -97,12 +103,21 @@ public static class AppearanceThemeManager
         resources["Metric.ControlHeight"] = comfortable ? 34d : 30d;
         resources["Metric.PrimaryFontSize"] = comfortable ? 12.25d : 11.5d;
         resources["Metric.SecondaryFontSize"] = comfortable ? 10.25d : 9.5d;
+        resources["Metric.Settings.TitleFontSize"] = comfortable ? 19d : 18d;
+        resources["Metric.Settings.SectionFontSize"] = comfortable ? 14.5d : 14d;
+        resources["Metric.Settings.BodyFontSize"] = comfortable ? 12.5d : 12d;
+        resources["Metric.Settings.RowFontSize"] = comfortable ? 13.5d : 13d;
+        resources["Metric.Settings.CaptionFontSize"] = comfortable ? 11.5d : 11d;
+        resources["Metric.Settings.ControlHeight"] = comfortable ? 40d : 36d;
 
         // Legacy aliases stay synchronized until every remaining view is tokenized.
         SetBrush(resources, "BackgroundDark", palette.WindowBase);
         SetBrush(resources, "ForegroundLight", palette.TextPrimary);
         SetBrush(resources, "AccentBlue", palette.AccentPrimary);
         SetBrush(resources, "TextSecondary", palette.TextMuted);
+
+        if (SystemParameters.HighContrast)
+            ApplyHighContrast(resources);
 
         return palette;
     }
@@ -115,6 +130,68 @@ public static class AppearanceThemeManager
         SetBrush(resources, $"Brush.State.{state}", color);
         SetBrush(resources, $"Brush.State.{state}.Subtle", WithAlpha(color, 0x18));
         SetBrush(resources, $"Brush.State.{state}.Border", WithAlpha(color, 0x48));
+    }
+
+    private static void ApplyHighContrast(ResourceDictionary resources)
+    {
+        string window = SystemColors.WindowColor.ToString();
+        string text = SystemColors.WindowTextColor.ToString();
+        string control = SystemColors.ControlColor.ToString();
+        string highlight = SystemColors.HighlightColor.ToString();
+        string highlightText = SystemColors.HighlightTextColor.ToString();
+        string gray = SystemColors.GrayTextColor.ToString();
+
+        foreach (string key in new[] { "Brush.Notch.Base", "Brush.Window.Base", "Brush.Window.BackdropTint", "Brush.Window.Header" })
+            SetBrush(resources, key, window);
+        foreach (string key in new[] { "Brush.Surface.Raised", "Brush.Surface.Popup", "Brush.Surface.Control" })
+            SetBrush(resources, key, control);
+        foreach (string key in new[] { "Brush.Surface.Soft", "Brush.Surface.Softer", "Brush.Surface.Hover", "Brush.Surface.Pressed" })
+            SetBrush(resources, key, window);
+        foreach (string key in new[] { "Brush.Text.Primary", "Brush.Text.Secondary", "Brush.Text.OnDarkPrimary", "Brush.Text.OnDarkSecondary" })
+            SetBrush(resources, key, text);
+        foreach (string key in new[] { "Brush.Text.Muted", "Brush.Text.Faint", "Brush.Text.OnDarkMuted" })
+            SetBrush(resources, key, gray);
+        foreach (string key in new[] { "Brush.Border.Subtle", "Brush.Border.Strong", "Brush.Border.Premium", "Brush.Border.OnDark", "Brush.Border.OnDarkStrong", "Brush.Notch.Edge", "Brush.Notch.InnerEdge" })
+            SetBrush(resources, key, text);
+        foreach (string key in new[] { "Brush.Accent.Primary", "Brush.Accent.Hover", "Brush.Accent.Pressed", "Brush.Accent.Border", "Brush.Focus" })
+            SetBrush(resources, key, highlight);
+        SetBrush(resources, "Brush.Accent.Foreground", highlightText);
+        // Selected controls retain readable WindowText; focus/border carries Highlight.
+        SetBrush(resources, "Brush.Accent.Selection", window);
+        SetBrush(resources, "Brush.Accent.Subtle", window);
+        SetBrush(resources, "Brush.Focus.Inner", window);
+        SetBrush(resources, "Brush.Notch.Handle", highlight);
+        SetBrush(resources, "Brush.Notch.AmbientSurface", window);
+        SetBrush(resources, "Brush.Notch.AmbientGlow", window);
+        SetBrush(resources, "Brush.Notch.AmbientIcon", text);
+        SetBrush(resources, "Brush.Notch.AmbientText", text);
+        SetBrush(resources, "Brush.Border.LightTheme", text);
+        SetBrush(resources, "Brush.Accent.System", highlight);
+        SetBrush(resources, "Brush.Accent.SystemForeground", highlightText);
+        SetBrush(resources, "Brush.Notch.Highlight", "#00FFFFFF");
+        SetBrush(resources, "Brush.Surface.Highlight", "#00FFFFFF");
+        SetBrush(resources, "Brush.Accent.Glow", "#00FFFFFF");
+        SetBrush(resources, "Brush.Shadow", "#00000000");
+
+        foreach (string semantic in new[] { "Success", "Danger" })
+        {
+            SetBrush(resources, $"Brush.Semantic.{semantic}", highlight);
+            SetBrush(resources, $"Brush.Semantic.{semantic}Subtle", window);
+            SetBrush(resources, $"Brush.Semantic.{semantic}Border", text);
+        }
+        SetBrush(resources, "Brush.Semantic.Warning", highlight);
+
+        foreach (string state in new[] { "File", "Clipboard", "Screenshot", "Media" })
+        {
+            SetBrush(resources, $"Brush.State.{state}", highlight);
+            SetBrush(resources, $"Brush.State.{state}.Subtle", window);
+            SetBrush(resources, $"Brush.State.{state}.Border", text);
+        }
+
+        SetBrush(resources, "BackgroundDark", window);
+        SetBrush(resources, "ForegroundLight", text);
+        SetBrush(resources, "AccentBlue", highlight);
+        SetBrush(resources, "TextSecondary", gray);
     }
 
     private static void SetBrush(ResourceDictionary resources, string key, string hex)

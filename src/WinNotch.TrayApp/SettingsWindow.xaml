@@ -10,19 +10,11 @@
         ShowInTaskbar="False"
         Background="{DynamicResource Brush.Window.Base}"
         Foreground="{DynamicResource Brush.Text.Primary}"
-        FontFamily="Segoe UI"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True">
 
     <Window.Resources>
-        <DropShadowEffect x:Key="CardShadow"
-                          Color="#FF000000"
-                          BlurRadius="16"
-                          ShadowDepth="3"
-                          Direction="270"
-                          Opacity="0.18"
-                          RenderingBias="Quality"/>
-
         <Style x:Key="SectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Premium}"/>
@@ -30,18 +22,17 @@
             <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}"/>
             <Setter Property="Padding" Value="{DynamicResource Thickness.CardPadding}"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
         </Style>
 
         <Style x:Key="SectionTitle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{DynamicResource Metric.Settings.SectionFontSize}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
             <Setter Property="Margin" Value="0,0,0,3"/>
         </Style>
 
         <Style x:Key="SectionDescription" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="FontSize" Value="{DynamicResource Metric.Settings.BodyFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
@@ -53,6 +44,7 @@
             <Setter Property="Padding" Value="8,8"/>
             <Setter Property="Margin" Value="-8,0,-8,1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -111,12 +103,13 @@
         </Style>
 
         <Style x:Key="SegmentRadio" TargetType="RadioButton">
-            <Setter Property="Height" Value="34"/>
+            <Setter Property="Height" Value="{DynamicResource Metric.Settings.ControlHeight}"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="{DynamicResource Metric.Settings.BodyFontSize}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -147,6 +140,7 @@
         </Style>
 
         <Style x:Key="ModernComboItem" TargetType="ComboBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Padding" Value="11,8"/>
@@ -181,8 +175,9 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{DynamicResource Metric.Settings.BodyFontSize}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="ItemContainerStyle" Value="{StaticResource ModernComboItem}"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -303,6 +298,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -333,8 +329,11 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="{DynamicResource Brush.Border.Subtle}"
+    <Border x:Name="RootChrome"
+            BorderBrush="{DynamicResource Brush.Border.Subtle}"
             BorderThickness="1"
+            CornerRadius="8"
+            ClipToBounds="True"
             Background="{DynamicResource Brush.Window.Base}">
         <Grid>
             <Grid.RowDefinitions>
@@ -360,20 +359,21 @@
                             BorderThickness="1"
                             Margin="0,0,11,0">
                         <Grid>
-                            <Ellipse Width="14" Height="14"
+                            <Ellipse Width="24" Height="24"
                                      Fill="{DynamicResource Brush.Accent.Glow}"/>
-                            <Border Width="13" Height="3"
-                                    CornerRadius="1.5"
-                                    Background="{DynamicResource Brush.Accent.Primary}"/>
+                            <Path Data="{DynamicResource Icon.NotchMark}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"
+                                  Fill="{DynamicResource Brush.Accent.Primary}"/>
                         </Grid>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="WinNotch"
-                                   FontSize="16.5"
+                                   FontSize="{DynamicResource Metric.Settings.TitleFontSize}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource Brush.Text.Primary}"/>
-                        <TextBlock Text="AYARLAR  ·  KİŞİSELLEŞTİRME"
-                                   FontSize="7.5"
+                        <TextBlock Text="Ayarlar ve kişiselleştirme"
+                                   FontSize="{DynamicResource Metric.Settings.CaptionFontSize}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource Brush.Text.Faint}"
                                    Margin="0,2,0,0"/>
@@ -399,40 +399,49 @@
                 <StackPanel>
                     <Border Style="{StaticResource SectionCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Özellikler"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Width="28" Height="28" CornerRadius="8"
+                                        Background="{DynamicResource Brush.State.File.Subtle}"
+                                        BorderBrush="{DynamicResource Brush.State.File.Border}" BorderThickness="1"
+                                        Margin="0,0,10,0">
+                                    <Path Data="{DynamicResource Icon.File}" Width="14" Height="14" Stretch="Uniform"
+                                          Stroke="{DynamicResource Brush.State.File}" StrokeThickness="1.35" StrokeLineJoin="Round"/>
+                                </Border>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Özellikler" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Yalnız kullandığın yüzeyleri açık tut. Medya entegrasyonu ek bellek kullanır."/>
 
                             <CheckBox x:Name="ModuleACheckBox" Style="{StaticResource SettingsToggleRow}"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Dosya Rafı" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Dosya Rafı" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="Dosyaları geçici olarak tut, kopyala ve yeniden sürükle"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox x:Name="ModuleBCheckBox" Style="{StaticResource SettingsToggleRow}"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Akıllı Pano" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Akıllı Pano" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="URL, dosya yolu ve anlamlı içeriklerde bağlamsal aksiyon göster"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox x:Name="ModuleCCheckBox" Style="{StaticResource SettingsToggleRow}"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Medya Kontrolleri" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Medya Kontrolleri" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="Aktif sistem medya oturumunu kompakt yüzeyde göster"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox x:Name="ModuleECheckBox" Style="{StaticResource SettingsToggleRow}"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Ekran Görüntüleri" FontSize="11.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Ekran Görüntüleri" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="Snipping Tool sonucunu önizle ve hızlıca kaydet"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
                         </StackPanel>
@@ -440,12 +449,21 @@
 
                     <Border Style="{StaticResource SectionCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Davranış"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Width="28" Height="28" CornerRadius="8"
+                                        Background="{DynamicResource Brush.Accent.Subtle}"
+                                        BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"
+                                        Margin="0,0,10,0">
+                                    <Path Data="{DynamicResource Icon.Settings}" Width="14" Height="14" Stretch="Uniform"
+                                          Stroke="{DynamicResource Brush.Accent.Primary}" StrokeThickness="1.35" StrokeLineJoin="Round"/>
+                                </Border>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Davranış" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="Yüzeyin ne zaman görüneceğini ve ne kadar tepki vereceğini belirle."/>
 
                             <TextBlock Text="Görünürlük" Foreground="{DynamicResource Brush.Text.Secondary}"
-                                       FontSize="10.5" Margin="0,0,0,6"/>
+                                       FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Margin="0,0,0,6"/>
                             <Border Background="{DynamicResource Brush.Surface.Control}"
                                     BorderBrush="{DynamicResource Brush.Border.Strong}"
                                     BorderThickness="1" CornerRadius="8" Padding="2" Margin="0,0,0,12">
@@ -466,7 +484,7 @@
                             </Border>
 
                             <TextBlock Text="Tepki seviyesi" Foreground="{DynamicResource Brush.Text.Secondary}"
-                                       FontSize="10.5" Margin="0,0,0,6"/>
+                                       FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Margin="0,0,0,6"/>
                             <Border Background="{DynamicResource Brush.Surface.Control}"
                                     BorderBrush="{DynamicResource Brush.Border.Strong}"
                                     BorderThickness="1" CornerRadius="8" Padding="2">
@@ -493,11 +511,20 @@
 
                     <Border Style="{StaticResource SectionCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Ekran ve başlangıç"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Width="28" Height="28" CornerRadius="8"
+                                        Background="{DynamicResource Brush.State.Screenshot.Subtle}"
+                                        BorderBrush="{DynamicResource Brush.State.Screenshot.Border}" BorderThickness="1"
+                                        Margin="0,0,10,0">
+                                    <Path Data="{DynamicResource Icon.Monitor}" Width="14" Height="14" Stretch="Uniform"
+                                          Stroke="{DynamicResource Brush.State.Screenshot}" StrokeThickness="1.35" StrokeLineJoin="Round"/>
+                                </Border>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Ekran ve başlangıç" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Style="{StaticResource SectionDescription}"
                                        Text="WinNotch'un hangi monitöre bağlanacağını ve Windows ile başlayıp başlamayacağını seç."/>
                             <TextBlock Text="Hedef monitör" Foreground="{DynamicResource Brush.Text.Secondary}"
-                                       FontSize="10.5" Margin="0,0,0,6"/>
+                                       FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Margin="0,0,0,6"/>
                             <ComboBox x:Name="MonitorComboBox"
                                       Style="{StaticResource ModernCombo}"
                                       Margin="0,0,0,8"
@@ -507,9 +534,9 @@
                                       Checked="AutoStartCheckBox_Changed"
                                       Unchecked="AutoStartCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Windows ile otomatik başlat" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Windows ile otomatik başlat" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="Oturum açıldığında WinNotch'u sessizce başlat"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
                         </StackPanel>
@@ -517,17 +544,27 @@
 
                     <Border Style="{StaticResource SectionCard}" Margin="0,0,0,4">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Teşhis"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Width="28" Height="28" CornerRadius="8"
+                                        Background="{DynamicResource Brush.Semantic.SuccessSubtle}"
+                                        BorderBrush="{DynamicResource Brush.Semantic.SuccessBorder}" BorderThickness="1"
+                                        Margin="0,0,10,0">
+                                    <Path Data="{DynamicResource Icon.Diagnostics}" Width="14" Height="14" Stretch="Uniform"
+                                          Stroke="{DynamicResource Brush.Semantic.Success}" StrokeThickness="1.35"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                </Border>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Teşhis" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Style="{StaticResource SectionDescription}"
-                                       Text="Geliştirme sırasında anlık process kullanımını göster. Kapalıyken sayaç çalışmaz."/>
+                                       Text="Geliştirme sırasında anlık işlem kullanımını göster. Kapalıyken sayaç çalışmaz."/>
                             <CheckBox x:Name="DiagnosticsCheckBox"
                                       Style="{StaticResource SettingsToggleRow}"
                                       Checked="DiagnosticsCheckBox_Changed"
                                       Unchecked="DiagnosticsCheckBox_Changed">
                                 <StackPanel>
-                                    <TextBlock Text="Performans panelini göster" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Performans panelini göster" FontSize="{DynamicResource Metric.Settings.RowFontSize}" FontWeight="SemiBold"/>
                                     <TextBlock Text="Bellek ve CPU örneklerini yalnız bu pencere açıkken izle"
-                                               FontSize="9.5" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
+                                               FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Muted}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </CheckBox>
 
@@ -545,13 +582,13 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Bellek" FontSize="9.5" Foreground="{DynamicResource Brush.Text.Faint}"/>
-                                        <TextBlock x:Name="RamUsageText" Text="—" FontSize="13"
+                                        <TextBlock Text="Bellek" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
+                                        <TextBlock x:Name="RamUsageText" Text="—" FontSize="16"
                                                    FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="CPU" FontSize="9.5" Foreground="{DynamicResource Brush.Text.Faint}"/>
-                                        <TextBlock x:Name="CpuUsageText" Text="—" FontSize="13"
+                                        <TextBlock Text="CPU" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
+                                        <TextBlock x:Name="CpuUsageText" Text="—" FontSize="16"
                                                    FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Grid>

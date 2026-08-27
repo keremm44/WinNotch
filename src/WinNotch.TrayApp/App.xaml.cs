@@ -29,6 +29,7 @@ public partial class App : Application
             _settings.Appearance ??= new AppearanceSettings();
             AppearanceResolver.NormalizeInPlace(_settings.Appearance);
             AppearanceThemeManager.Apply(_settings.Appearance);
+            SystemParameters.StaticPropertyChanged += OnSystemVisualPreferenceChanged;
             Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}, Theme={_settings.Appearance.ThemePreset}");
 
             _mutex = new Mutex(true, Constants.MutexName, out bool createdNew);
@@ -86,6 +87,7 @@ public partial class App : Application
 
     private void OnExit(object sender, ExitEventArgs e)
     {
+        SystemParameters.StaticPropertyChanged -= OnSystemVisualPreferenceChanged;
         SettingsStore.Save(_settings);
 
         if (_trayIcon != null)
@@ -118,6 +120,19 @@ public partial class App : Application
         try { _mutex?.ReleaseMutex(); } catch (ApplicationException) { }
         _mutex?.Dispose();
         _mutex = null;
+    }
+
+    private void OnSystemVisualPreferenceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(SystemParameters.HighContrast) or nameof(SystemParameters.ClientAreaAnimation)))
+            return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            AppearanceThemeManager.Apply(_settings.Appearance);
+            _mainWindow?.ApplyAppearanceSettings();
+            _settingsWindow?.RefreshSystemVisuals();
+        });
     }
 
     private void OnTraySettingsChanged(object? sender, ModuleSettings settings)

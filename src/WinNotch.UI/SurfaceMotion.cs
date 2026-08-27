@@ -11,7 +11,7 @@ namespace WinNotch.UI;
 /// </summary>
 internal static class SurfaceMotion
 {
-    private static MotionProfile s_profile = new(1.0, 110, 2.0);
+    private static MotionProfile s_profile = new(1.0, 167, 2.0);
 
     public static void Configure(AppearanceSettings settings)
         => s_profile = AppearanceResolver.ResolveMotion(settings);

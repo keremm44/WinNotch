@@ -37,9 +37,9 @@ public partial class ClipboardToastView : UserControl
         DensityProfile density = AppearanceResolver.ResolveDensity(_appearance);
 
         PreviewText.FontSize = 10.5 * density.FontScale;
-        DetailText.FontSize = 8.5 * density.FontScale;
-        TimestampText.FontSize = 8.0 * density.FontScale;
-        ActionHintText.FontSize = 9.0 * density.FontScale;
+        DetailText.FontSize = 9.5 * density.FontScale;
+        TimestampText.FontSize = 9.0 * density.FontScale;
+        ActionHintText.FontSize = 9.5 * density.FontScale;
         PrimaryActionButton.FontSize = 9.5 * density.FontScale;
 
         if (_currentImage != null)

@@ -15,6 +15,7 @@
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -50,6 +51,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="FontSize" Value="8.5"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -80,6 +82,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkMuted}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -125,13 +128,23 @@
                     BorderBrush="{DynamicResource Brush.Border.OnDark}"
                     BorderThickness="1"
                     VerticalAlignment="Center">
-                <TextBlock x:Name="FileIcon"
-                           Text="+"
-                           FontSize="9.5"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                <Grid>
+                    <Path x:Name="FileAddIcon"
+                          Data="{DynamicResource Icon.Add}"
+                          Width="12" Height="12"
+                          Stretch="Uniform"
+                          Stroke="{DynamicResource Brush.Text.OnDarkPrimary}"
+                          StrokeThickness="1.6"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"/>
+                    <TextBlock x:Name="FileIcon"
+                               FontSize="9.5"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                               Visibility="Collapsed"/>
+                </Grid>
             </Border>
 
             <StackPanel Grid.Column="1"
@@ -144,7 +157,7 @@
                            Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
                            TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="FileSummaryText"
-                           FontSize="8.5"
+                           FontSize="9.5"
                            Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
                            TextTrimming="CharacterEllipsis"
                            Margin="0,1,0,0"/>
@@ -190,9 +203,19 @@
                     Click="OpenFolderButton_Click"/>
             <Button x:Name="MoreButton"
                     Style="{StaticResource ShelfActionButton}"
-                    Content="•••"
                     Margin="0"
-                    Click="MoreButton_Click"/>
+                    ToolTip="Daha fazla"
+                    AutomationProperties.Name="Daha fazla işlem"
+                    Click="MoreButton_Click">
+                <Path Data="{DynamicResource Icon.More}" Width="14" Height="4" Stretch="Fill"
+                      Fill="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            </Button>
         </StackPanel>
+        <Border Height="1"
+                VerticalAlignment="Bottom"
+                Margin="8,0"
+                Background="{DynamicResource Brush.State.File}"
+                Opacity="0.55"
+                IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

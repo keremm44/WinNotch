@@ -10,7 +10,7 @@ public partial class MediaWidgetView
         DensityProfile density = AppearanceResolver.ResolveDensity(settings);
 
         TitleText.FontSize = 11.5 * density.FontScale;
-        SubtitleText.FontSize = 8.8 * density.FontScale;
+        SubtitleText.FontSize = 9.5 * density.FontScale;
         TitleText.MaxWidth = 142 * density.SurfaceScale;
         SubtitleText.MaxWidth = 142 * density.SurfaceScale;
 

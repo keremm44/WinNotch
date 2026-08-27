@@ -88,8 +88,8 @@ public static class AppearanceResolver
     {
         NormalizeInPlace(settings);
         return string.Equals(settings.MotionMode, "Reduced", StringComparison.OrdinalIgnoreCase)
-            ? new MotionProfile(0.45, 70, 0.0)
-            : new MotionProfile(1.00, 110, 2.0);
+            ? new MotionProfile(0.45, 83, 0.0)
+            : new MotionProfile(1.00, 167, 2.0);
     }
 
     public static AppearancePalette ResolvePalette(
@@ -117,7 +117,7 @@ public static class AppearanceResolver
                 "#FF0A1020", "#FF0E111A", "#FF121622", "#FF151A26", "#FF19202E", "#FF202735",
                 "#16FFFFFF", "#0CFFFFFF", "#26FFFFFF", "#36FFFFFF",
                 "#FF283142", "#FF3A465A", "#22FFFFFF", "#3AFFFFFF",
-                "#FFF4F5FA", "#FFBCC2D0", "#FF8C94A5", "#FF727A89",
+                "#FFF4F5FA", "#FFBCC2D0", "#FF8C94A5", "#FF808899",
                 "#F4FFFFFF", "#A4FFFFFF", "#70FFFFFF",
                 accent, hover, pressed, selection, subtle, accentBorder,
                 "#FF43CF93", "#FFFFB956", "#FFFF6575",
@@ -127,7 +127,7 @@ public static class AppearanceResolver
                 "#FFF8F8FA", "#FFF4F5F7", "#FFFFFFFF", "#FFFFFFFF", "#FFFFFFFF", "#FFF0F1F4",
                 "#10000000", "#08000000", "#12000000", "#1C000000",
                 "#FFD9DCE2", "#FFC4C8D0", "#18000000", "#2A000000",
-                "#FF17181B", "#FF4C5058", "#FF6F747E", "#FF8B9099",
+                "#FF17181B", "#FF4C5058", "#FF6F747E", "#FF6F747E",
                 "#FF17181B", "#FF4C5058", "#FF6F747E",
                 accent, hover, pressed, selection, subtle, accentBorder,
                 "#FF228A5C", "#FFB56B13", "#FFC93D4F",
@@ -139,7 +139,7 @@ public static class AppearanceResolver
                 "#FF050505", "#FF101010", "#FF141414", "#FF181818", "#FF1D1D1D", "#FF232323",
                 "#14FFFFFF", "#0BFFFFFF", "#22FFFFFF", "#32FFFFFF",
                 "#FF2A2A2A", "#FF3B3B3B", "#20FFFFFF", "#36FFFFFF",
-                "#FFF3F3F3", "#FFBDBDBD", "#FF8C8C8C", "#FF737373",
+                "#FFF3F3F3", "#FFBDBDBD", "#FF8C8C8C", "#FF858585",
                 "#F4FFFFFF", "#9AFFFFFF", "#68FFFFFF",
                 accent, hover, pressed, selection, subtle, accentBorder,
                 "#FFE6E6E8", "#FFBDBDBD", "#FFFFFFFF",
@@ -149,7 +149,7 @@ public static class AppearanceResolver
                 "#FF0B0B0D", "#FF101012", "#FF141416", "#FF18181B", "#FF1C1C20", "#FF222226",
                 "#14FFFFFF", "#0CFFFFFF", "#24FFFFFF", "#34FFFFFF",
                 "#FF29292E", "#FF3A3A42", "#20FFFFFF", "#38FFFFFF",
-                "#FFF5F5F7", "#FFBDBDC5", "#FF8D8D96", "#FF777780",
+                "#FFF5F5F7", "#FFBDBDC5", "#FF8D8D96", "#FF85858E",
                 "#F4FFFFFF", "#9AFFFFFF", "#6CFFFFFF",
                 accent, hover, pressed, selection, subtle, accentBorder,
                 "#FF35C98A", "#FFFFB547", "#FFFF5D6C",

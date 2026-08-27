@@ -52,8 +52,9 @@ public partial class AppearancePreviewView : UserControl
         ActionPreview.Visibility = mode == "Action" ? Visibility.Visible : Visibility.Collapsed;
         MediaPreview.Visibility = mode == "Media" ? Visibility.Visible : Visibility.Collapsed;
 
-        PreviewNotch.Width = Math.Round((mode == "Idle" ? 116 : mode == "Media" ? 300 : 294) * density.SurfaceScale);
-        PreviewNotch.Height = Math.Round((mode == "Idle" ? 28 : mode == "Media" ? 64 : 64) * density.ControlScale);
+        // Keep preview geometry aligned with the corresponding runtime states.
+        PreviewNotch.Width = Math.Round((mode == "Idle" ? 100 : mode == "Media" ? 336 : 300) * density.SurfaceScale);
+        PreviewNotch.Height = Math.Round((mode == "Idle" ? 22 : mode == "Media" ? 64 : 74) * density.ControlScale);
 
         bool dot = string.Equals(_appearance.IdleStyle, "Dot", StringComparison.OrdinalIgnoreCase);
         bool ambient = string.Equals(_appearance.IdleStyle, "Ambient", StringComparison.OrdinalIgnoreCase);

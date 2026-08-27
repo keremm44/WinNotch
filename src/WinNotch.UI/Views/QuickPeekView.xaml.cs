@@ -27,7 +27,7 @@ public partial class QuickPeekView : UserControl
 
         DensityProfile density = AppearanceResolver.ResolveDensity(_appearance);
         ContextPreviewText.FontSize = 10.5 * density.FontScale;
-        ContextKindText.FontSize = 8.5 * density.FontScale;
+        ContextKindText.FontSize = 9.5 * density.FontScale;
         RenderContext();
     }
 
@@ -88,6 +88,9 @@ public partial class QuickPeekView : UserControl
         ContextStatusSurface.SetResourceReference(
             Border.BorderBrushProperty,
             $"Brush.State.{stateKey}.Border");
+        QuickPeekStateIndicator.SetResourceReference(
+            Border.BackgroundProperty,
+            $"Brush.State.{stateKey}");
     }
 
     private void ContextButton_Click(object sender, RoutedEventArgs e)

@@ -39,8 +39,26 @@ public partial class SettingsWindow : Window
 
         LoadSettings();
         UpdateDiagnosticsState();
+        SourceInitialized += SettingsWindow_SourceInitialized;
         Loaded += SettingsWindow_Loaded;
         Closed += SettingsWindow_Closed;
+    }
+
+    private void SettingsWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        SourceInitialized -= SettingsWindow_SourceInitialized;
+        ApplyWindowBackdrop();
+    }
+
+    internal void RefreshSystemVisuals() => ApplyWindowBackdrop();
+
+    private void ApplyWindowBackdrop()
+    {
+        bool darkTheme = !AppearanceThemeManager.IsLightTheme(_settings.Appearance);
+        bool applied = WindowBackdrop.TryApply(this, darkTheme);
+        RootChrome.SetResourceReference(
+            Border.BackgroundProperty,
+            applied ? "Brush.Window.BackdropTint" : "Brush.Window.Base");
     }
 
     private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
@@ -221,6 +239,7 @@ public partial class SettingsWindow : Window
     {
         if (_isLoadingSettings) return;
         _settings.Appearance = appearance;
+        ApplyWindowBackdrop();
         OnSettingsChanged();
     }
 

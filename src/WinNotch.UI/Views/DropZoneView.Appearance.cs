@@ -12,7 +12,7 @@ public partial class DropZoneView
         DensityProfile density = AppearanceResolver.ResolveDensity(settings);
 
         DropTargetText.FontSize = 10.5 * density.FontScale;
-        FileSummaryText.FontSize = 8.5 * density.FontScale;
+        FileSummaryText.FontSize = 9.5 * density.FontScale;
         FileIcon.FontSize = 9.5 * density.FontScale;
         CopyFilesButton.FontSize = 9.5 * density.FontScale;
         OpenFolderButton.FontSize = 9.5 * density.FontScale;

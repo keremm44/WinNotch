@@ -15,8 +15,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontFamily" Value="Segoe UI Symbol"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -79,16 +78,11 @@
                 <Image x:Name="AlbumArtImage"
                        Stretch="UniformToFill"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
-                <Border Height="13"
+                <Border Height="2"
+                        Margin="1,0"
                         VerticalAlignment="Top"
-                        IsHitTestVisible="False">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#24FFFFFF" Offset="0"/>
-                            <GradientStop Color="#00FFFFFF" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
+                        Background="{DynamicResource Brush.Notch.Highlight}"
+                        IsHitTestVisible="False"/>
             </Grid>
         </Border>
 
@@ -113,7 +107,7 @@
                        Grid.Row="1"
                        Text=""
                        Foreground="{DynamicResource Brush.Text.OnDarkSecondary}"
-                       FontSize="8.8"
+                       FontSize="9.5"
                        TextTrimming="CharacterEllipsis"
                        MaxWidth="142"
                        Margin="0,1,0,0"/>
@@ -137,25 +131,42 @@
                     VerticalAlignment="Center">
             <Button x:Name="PrevButton"
                     Style="{StaticResource MediaControlButton}"
-                    Content="⏮"
                     Click="PrevButton_Click"
-                    ToolTip="Önceki"/>
+                    ToolTip="Önceki"
+                    AutomationProperties.Name="Önceki parça">
+                <Path Data="{DynamicResource Icon.Previous}" Width="12" Height="12" Stretch="Uniform"
+                      Fill="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            </Button>
 
             <Button x:Name="PlayPauseButton"
                     Style="{StaticResource MediaControlButton}"
                     Width="34" Height="34"
                     Background="{DynamicResource Brush.State.Media.Subtle}"
                     BorderBrush="{DynamicResource Brush.State.Media.Border}"
-                    Content="▶"
-                    FontSize="14"
                     Click="PlayPauseButton_Click"
-                    ToolTip="Oynat / duraklat"/>
+                    ToolTip="Oynat / duraklat"
+                    AutomationProperties.Name="Oynat veya duraklat">
+                <Path x:Name="PlayPauseIcon"
+                      Data="{DynamicResource Icon.Play}"
+                      Width="13" Height="13" Stretch="Uniform"
+                      Fill="{DynamicResource Brush.Text.OnDarkPrimary}"
+                      Margin="1,0,0,0"/>
+            </Button>
 
             <Button x:Name="NextButton"
                     Style="{StaticResource MediaControlButton}"
-                    Content="⏭"
                     Click="NextButton_Click"
-                    ToolTip="Sonraki"/>
+                    ToolTip="Sonraki"
+                    AutomationProperties.Name="Sonraki parça">
+                <Path Data="{DynamicResource Icon.Next}" Width="12" Height="12" Stretch="Uniform"
+                      Fill="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            </Button>
         </StackPanel>
+        <Border Height="1"
+                VerticalAlignment="Bottom"
+                Margin="8,0"
+                Background="{DynamicResource Brush.State.Media}"
+                Opacity="0.55"
+                IsHitTestVisible="False"/>
     </Grid>
 </UserControl>
