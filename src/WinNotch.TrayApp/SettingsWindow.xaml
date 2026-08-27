@@ -204,7 +204,6 @@
             </Setter>
         </Style>
 
-        <!-- Vertical settings scroller: no stock white chrome. -->
         <Style TargetType="{x:Type ScrollBar}">
             <Setter Property="Width" Value="8"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -220,9 +219,7 @@
                                    Value="{TemplateBinding Value}"
                                    ViewportSize="{TemplateBinding ViewportSize}">
                                 <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
-                                                  Opacity="0"
-                                                  Focusable="False"/>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="False"/>
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
                                     <Thumb MinHeight="36" Cursor="Hand">
@@ -245,9 +242,7 @@
                                     </Thumb>
                                 </Track.Thumb>
                                 <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
-                                                  Opacity="0"
-                                                  Focusable="False"/>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="False"/>
                                 </Track.IncreaseRepeatButton>
                             </Track>
                         </Grid>
@@ -279,40 +274,6 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonSurface" Property="Background" Value="#FF216FE8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="11,0"/>
-            <Setter Property="Background" Value="#FF242429"/>
-            <Setter Property="Foreground" Value="#FFE4E4E8"/>
-            <Setter Property="BorderBrush" Value="#FF37373E"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonSurface"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF303037"/>
-                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#FF4A4A54"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="Background" Value="#FF202025"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -372,44 +333,10 @@
                             <CheckBox x:Name="ModuleCCheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Medya Kontrolleri — sistem medya oturumunu göster"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
-                            <CheckBox x:Name="ModuleDCheckBox" Style="{StaticResource ModernCheckBox}"
-                                      Content="Pencere Sabitleme — aktif pencereyi üstte tut"
-                                      Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
                             <CheckBox x:Name="ModuleECheckBox" Style="{StaticResource ModernCheckBox}"
                                       Content="Ekran Görüntüleri — Snipping Tool sonucunu yüzeyde göster"
                                       Margin="0"
                                       Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border x:Name="PinnedWindowsCard" Style="{StaticResource SectionCard}">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Sabitlenen pencereler"/>
-                                    <TextBlock Text="Üstte tutulan pencereleri buradan tek tek veya topluca bırak."
-                                               FontSize="10.5"
-                                               Foreground="#FF8D8D96"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button x:Name="ClearAllPinnedButton"
-                                        Grid.Column="1"
-                                        Style="{StaticResource SecondaryButton}"
-                                        Content="Tümünü kaldır"
-                                        Margin="12,0,0,0"
-                                        Visibility="Collapsed"
-                                        Click="ClearAllPinnedButton_Click"/>
-                            </Grid>
-                            <TextBlock x:Name="PinnedEmptyText"
-                                       Text="Şu anda sabitlenen pencere yok."
-                                       Foreground="#FF73737C"
-                                       FontSize="10.5"
-                                       Margin="0,2,0,0"/>
-                            <StackPanel x:Name="PinnedWindowsPanel"/>
                         </StackPanel>
                     </Border>
 
