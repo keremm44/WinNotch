@@ -28,6 +28,7 @@ public partial class ClipboardToastView : UserControl
     {
         InitializeComponent();
         IsVisibleChanged += ClipboardToastView_RevealVisibilityChanged;
+        Unloaded += ClipboardToastView_Unloaded;
     }
 
     public void ApplyAppearance(AppearanceSettings settings)
@@ -228,34 +229,37 @@ public partial class ClipboardToastView : UserControl
     private void ScheduleCollapseGrace()
     {
         CancelCollapseGrace();
-
-        _collapseGraceTimer = new System.Windows.Threading.DispatcherTimer
+        if (_collapseGraceTimer == null)
         {
-            Interval = TimeSpan.FromMilliseconds(HoverGraceMs)
-        };
-
-        EventHandler? handler = null;
-        handler = (_, _) =>
-        {
-            if (_collapseGraceTimer != null && handler != null)
-                _collapseGraceTimer.Tick -= handler;
-            _collapseGraceTimer?.Stop();
-            _collapseGraceTimer = null;
-
-            if (IsMouseOver || ActionPanel.IsMouseOver || PrimaryActionButton.IsMouseOver)
-                return;
-
-            CollapseActions(notify: true);
-        };
-
-        _collapseGraceTimer.Tick += handler;
+            _collapseGraceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(HoverGraceMs)
+            };
+            _collapseGraceTimer.Tick += CollapseGraceTimer_Tick;
+        }
         _collapseGraceTimer.Start();
     }
 
-    private void CancelCollapseGrace()
+    private void CollapseGraceTimer_Tick(object? sender, EventArgs e)
     {
         _collapseGraceTimer?.Stop();
-        _collapseGraceTimer = null;
+        if (IsMouseOver || ActionPanel.IsMouseOver || PrimaryActionButton.IsMouseOver)
+            return;
+
+        CollapseActions(notify: true);
+    }
+
+    private void CancelCollapseGrace() => _collapseGraceTimer?.Stop();
+
+    private void ClipboardToastView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (_collapseGraceTimer != null)
+        {
+            _collapseGraceTimer.Stop();
+            _collapseGraceTimer.Tick -= CollapseGraceTimer_Tick;
+            _collapseGraceTimer = null;
+        }
+        Unloaded -= ClipboardToastView_Unloaded;
     }
 
     private void CollapseActions(bool notify)

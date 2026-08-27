@@ -196,7 +196,11 @@ public static class AppearanceThemeManager
 
     private static void SetBrush(ResourceDictionary resources, string key, string hex)
     {
-        var brush = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(hex));
+        WpfColor color = (WpfColor)WpfColorConverter.ConvertFromString(hex);
+        if (resources[key] is SolidColorBrush existing && existing.Color == color)
+            return;
+
+        var brush = new SolidColorBrush(color);
         brush.Freeze();
         resources[key] = brush;
     }

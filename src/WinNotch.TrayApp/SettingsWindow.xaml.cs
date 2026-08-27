@@ -13,7 +13,7 @@ namespace WinNotch.TrayApp;
 public partial class SettingsWindow : Window
 {
     private readonly ModuleSettings _settings;
-    private readonly System.Windows.Threading.DispatcherTimer _statsTimer;
+    private System.Windows.Threading.DispatcherTimer? _statsTimer;
     private bool _isLoadingSettings;
     private TimeSpan _lastCpuTime;
     private DateTime _lastCpuSampleAt;
@@ -30,12 +30,6 @@ public partial class SettingsWindow : Window
         double availableHeight = Math.Max(560, SystemParameters.WorkArea.Height - 32);
         MaxHeight = availableHeight;
         Height = Math.Min(720, availableHeight);
-
-        _statsTimer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
-        _statsTimer.Tick += StatsTimer_Tick;
 
         LoadSettings();
         UpdateDiagnosticsState();
@@ -134,8 +128,7 @@ public partial class SettingsWindow : Window
 
     private void SettingsWindow_Closed(object? sender, EventArgs e)
     {
-        _statsTimer.Stop();
-        _statsTimer.Tick -= StatsTimer_Tick;
+        ReleaseStatsTimer();
         Closed -= SettingsWindow_Closed;
     }
 
@@ -275,13 +268,32 @@ public partial class SettingsWindow : Window
             _lastCpuTime = process.TotalProcessorTime;
             _lastCpuSampleAt = DateTime.UtcNow;
             StatsTimer_Tick(null, EventArgs.Empty);
+            _statsTimer ??= CreateStatsTimer();
             _statsTimer.Start();
         }
         else
         {
-            _statsTimer.Stop();
+            ReleaseStatsTimer();
             PerformancePanel.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private System.Windows.Threading.DispatcherTimer CreateStatsTimer()
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        timer.Tick += StatsTimer_Tick;
+        return timer;
+    }
+
+    private void ReleaseStatsTimer()
+    {
+        if (_statsTimer == null) return;
+        _statsTimer.Stop();
+        _statsTimer.Tick -= StatsTimer_Tick;
+        _statsTimer = null;
     }
 
     private void StatsTimer_Tick(object? sender, EventArgs e)
@@ -291,7 +303,11 @@ public partial class SettingsWindow : Window
         try
         {
             using var process = Process.GetCurrentProcess();
-            double ramMB = process.WorkingSet64 / (1024.0 * 1024.0);
+            process.Refresh();
+            const double bytesPerMegabyte = 1024.0 * 1024.0;
+            double workingSetMB = process.WorkingSet64 / bytesPerMegabyte;
+            double privateBytesMB = process.PrivateMemorySize64 / bytesPerMegabyte;
+            double managedHeapMB = GC.GetTotalMemory(forceFullCollection: false) / bytesPerMegabyte;
 
             DateTime now = DateTime.UtcNow;
             TimeSpan cpuNow = process.TotalProcessorTime;
@@ -302,9 +318,11 @@ public partial class SettingsWindow : Window
             _lastCpuTime = cpuNow;
             _lastCpuSampleAt = now;
 
-            RamUsageText.Text = $"{ramMB:F1} MB";
+            RamUsageText.Text = $"{workingSetMB:F1} / {privateBytesMB:F1} / {managedHeapMB:F1} MB";
             CpuUsageText.Text = $"{cpuPercent:F2}%";
+            RuntimeUsageText.Text = $"{process.Threads.Count} / {process.HandleCount}";
             RamUsageText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text.Primary");
+            RuntimeUsageText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text.Primary");
             CpuUsageText.SetResourceReference(
                 TextBlock.ForegroundProperty,
                 cpuPercent <= 1.0 ? "Brush.Semantic.Success" : "Brush.Text.Primary");
@@ -313,6 +331,7 @@ public partial class SettingsWindow : Window
         {
             RamUsageText.Text = "—";
             CpuUsageText.Text = "—";
+            RuntimeUsageText.Text = "—";
         }
     }
 

@@ -75,7 +75,7 @@ public partial class MainWindow
                 break;
 
             case PrimaryInteractionKind.ExpandContextAction:
-                ClipboardToastView.RevealActionsFromPrimaryClick();
+                EnsureClipboardToastView().RevealActionsFromPrimaryClick();
                 break;
 
             case PrimaryInteractionKind.CollapseToPersistent:
@@ -133,44 +133,45 @@ public partial class MainWindow
             IsImage = false
         };
 
-        ClipboardToastView.SetNotification(notification, context.ContentType);
+        EnsureClipboardToastView().SetNotification(notification, context.ContentType);
         TransitionToState(
             NotchState.ClipboardNotify,
             StatePriority.Clipboard,
             returnState: GetPersistentState(),
             force: true);
-        ClipboardToastView.RevealActionsFromPrimaryClick();
+        EnsureClipboardToastView().RevealActionsFromPrimaryClick();
     }
 
     private void ScheduleQuickPeekCollapse()
     {
         CancelQuickPeekLeave();
-        _quickPeekLeaveTimer = new System.Windows.Threading.DispatcherTimer
+        if (_quickPeekLeaveTimer == null)
         {
-            Interval = TimeSpan.FromMilliseconds(Constants.QuickPeekLeaveGraceMs)
-        };
-
-        EventHandler? handler = null;
-        handler = (_, _) =>
-        {
-            if (_quickPeekLeaveTimer != null && handler != null)
-                _quickPeekLeaveTimer.Tick -= handler;
-            _quickPeekLeaveTimer?.Stop();
-            _quickPeekLeaveTimer = null;
-
-            if (_currentState != NotchState.QuickPeek || RootGrid.IsMouseOver)
-                return;
-
-            TransitionToState(GetPersistentState(), force: true);
-        };
-
-        _quickPeekLeaveTimer.Tick += handler;
+            _quickPeekLeaveTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(Constants.QuickPeekLeaveGraceMs)
+            };
+            _quickPeekLeaveTimer.Tick += QuickPeekLeaveTimer_Tick;
+        }
         _quickPeekLeaveTimer.Start();
     }
 
-    private void CancelQuickPeekLeave()
+    private void QuickPeekLeaveTimer_Tick(object? sender, EventArgs e)
     {
         _quickPeekLeaveTimer?.Stop();
+        if (_currentState != NotchState.QuickPeek || RootGrid.IsMouseOver)
+            return;
+
+        TransitionToState(GetPersistentState(), force: true);
+    }
+
+    private void CancelQuickPeekLeave() => _quickPeekLeaveTimer?.Stop();
+
+    private void ReleaseQuickPeekLeaveTimer()
+    {
+        if (_quickPeekLeaveTimer == null) return;
+        _quickPeekLeaveTimer.Stop();
+        _quickPeekLeaveTimer.Tick -= QuickPeekLeaveTimer_Tick;
         _quickPeekLeaveTimer = null;
     }
 

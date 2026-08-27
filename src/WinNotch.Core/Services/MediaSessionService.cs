@@ -255,7 +255,10 @@ public sealed class MediaSessionService : IDisposable
             GlobalSystemMediaTransportControlsSession? selected = _currentSession;
             if (ReferenceEquals(selected, session) || selected?.Equals(session) == true)
             {
-                _ = UpdateSessionInfoAsync(selected!, Interlocked.Increment(ref _updateVersion));
+                _ = UpdateSessionInfoAsync(
+                    selected!,
+                    Interlocked.Increment(ref _updateVersion),
+                    refreshArtwork: false);
                 return;
             }
 
@@ -268,7 +271,10 @@ public sealed class MediaSessionService : IDisposable
 
             // A recovery callback may have crossed Dispose before acquiring this
             // mutation gate. The first check above prevents post-dispose attachment.
-            _ = UpdateSessionInfoAsync(session, Interlocked.Increment(ref _updateVersion));
+            _ = UpdateSessionInfoAsync(
+                session,
+                Interlocked.Increment(ref _updateVersion),
+                refreshArtwork: true);
         }
     }
 
@@ -299,7 +305,10 @@ public sealed class MediaSessionService : IDisposable
         MediaPropertiesChangedEventArgs args)
     {
         if (_disposed || !IsSelected(sender)) return;
-        _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
+        _ = UpdateSessionInfoAsync(
+            sender,
+            Interlocked.Increment(ref _updateVersion),
+            refreshArtwork: true);
     }
 
     private void OnPlaybackInfoChanged(
@@ -313,7 +322,10 @@ public sealed class MediaSessionService : IDisposable
         if (_sessionManager != null)
             ReselectSession(_sessionManager, clearWhenEmpty: false);
         else
-            _ = UpdateSessionInfoAsync(sender, Interlocked.Increment(ref _updateVersion));
+            _ = UpdateSessionInfoAsync(
+                sender,
+                Interlocked.Increment(ref _updateVersion),
+                refreshArtwork: false);
     }
 
     private bool IsSelected(GlobalSystemMediaTransportControlsSession session)
@@ -359,7 +371,8 @@ public sealed class MediaSessionService : IDisposable
 
     private async Task UpdateSessionInfoAsync(
         GlobalSystemMediaTransportControlsSession session,
-        long version)
+        long version,
+        bool refreshArtwork)
     {
         if (_disposed) return;
 
@@ -372,8 +385,11 @@ public sealed class MediaSessionService : IDisposable
             var controls = playbackInfo.Controls;
             var timeline = session.GetTimelineProperties();
 
-            BitmapSource? albumArt = null;
-            if (mediaProperties.Thumbnail != null)
+            // Playback/timeline churn must not decode the same thumbnail again.
+            // Keep the single frozen 96px bitmap until media properties actually change.
+            bool shouldReadArtwork = refreshArtwork || _lastInfo == null;
+            BitmapSource? albumArt = shouldReadArtwork ? null : _lastInfo?.AlbumArt;
+            if (shouldReadArtwork && mediaProperties.Thumbnail != null)
                 albumArt = await ReadThumbnailAsync(mediaProperties.Thumbnail);
 
             if (!CanPublish(session, version)) return;

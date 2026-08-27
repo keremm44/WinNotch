@@ -94,15 +94,16 @@
                                      Visibility="Collapsed"
                                      ContextRequested="OnQuickPeekContextRequested"/>
 
-                <views:DropZoneView x:Name="DropZoneView"
-                                    Visibility="Collapsed"/>
+                <!-- Feature visual trees are materialized only when their module is
+                     actually used; disabled modules retain no templates or timers. -->
+                <ContentControl x:Name="DropZoneHost"
+                                Visibility="Collapsed"/>
 
-                <views:MediaWidgetView x:Name="MediaWidgetView"
-                                       Visibility="Collapsed"/>
+                <ContentControl x:Name="MediaWidgetHost"
+                                Visibility="Collapsed"/>
 
-                <views:ClipboardToastView x:Name="ClipboardToastView"
-                                          Visibility="Collapsed"
-                                          MeaningfulContextAvailable="ClipboardToastView_MeaningfulContextAvailable"/>
+                <ContentControl x:Name="ClipboardToastHost"
+                                Visibility="Collapsed"/>
 
                 <!-- Lightweight material treatment: no blur/effect loop, only two
                      compositor-friendly overlays which follow every notch size. -->

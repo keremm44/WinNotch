@@ -9,7 +9,7 @@ namespace WinNotch.UI.Views;
 
 public partial class MediaWidgetView : UserControl
 {
-    private readonly System.Windows.Threading.DispatcherTimer _progressTimer;
+    private System.Windows.Threading.DispatcherTimer? _progressTimer;
     private MediaSessionInfo? _currentSession;
     private TimeSpan _basePosition;
     private TimeSpan _timelineStart;
@@ -25,11 +25,8 @@ public partial class MediaWidgetView : UserControl
     {
         InitializeComponent();
 
-        _progressTimer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
-        _progressTimer.Tick += ProgressTimer_Tick;
+        // The timer is created only when visible, playing media has a timeline.
+        // A disabled or never-used media module therefore owns no DispatcherTimer.
         IsVisibleChanged += MediaWidgetView_IsVisibleChanged;
         Unloaded += MediaWidgetView_Unloaded;
     }
@@ -78,10 +75,25 @@ public partial class MediaWidgetView : UserControl
         UpdateProgressTimerState();
     }
 
+    public void ClearSessionInfo()
+    {
+        _currentSession = null;
+        _isPlaying = false;
+        _basePosition = default;
+        _timelineStart = default;
+        _timelineEnd = default;
+        _timelineCapturedAt = default;
+        AlbumArtImage.Source = null;
+        TitleText.Text = "Medya";
+        SubtitleText.Text = string.Empty;
+        ProgressFill.Width = 0;
+        ProgressTrack.Visibility = Visibility.Collapsed;
+        ReleaseProgressTimer();
+    }
+
     private void MediaWidgetView_Unloaded(object sender, RoutedEventArgs e)
     {
-        _progressTimer.Stop();
-        _progressTimer.Tick -= ProgressTimer_Tick;
+        ClearSessionInfo();
         IsVisibleChanged -= MediaWidgetView_IsVisibleChanged;
         Unloaded -= MediaWidgetView_Unloaded;
     }
@@ -98,9 +110,32 @@ public partial class MediaWidgetView : UserControl
         bool shouldRun = IsVisible && _isPlaying && hasTimeline;
 
         if (shouldRun)
+        {
+            _progressTimer ??= CreateProgressTimer();
             _progressTimer.Start();
+        }
         else
-            _progressTimer.Stop();
+        {
+            _progressTimer?.Stop();
+        }
+    }
+
+    private System.Windows.Threading.DispatcherTimer CreateProgressTimer()
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        timer.Tick += ProgressTimer_Tick;
+        return timer;
+    }
+
+    private void ReleaseProgressTimer()
+    {
+        if (_progressTimer == null) return;
+        _progressTimer.Stop();
+        _progressTimer.Tick -= ProgressTimer_Tick;
+        _progressTimer = null;
     }
 
     private void UpdateProgressVisual()

@@ -7,9 +7,18 @@ public partial class MainWindow
     private System.Windows.Threading.DispatcherTimer? _runtimeReliabilityTimer;
     private bool _runtimeReliabilityCloseHooked;
 
+    private void UpdateRuntimeReliabilityChecks()
+    {
+        if (_settings.ModuleC_Media && ShouldRunModuleServices())
+            StartRuntimeReliabilityChecks();
+        else
+            StopRuntimeReliabilityChecks();
+    }
+
     private void StartRuntimeReliabilityChecks()
     {
-        if (_runtimeReliabilityTimer != null)
+        if (!_settings.ModuleC_Media || !ShouldRunModuleServices() ||
+            _runtimeReliabilityTimer != null)
             return;
 
         _runtimeReliabilityTimer = new System.Windows.Threading.DispatcherTimer
@@ -56,7 +65,7 @@ public partial class MainWindow
         if (!_settings.ModuleC_Media || !ShouldShowMediaAmbient())
             return;
 
-        if (DropZoneView.HasItems || _isDragging || _isDraggingOut)
+        if (_dropZoneView?.HasItems == true || _isDragging || _isDraggingOut)
             return;
 
         if (_currentState is NotchState.Idle or NotchState.Hover)

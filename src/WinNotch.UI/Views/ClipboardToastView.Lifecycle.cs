@@ -20,6 +20,11 @@ public partial class ClipboardToastView
             return;
         }
 
+        ClearRetainedContent();
+    }
+
+    public void ClearRetainedContent()
+    {
         CancelCollapseGrace();
         CollapseActions(notify: false);
         _currentAction = null;

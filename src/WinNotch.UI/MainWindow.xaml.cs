@@ -20,7 +20,9 @@ public partial class MainWindow : Window
     private ClipboardService? _clipboardService;
     private DragDropService? _dragDropService;
     private MediaSessionService? _mediaSessionService;
-    private PowerMonitorService? _powerMonitorService;
+    private Views.DropZoneView? _dropZoneView;
+    private Views.MediaWidgetView? _mediaWidgetView;
+    private Views.ClipboardToastView? _clipboardToastView;
     private readonly NotchMotionController _motionController;
 
     private bool _isDragging;
@@ -33,6 +35,8 @@ public partial class MainWindow : Window
     private readonly NotchStateMachine _stateMachine = new();
     private readonly AttentionPolicy _attentionPolicy = new();
     private System.Windows.Threading.DispatcherTimer? _stateReturnTimer;
+    private System.Windows.Threading.DispatcherTimer? _temporaryHideTimer;
+    private NotchState? _scheduledReturnState;
     private double _currentWidth = Constants.NotchIdleWidth;
     private double _currentHeight = Constants.NotchIdleHeight;
     private int _hitWidthPx = (int)Constants.NotchIdleWidth;
@@ -46,10 +50,69 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _motionController = new NotchMotionController(this, SyncNativeGeometry);
-        DropZoneView.ShelfCleared += OnShelfCleared;
-        DropZoneView.DragOutStarted += OnShelfDragOutStarted;
-        DropZoneView.DragOutCompleted += OnShelfDragOutCompleted;
         SourceInitialized += MainWindow_SourceInitialized;
+    }
+
+    private Views.DropZoneView EnsureDropZoneView()
+    {
+        if (_dropZoneView != null) return _dropZoneView;
+
+        _dropZoneView = new Views.DropZoneView { Visibility = Visibility.Visible };
+        _dropZoneView.ShelfCleared += OnShelfCleared;
+        _dropZoneView.DragOutStarted += OnShelfDragOutStarted;
+        _dropZoneView.DragOutCompleted += OnShelfDragOutCompleted;
+        _dropZoneView.ApplyAppearance(_settings.Appearance);
+        DropZoneHost.Content = _dropZoneView;
+        return _dropZoneView;
+    }
+
+    private Views.MediaWidgetView EnsureMediaWidgetView()
+    {
+        if (_mediaWidgetView != null) return _mediaWidgetView;
+
+        _mediaWidgetView = new Views.MediaWidgetView { Visibility = Visibility.Visible };
+        _mediaWidgetView.ApplyAppearance(_settings.Appearance);
+        MediaWidgetHost.Content = _mediaWidgetView;
+        return _mediaWidgetView;
+    }
+
+    private Views.ClipboardToastView EnsureClipboardToastView()
+    {
+        if (_clipboardToastView != null) return _clipboardToastView;
+
+        _clipboardToastView = new Views.ClipboardToastView { Visibility = Visibility.Visible };
+        _clipboardToastView.MeaningfulContextAvailable += ClipboardToastView_MeaningfulContextAvailable;
+        _clipboardToastView.ApplyAppearance(_settings.Appearance);
+        ClipboardToastHost.Content = _clipboardToastView;
+        return _clipboardToastView;
+    }
+
+    private void ReleaseClipboardToastView()
+    {
+        if (_clipboardToastView == null) return;
+        _clipboardToastView.MeaningfulContextAvailable -= ClipboardToastView_MeaningfulContextAvailable;
+        _clipboardToastView.ClearRetainedContent();
+        ClipboardToastHost.Content = null;
+        _clipboardToastView = null;
+    }
+
+    private void ReleaseDropZoneView()
+    {
+        if (_dropZoneView == null) return;
+        _dropZoneView.ShelfCleared -= OnShelfCleared;
+        _dropZoneView.DragOutStarted -= OnShelfDragOutStarted;
+        _dropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
+        _dropZoneView.ResetShelf(notify: false);
+        DropZoneHost.Content = null;
+        _dropZoneView = null;
+    }
+
+    private void ReleaseMediaWidgetView()
+    {
+        if (_mediaWidgetView == null) return;
+        _mediaWidgetView.ClearSessionInfo();
+        MediaWidgetHost.Content = null;
+        _mediaWidgetView = null;
     }
 
     public void SetSettings(ModuleSettings settings) => _settings = settings;
@@ -248,18 +311,39 @@ public partial class MainWindow : Window
 
     private void InitializeServices()
     {
-        _windowHookManager = new WindowHookManager();
-        _windowHookManager.ForegroundWindowChanged += OnForegroundWindowChanged;
-        _windowHookManager.StartTracking();
-
-        _powerMonitorService = new PowerMonitorService();
-        _powerMonitorService.Initialize();
-
+        UpdateWindowTracking();
         InitializeModuleServices();
+    }
+
+    private bool ShouldRunModuleServices()
+        => !_manuallyHidden &&
+           !string.Equals(_settings.VisibilityMode, "Hidden", StringComparison.OrdinalIgnoreCase);
+
+    private void UpdateWindowTracking()
+    {
+        bool needsTracking = !_manuallyHidden && string.Equals(
+            _settings.VisibilityMode,
+            "Auto",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (needsTracking && _windowHookManager == null)
+        {
+            _windowHookManager = new WindowHookManager();
+            _windowHookManager.ForegroundWindowChanged += OnForegroundWindowChanged;
+            _windowHookManager.StartTracking();
+        }
+        else if (!needsTracking && _windowHookManager != null)
+        {
+            _windowHookManager.ForegroundWindowChanged -= OnForegroundWindowChanged;
+            _windowHookManager.Dispose();
+            _windowHookManager = null;
+        }
     }
 
     private void InitializeModuleServices()
     {
+        if (!ShouldRunModuleServices()) return;
+
         bool needsClipboardListener = _settings.ModuleB_Clipboard || _settings.ModuleE_Screenshot;
         if (needsClipboardListener && _clipboardService == null)
         {
@@ -269,6 +353,9 @@ public partial class MainWindow : Window
             bool started = _clipboardService.Start(_hWnd);
             System.Diagnostics.Debug.WriteLine($"[WinNotch] Clipboard listener started={started}");
         }
+        _clipboardService?.SetContentPreferences(
+            _settings.ModuleB_Clipboard,
+            _settings.ModuleE_Screenshot);
 
         if (_settings.ModuleA_DragDrop && _dragDropService == null)
         {
@@ -288,31 +375,45 @@ public partial class MainWindow : Window
 
     private void DisposeDisabledModuleServices()
     {
-        bool needsClipboardListener = _settings.ModuleB_Clipboard || _settings.ModuleE_Screenshot;
+        bool shouldRun = ShouldRunModuleServices();
+        bool needsClipboardListener = shouldRun &&
+            (_settings.ModuleB_Clipboard || _settings.ModuleE_Screenshot);
         if (!needsClipboardListener && _clipboardService != null)
         {
             _clipboardService.NotificationRequested -= OnClipboardNotification;
             _clipboardService.ImageNotificationRequested -= OnClipboardImageNotification;
             _clipboardService.Dispose();
             _clipboardService = null;
+            ReleaseClipboardToastView();
+            if (!_settings.ModuleB_Clipboard && !_settings.ModuleE_Screenshot)
+            {
+                _lastMeaningfulClipboard.Clear();
+                QuickPeekView.SetContext(null);
+            }
+            if (_currentState is NotchState.ClipboardNotify or NotchState.ScreenshotNotify or NotchState.QuickPeek)
+                TransitionToState(GetPersistentState(), force: true);
         }
 
-        if (!_settings.ModuleA_DragDrop && _dragDropService != null)
+        if ((!shouldRun || !_settings.ModuleA_DragDrop) && _dragDropService != null)
         {
             _dragDropService.FilesDropped -= OnFilesDropped;
             _dragDropService.DragEntered -= OnDragEntered;
             _dragDropService.DragLeft -= OnDragLeft;
             _dragDropService = null;
-            DropZoneView.ResetShelf(notify: false);
+        }
+        if (!_settings.ModuleA_DragDrop && _dropZoneView != null)
+        {
+            ReleaseDropZoneView();
             TransitionToState(GetPersistentState(), force: true);
         }
 
-        if (!_settings.ModuleC_Media && _mediaSessionService != null)
+        if ((!shouldRun || !_settings.ModuleC_Media) && _mediaSessionService != null)
         {
             _mediaSessionService.SessionChanged -= OnMediaSessionChanged;
             _mediaSessionService.Dispose();
             _mediaSessionService = null;
             _hasActiveMediaSession = false;
+            ReleaseMediaWidgetView();
             if (_currentState is NotchState.MediaActive or NotchState.MediaAmbient)
                 TransitionToState(GetPersistentState(), force: true);
         }
@@ -320,8 +421,11 @@ public partial class MainWindow : Window
 
     public void OnSettingsChanged()
     {
+        UpdateWindowTracking();
         DisposeDisabledModuleServices();
         InitializeModuleServices();
+        UpdateRuntimeReliabilityChecks();
+        UpdateFullscreenFallbackChecks();
         PositionOnTargetMonitor();
         ApplyVisibilityMode();
     }
@@ -392,7 +496,7 @@ public partial class MainWindow : Window
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
 
         _isDragging = true;
-        DropZoneView.ShowDropTarget();
+        EnsureDropZoneView().ShowDropTarget();
         _dragDropService?.NotifyDragEnter();
         TransitionToState(NotchState.DragActive, StatePriority.DropTarget, force: true);
         e.Handled = true;
@@ -472,15 +576,25 @@ public partial class MainWindow : Window
             ? Visibility.Visible : Visibility.Collapsed;
         MediaAmbientContent.Visibility = state == NotchState.MediaAmbient
             ? Visibility.Visible : Visibility.Collapsed;
-        DropZoneView.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
-        MediaWidgetView.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
-        ClipboardToastView.Visibility = state is NotchState.ClipboardNotify or NotchState.ScreenshotNotify
-            ? Visibility.Visible : Visibility.Collapsed;
+        DropZoneHost.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
+        MediaWidgetHost.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
+        bool contextVisible = state is NotchState.ClipboardNotify or NotchState.ScreenshotNotify;
+        ClipboardToastHost.Visibility = contextVisible ? Visibility.Visible : Visibility.Collapsed;
+        if (!contextVisible)
+            ReleaseClipboardToastView();
 
-        if (state == NotchState.DragActive)
-            DropZoneView.ShowDropTarget();
+        if (shelfVisible)
+        {
+            Views.DropZoneView shelf = EnsureDropZoneView();
+            if (state == NotchState.DragActive)
+                shelf.ShowDropTarget();
+            else
+                shelf.SetExpanded(state is NotchState.DropResult or NotchState.ShelfExpanded or NotchState.ShelfDraggingOut);
+        }
         else
-            DropZoneView.SetExpanded(state is NotchState.DropResult or NotchState.ShelfExpanded or NotchState.ShelfDraggingOut);
+        {
+            _dropZoneView?.SetExpanded(false);
+        }
     }
 
     private void ApplyDimensions(NotchState state, bool force = false)
@@ -497,31 +611,34 @@ public partial class MainWindow : Window
     private void ScheduleReturn(TimeSpan? timeout, NotchState? returnState)
     {
         _stateReturnTimer?.Stop();
-        _stateReturnTimer = null;
+        _scheduledReturnState = null;
         if (timeout == null) return;
 
-        _stateReturnTimer = new System.Windows.Threading.DispatcherTimer { Interval = timeout.Value };
-        EventHandler? handler = null;
-        handler = (_, _) =>
+        if (_stateReturnTimer == null)
         {
-            _stateReturnTimer?.Stop();
-            if (_stateReturnTimer != null && handler != null)
-                _stateReturnTimer.Tick -= handler;
-            _stateReturnTimer = null;
+            _stateReturnTimer = new System.Windows.Threading.DispatcherTimer();
+            _stateReturnTimer.Tick += StateReturnTimer_Tick;
+        }
 
-            NotchState target = returnState ?? GetPersistentState();
-            _stateMachine.ReturnTo(target);
-            _currentState = target;
-            UpdateContentVisibility(target);
-            ApplyDimensions(target);
-        };
-        _stateReturnTimer.Tick += handler;
+        _scheduledReturnState = returnState;
+        _stateReturnTimer.Interval = timeout.Value;
         _stateReturnTimer.Start();
+    }
+
+    private void StateReturnTimer_Tick(object? sender, EventArgs e)
+    {
+        _stateReturnTimer?.Stop();
+        NotchState target = _scheduledReturnState ?? GetPersistentState();
+        _scheduledReturnState = null;
+        _stateMachine.ReturnTo(target);
+        _currentState = target;
+        UpdateContentVisibility(target);
+        ApplyDimensions(target);
     }
 
     private NotchState GetPersistentState()
     {
-        if (DropZoneView.HasItems)
+        if (_dropZoneView?.HasItems == true)
             return NotchState.ShelfOccupied;
         if (ShouldShowMediaAmbient())
             return NotchState.MediaAmbient;
@@ -554,7 +671,7 @@ public partial class MainWindow : Window
                 _settings.ReactionLevel);
             if (decision.Level == AttentionLevel.Silent || decision.Suppressed) return;
 
-            ClipboardToastView.SetNotification(e, contentType);
+            EnsureClipboardToastView().SetNotification(e, contentType);
             TransitionToState(
                 decision.TargetState,
                 decision.Priority,
@@ -572,7 +689,7 @@ public partial class MainWindow : Window
             var decision = _attentionPolicy.ClassifyScreenshot();
             if (decision.Suppressed) return;
 
-            ClipboardToastView.SetImageNotification(e);
+            EnsureClipboardToastView().SetImageNotification(e);
             TransitionToState(
                 decision.TargetState,
                 decision.Priority,
@@ -585,7 +702,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            DropZoneView.SetDroppedPaths(e.DroppedPaths);
+            EnsureDropZoneView().SetDroppedPaths(e.DroppedPaths);
             TransitionToState(
                 NotchState.DropResult,
                 StatePriority.DropResult,
@@ -604,7 +721,12 @@ public partial class MainWindow : Window
     }
 
     private void OnShelfCleared(object? sender, EventArgs e)
-        => Dispatcher.Invoke(() => TransitionToState(GetPersistentState(), force: true));
+        => Dispatcher.Invoke(() =>
+        {
+            TransitionToState(GetPersistentState(), force: true);
+            _dragDropService?.ClearHistory();
+            ReleaseDropZoneView();
+        });
 
     private void OnShelfDragOutStarted(object? sender, EventArgs e)
     {
@@ -634,12 +756,12 @@ public partial class MainWindow : Window
 
             if (_hasActiveMediaSession)
             {
-                MediaWidgetView.SetSessionInfo(e.Session);
+                EnsureMediaWidgetView().SetSessionInfo(e.Session);
                 MediaAmbientTitle.Text = string.IsNullOrWhiteSpace(e.Session.Title)
                     ? "Medya"
                     : e.Session.Title;
 
-                if (DropZoneView.HasItems || _isDragging || _isDraggingOut ||
+                if (_dropZoneView?.HasItems == true || _isDragging || _isDraggingOut ||
                     !ShouldShowMediaAmbient())
                     return;
 
@@ -658,6 +780,7 @@ public partial class MainWindow : Window
             }
 
             MediaAmbientTitle.Text = "Medya";
+            ReleaseMediaWidgetView();
             if (hadSession &&
                 _currentState is (NotchState.MediaActive or NotchState.MediaAmbient))
                 TransitionToState(GetPersistentState(), force: true);
@@ -668,35 +791,62 @@ public partial class MainWindow : Window
     {
         _manuallyHidden = true;
         Visibility = Visibility.Hidden;
+        UpdateWindowTracking();
+        DisposeDisabledModuleServices();
+        UpdateRuntimeReliabilityChecks();
+        UpdateFullscreenFallbackChecks();
 
+        _temporaryHideTimer ??= CreateTemporaryHideTimer();
+        _temporaryHideTimer.Start();
+    }
+
+    private System.Windows.Threading.DispatcherTimer CreateTemporaryHideTimer()
+    {
         var timer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(Constants.TemporaryHideDurationMs)
         };
-        EventHandler? handler = null;
-        handler = (_, _) =>
-        {
-            timer.Stop();
-            if (handler != null) timer.Tick -= handler;
-            _manuallyHidden = false;
-            ApplyVisibilityMode();
-        };
-        timer.Tick += handler;
-        timer.Start();
+        timer.Tick += TemporaryHideTimer_Tick;
+        return timer;
+    }
+
+    private void TemporaryHideTimer_Tick(object? sender, EventArgs e)
+    {
+        ReleaseTemporaryHideTimer();
+        _manuallyHidden = false;
+        UpdateWindowTracking();
+        InitializeModuleServices();
+        UpdateRuntimeReliabilityChecks();
+        UpdateFullscreenFallbackChecks();
+        ApplyVisibilityMode();
+    }
+
+    private void ReleaseTemporaryHideTimer()
+    {
+        if (_temporaryHideTimer == null) return;
+        _temporaryHideTimer.Stop();
+        _temporaryHideTimer.Tick -= TemporaryHideTimer_Tick;
+        _temporaryHideTimer = null;
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        _stateReturnTimer?.Stop();
+        if (_stateReturnTimer != null)
+        {
+            _stateReturnTimer.Stop();
+            _stateReturnTimer.Tick -= StateReturnTimer_Tick;
+            _stateReturnTimer = null;
+        }
+        ReleaseQuickPeekLeaveTimer();
+        ReleaseTemporaryHideTimer();
         _motionController.Dispose();
-        DropZoneView.ShelfCleared -= OnShelfCleared;
-        DropZoneView.DragOutStarted -= OnShelfDragOutStarted;
-        DropZoneView.DragOutCompleted -= OnShelfDragOutCompleted;
+        ReleaseDropZoneView();
 
         _windowHookManager?.Dispose();
         _clipboardService?.Dispose();
         _mediaSessionService?.Dispose();
-        _powerMonitorService?.Dispose();
+        ReleaseMediaWidgetView();
+        ReleaseClipboardToastView();
         _hwndSource?.RemoveHook(WndProc);
     }
 }

@@ -39,12 +39,12 @@ public partial class MainWindow
             switch (result)
             {
                 case ScreenshotSaveResult.Saved:
-                    ClipboardToastView.ShowActionFeedback(
+                    EnsureClipboardToastView().ShowActionFeedback(
                         action.SuccessMessage ?? "Kaydedildi",
                         succeeded: true);
                     break;
                 case ScreenshotSaveResult.Failed:
-                    ClipboardToastView.ShowActionFeedback(
+                    EnsureClipboardToastView().ShowActionFeedback(
                         error ?? "Kaydetme başarısız",
                         succeeded: false);
                     break;
@@ -55,7 +55,7 @@ public partial class MainWindow
         }
 
         bool succeeded = ContextActionExecutor.TryExecute(action, out string? executionError);
-        ClipboardToastView.ShowActionFeedback(
+        EnsureClipboardToastView().ShowActionFeedback(
             succeeded
                 ? action.SuccessMessage ?? "Açıldı"
                 : executionError ?? "Aksiyon açılamadı",

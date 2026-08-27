@@ -578,17 +578,23 @@
                                     Margin="0,5,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.6*"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Bellek" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
-                                        <TextBlock x:Name="RamUsageText" Text="—" FontSize="16"
-                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
+                                        <TextBlock Text="Bellek (WS / Özel / GC)" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
+                                        <TextBlock x:Name="RamUsageText" Text="—" FontSize="14"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,8,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="CPU" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
                                         <TextBlock x:Name="CpuUsageText" Text="—" FontSize="16"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,8,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="İş p. / Tanıtıcı" FontSize="{DynamicResource Metric.Settings.BodyFontSize}" Foreground="{DynamicResource Brush.Text.Faint}"/>
+                                        <TextBlock x:Name="RuntimeUsageText" Text="—" FontSize="14"
                                                    FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Grid>

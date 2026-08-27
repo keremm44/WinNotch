@@ -22,7 +22,29 @@ public partial class MainWindow
         _reliabilityLayerInitialized = true;
 
         RootGrid.PreviewMouseRightButtonUp += Reliability_PreviewMouseRightButtonUp;
+        UpdateFullscreenFallbackChecks();
+        VerifyAutomaticFullscreenVisibility();
+    }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        StopFullscreenFallbackChecks();
+
+        RootGrid.PreviewMouseRightButtonUp -= Reliability_PreviewMouseRightButtonUp;
+        base.OnClosed(e);
+    }
+
+    private void UpdateFullscreenFallbackChecks()
+    {
+        bool shouldRun = _reliabilityLayerInitialized && !_manuallyHidden &&
+            string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase);
+        if (!shouldRun)
+        {
+            StopFullscreenFallbackChecks();
+            return;
+        }
+
+        if (_fullscreenFallbackTimer != null) return;
         _fullscreenFallbackTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             // WinEvents are primary. This catches delayed Chromium/DWM transitions
@@ -31,21 +53,14 @@ public partial class MainWindow
         };
         _fullscreenFallbackTimer.Tick += FullscreenFallbackTimer_Tick;
         _fullscreenFallbackTimer.Start();
-
-        VerifyAutomaticFullscreenVisibility();
     }
 
-    protected override void OnClosed(EventArgs e)
+    private void StopFullscreenFallbackChecks()
     {
-        if (_fullscreenFallbackTimer != null)
-        {
-            _fullscreenFallbackTimer.Stop();
-            _fullscreenFallbackTimer.Tick -= FullscreenFallbackTimer_Tick;
-            _fullscreenFallbackTimer = null;
-        }
-
-        RootGrid.PreviewMouseRightButtonUp -= Reliability_PreviewMouseRightButtonUp;
-        base.OnClosed(e);
+        if (_fullscreenFallbackTimer == null) return;
+        _fullscreenFallbackTimer.Stop();
+        _fullscreenFallbackTimer.Tick -= FullscreenFallbackTimer_Tick;
+        _fullscreenFallbackTimer = null;
     }
 
     private void FullscreenFallbackTimer_Tick(object? sender, EventArgs e)
@@ -122,6 +137,7 @@ public partial class MainWindow
         {
             PlacementTarget = RootGrid
         };
+        menu.Closed += ManagedContextMenu_Closed;
 
         var settingsItem = new MenuItem { Header = "Ayarlar" };
         settingsItem.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -138,5 +154,13 @@ public partial class MainWindow
         menu.Items.Add(exitItem);
 
         menu.IsOpen = true;
+    }
+
+    private static void ManagedContextMenu_Closed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu menu) return;
+        menu.Closed -= ManagedContextMenu_Closed;
+        menu.Items.Clear();
+        menu.PlacementTarget = null;
     }
 }

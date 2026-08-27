@@ -22,6 +22,8 @@ namespace WinNotch.Core.Services;
 public sealed class ClipboardService : IDisposable
 {
     private readonly ClipboardListener _listener;
+    private volatile bool _monitorText = true;
+    private volatile bool _monitorImages = true;
     private bool _disposed;
 
     /// <summary>
@@ -48,6 +50,17 @@ public sealed class ClipboardService : IDisposable
     public bool Start(IntPtr hWnd) => _listener.StartListening(hWnd);
 
     /// <summary>
+    /// Prevents expensive clipboard payload materialization for disabled modules.
+    /// Format detection stays native and allocation-free; only requested payloads
+    /// cross into managed/WPF memory.
+    /// </summary>
+    public void SetContentPreferences(bool monitorText, bool monitorImages)
+    {
+        _monitorText = monitorText;
+        _monitorImages = monitorImages;
+    }
+
+    /// <summary>
     /// Called by MainWindow WndProc when WM_CLIPBOARDUPDATE arrives.
     /// WHY: The native ClipboardListener registers our HWND but Windows sends
     /// the message to WndProc, not to the listener directly. We must forward it.
@@ -69,18 +82,24 @@ public sealed class ClipboardService : IDisposable
 
         if (e.HasImage)
         {
-            // Read clipboard image for thumbnail preview
-            var image = ReadClipboardImage();
-            if (image != null)
+            if (_monitorImages)
             {
-                ImageNotificationRequested?.Invoke(this, new ClipboardImageNotification
+                // Clipboard images can be tens of megabytes. Never materialize one
+                // when the screenshot module is disabled.
+                var image = ReadClipboardImage();
+                if (image != null)
                 {
-                    Image = image,
-                    Timestamp = DateTime.Now
-                });
+                    ImageNotificationRequested?.Invoke(this, new ClipboardImageNotification
+                    {
+                        Image = image,
+                        Timestamp = DateTime.Now
+                    });
+                }
             }
+            return;
         }
-        else if (e.HasText)
+
+        if (e.HasText && _monitorText)
         {
             string? text = ReadClipboardText();
             NotificationRequested?.Invoke(this, new ClipboardNotification
@@ -137,6 +156,8 @@ public sealed class ClipboardService : IDisposable
         _disposed = true;
         _listener.ClipboardChanged -= OnClipboardChanged;
         _listener.Dispose();
+        NotificationRequested = null;
+        ImageNotificationRequested = null;
     }
 }
 

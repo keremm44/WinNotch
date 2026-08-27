@@ -13,7 +13,7 @@ internal sealed class NotchMotionController : IDisposable
 {
     private readonly Window _window;
     private readonly Action _syncNativeGeometry;
-    private readonly DispatcherTimer _timer;
+    private DispatcherTimer? _timer;
 
     private double _startWidth;
     private double _startHeight;
@@ -28,11 +28,6 @@ internal sealed class NotchMotionController : IDisposable
     {
         _window = window;
         _syncNativeGeometry = syncNativeGeometry;
-        _timer = new DispatcherTimer(DispatcherPriority.Render)
-        {
-            Interval = TimeSpan.FromMilliseconds(16)
-        };
-        _timer.Tick += OnTick;
     }
 
     public void Configure(AppearanceSettings settings)
@@ -45,7 +40,7 @@ internal sealed class NotchMotionController : IDisposable
         // Windows accessibility preference has final authority over WinNotch settings.
         if (immediate || !SystemParameters.ClientAreaAnimation)
         {
-            _timer.Stop();
+            _timer?.Stop();
             _window.Width = targetWidth;
             _window.Height = targetHeight;
             _syncNativeGeometry();
@@ -69,8 +64,19 @@ internal sealed class NotchMotionController : IDisposable
         _durationMs = Math.Max(1, (int)Math.Round(baseDuration * _durationScale));
         _startTimestamp = Stopwatch.GetTimestamp();
 
+        _timer ??= CreateTimer();
         if (!_timer.IsEnabled)
             _timer.Start();
+    }
+
+    private DispatcherTimer CreateTimer()
+    {
+        var timer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        timer.Tick += OnTick;
+        return timer;
     }
 
     private void OnTick(object? sender, EventArgs e)
@@ -87,7 +93,7 @@ internal sealed class NotchMotionController : IDisposable
 
         if (progress >= 1.0)
         {
-            _timer.Stop();
+            _timer?.Stop();
             _window.Width = _targetWidth;
             _window.Height = _targetHeight;
             _syncNativeGeometry();
@@ -101,7 +107,11 @@ internal sealed class NotchMotionController : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _timer.Stop();
-        _timer.Tick -= OnTick;
+        if (_timer != null)
+        {
+            _timer.Stop();
+            _timer.Tick -= OnTick;
+            _timer = null;
+        }
     }
 }

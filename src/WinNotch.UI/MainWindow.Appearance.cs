@@ -21,9 +21,9 @@ public partial class MainWindow
 
         ApplyIdleSignature();
         QuickPeekView.ApplyAppearance(_settings.Appearance);
-        DropZoneView.ApplyAppearance(_settings.Appearance);
-        ClipboardToastView.ApplyAppearance(_settings.Appearance);
-        MediaWidgetView.ApplyAppearance(_settings.Appearance);
+        _dropZoneView?.ApplyAppearance(_settings.Appearance);
+        _clipboardToastView?.ApplyAppearance(_settings.Appearance);
+        _mediaWidgetView?.ApplyAppearance(_settings.Appearance);
         RefreshAppearanceThemeBorder(palette.IsLightTheme);
 
         if (!_appearanceLoadedHooked)
@@ -70,7 +70,7 @@ public partial class MainWindow
         // so an explicit Paper preset always wins over the OS dark/light preference.
         AppearancePalette palette = AppearanceResolver.ResolvePalette(_settings.Appearance);
         RefreshAppearanceThemeBorder(palette.IsLightTheme);
-        StartRuntimeReliabilityChecks();
+        UpdateRuntimeReliabilityChecks();
     }
 
     private void ApplyIdleSignature()
