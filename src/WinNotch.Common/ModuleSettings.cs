@@ -29,4 +29,10 @@ public sealed class ModuleSettings
 
     /// <summary>Quiet, Balanced or Active.</summary>
     public string ReactionLevel { get; set; } = "Balanced";
+
+    /// <summary>
+    /// Controlled visual personalization. Kept as a nested object so older settings.json
+    /// files that do not contain Appearance continue to deserialize with safe defaults.
+    /// </summary>
+    public AppearanceSettings Appearance { get; set; } = new();
 }
