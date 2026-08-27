@@ -68,26 +68,6 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <StackPanel x:Name="PinStatusContent"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed">
-                    <TextBlock Text="⌖"
-                               FontFamily="Segoe UI Symbol"
-                               FontSize="11"
-                               Foreground="#FF7FB0FF"
-                               Margin="0,0,5,0"
-                               VerticalAlignment="Center"/>
-                    <TextBlock x:Name="PinStatusText"
-                               Text="Pencere sabitlendi"
-                               FontSize="9.5"
-                               Foreground="#E8FFFFFF"
-                               TextTrimming="CharacterEllipsis"
-                               MaxWidth="120"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-
                 <views:DropZoneView x:Name="DropZoneView"
                                     Visibility="Collapsed"/>
 
