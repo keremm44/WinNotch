@@ -67,12 +67,51 @@ public class AppearanceTests
     }
 
     [Fact]
+    public void DarkThemeNotchBases_AreVisiblyDistinctByContract()
+    {
+        AppearancePalette obsidian = AppearanceResolver.ResolvePalette(
+            new AppearanceSettings { ThemePreset = "Obsidian" });
+        AppearancePalette aurora = AppearanceResolver.ResolvePalette(
+            new AppearanceSettings { ThemePreset = "Aurora" });
+        AppearancePalette monochrome = AppearanceResolver.ResolvePalette(
+            new AppearanceSettings { ThemePreset = "Monochrome" });
+
+        Assert.Equal("#FF0B0B0D", obsidian.NotchBase);
+        Assert.Equal("#FF0A1020", aurora.NotchBase);
+        Assert.Equal("#FF050505", monochrome.NotchBase);
+        Assert.NotEqual(obsidian.NotchBase, aurora.NotchBase);
+        Assert.NotEqual(obsidian.NotchBase, monochrome.NotchBase);
+        Assert.NotEqual(aurora.NotchBase, monochrome.NotchBase);
+    }
+
+    [Fact]
+    public void UserAccent_ChangesRealNotchHandleAndEdge()
+    {
+        var blueSettings = new AppearanceSettings { ThemePreset = "Obsidian", AccentPreset = "Blue" };
+        var violetSettings = new AppearanceSettings { ThemePreset = "Obsidian", AccentPreset = "Violet" };
+        AppearancePalette blue = AppearanceResolver.ResolvePalette(blueSettings);
+        AppearancePalette violet = AppearanceResolver.ResolvePalette(violetSettings);
+
+        string blueHandle = AppearanceResolver.ResolveNotchHandleColor(blueSettings, blue);
+        string violetHandle = AppearanceResolver.ResolveNotchHandleColor(violetSettings, violet);
+        string blueEdge = AppearanceResolver.ResolveNotchEdgeColor(blueSettings, blue);
+        string violetEdge = AppearanceResolver.ResolveNotchEdgeColor(violetSettings, violet);
+
+        Assert.NotEqual(blueHandle, violetHandle);
+        Assert.NotEqual(blueEdge, violetEdge);
+        Assert.Contains("2D7DFF", blueHandle);
+        Assert.Contains("8C6CFF", violetHandle);
+    }
+
+    [Fact]
     public void Monochrome_DoesNotLeakSelectedColor()
     {
         var appearance = new AppearanceSettings { ThemePreset = "Monochrome", AccentPreset = "Amber" };
         AppearancePalette palette = AppearanceResolver.ResolvePalette(appearance);
 
         Assert.Equal("#FFE6E6E8", palette.AccentPrimary);
+        Assert.Equal("#8CFFFFFF", AppearanceResolver.ResolveNotchHandleColor(appearance, palette));
+        Assert.Equal("#30FFFFFF", AppearanceResolver.ResolveNotchEdgeColor(appearance, palette));
     }
 
     [Fact]
