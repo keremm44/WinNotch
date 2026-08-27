@@ -1,14 +1,52 @@
 <UserControl x:Class="WinNotch.UI.Views.DropZoneView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Foreground="#FFFFFFFF">
-    <Grid Margin="8,4">
+             Foreground="#FFFFFFFF"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
+    <UserControl.Resources>
+        <Style x:Key="ShelfActionButton" TargetType="Button">
+            <Setter Property="FontSize" Value="9.5"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+            <Setter Property="Background" Value="#12FFFFFF"/>
+            <Setter Property="Foreground" Value="#E8FFFFFF"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface"
+                                CornerRadius="7"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#24FFFFFF"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="#38FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#34FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="10,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Compact persistent shelf surface. Drag this row back out to another app. -->
         <Grid x:Name="DragHandle"
               Grid.Row="0"
               Cursor="Hand"
@@ -20,52 +58,72 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Border Width="24" Height="24" CornerRadius="6"
-                    Background="#1FFFFFFF" VerticalAlignment="Center">
-                <TextBlock x:Name="FileIcon" Text="F" FontSize="10"
-                           FontWeight="SemiBold" HorizontalAlignment="Center"
-                           VerticalAlignment="Center" Foreground="#DDFFFFFF"/>
+            <Border Width="28" Height="28"
+                    CornerRadius="8"
+                    Background="#14FFFFFF"
+                    BorderBrush="#20FFFFFF"
+                    BorderThickness="1"
+                    VerticalAlignment="Center">
+                <TextBlock x:Name="FileIcon"
+                           Text="+"
+                           FontSize="9.5"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="#E8FFFFFF"/>
             </Border>
 
-            <StackPanel Grid.Column="1" Margin="7,0,8,0" VerticalAlignment="Center">
+            <StackPanel Grid.Column="1"
+                        Margin="8,0,8,0"
+                        VerticalAlignment="Center">
                 <TextBlock x:Name="DropTargetText"
                            Text="Dosyayı buraya bırak"
-                           FontSize="10.5" FontWeight="SemiBold"
-                           Foreground="#F0FFFFFF"
+                           FontSize="10.5"
+                           FontWeight="SemiBold"
+                           Foreground="#F2FFFFFF"
                            TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="FileSummaryText"
-                           FontSize="8.5" Foreground="#8FFFFFFF"
-                           TextTrimming="CharacterEllipsis"/>
+                           FontSize="8.5"
+                           Foreground="#86FFFFFF"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,1,0,0"/>
             </StackPanel>
 
-            <Button x:Name="RemoveButton" Grid.Column="2"
-                    Content="×" Width="24" Height="24"
-                    FontSize="15" Padding="0" BorderThickness="0"
-                    Background="Transparent" Foreground="#99FFFFFF"
-                    Visibility="Collapsed" Cursor="Hand"
-                    ToolTip="Shelf'i temizle"
+            <Button x:Name="RemoveButton"
+                    Grid.Column="2"
+                    Content="×"
+                    Width="26" Height="26"
+                    FontSize="15"
+                    Padding="0"
+                    BorderThickness="0"
+                    Background="Transparent"
+                    Foreground="#88FFFFFF"
+                    Visibility="Collapsed"
+                    Cursor="Hand"
+                    ToolTip="Rafı temizle"
                     Click="RemoveButton_Click"/>
         </Grid>
 
-        <!-- Primary transfer actions. Hidden in compact ShelfOccupied state. -->
-        <StackPanel x:Name="ActionButtons" Grid.Row="1"
-                    Orientation="Horizontal" HorizontalAlignment="Center"
-                    Margin="0,5,0,0" Visibility="Collapsed">
-            <Button x:Name="CopyFilesButton" Content="Copy files"
-                    FontSize="9" Padding="8,2" Margin="0,0,4,0"
-                    BorderThickness="0" Background="#26FFFFFF"
-                    Foreground="White" Cursor="Hand"
-                    ToolTip="Windows dosya panosuna kopyala; Explorer'da Ctrl+V ile yapıştır"
+        <StackPanel x:Name="ActionButtons"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,6,0,0"
+                    Visibility="Collapsed">
+            <Button x:Name="CopyFilesButton"
+                    Style="{StaticResource ShelfActionButton}"
+                    Content="Kopyala"
+                    ToolTip="Dosyaları Windows panosuna koy; Explorer'da Ctrl+V ile yapıştır"
                     Click="CopyFilesButton_Click"/>
-            <Button x:Name="OpenFolderButton" Content="Open"
-                    FontSize="9" Padding="8,2" Margin="0,0,4,0"
-                    BorderThickness="0" Background="#26FFFFFF"
-                    Foreground="White" Cursor="Hand"
+            <Button x:Name="OpenFolderButton"
+                    Style="{StaticResource ShelfActionButton}"
+                    Content="Göster"
+                    ToolTip="İlk öğeyi Dosya Gezgini'nde göster"
                     Click="OpenFolderButton_Click"/>
-            <Button x:Name="MoreButton" Content="•••"
-                    FontSize="9" Padding="8,2"
-                    BorderThickness="0" Background="#26FFFFFF"
-                    Foreground="White" Cursor="Hand"
+            <Button x:Name="MoreButton"
+                    Style="{StaticResource ShelfActionButton}"
+                    Content="•••"
+                    Margin="0"
                     Click="MoreButton_Click"/>
         </StackPanel>
     </Grid>
