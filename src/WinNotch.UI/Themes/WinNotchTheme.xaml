@@ -36,6 +36,7 @@
 
     <!-- Accent and semantic feedback -->
     <SolidColorBrush x:Key="Brush.Accent.Primary" Color="#FF2D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Foreground" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#FF438CFF"/>
     <SolidColorBrush x:Key="Brush.Accent.Pressed" Color="#FF216FE8"/>
     <SolidColorBrush x:Key="Brush.Accent.Selection" Color="#342D7DFF"/>
