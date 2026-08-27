@@ -12,6 +12,9 @@ public static class Constants
     public const double NotchHoverWidth = 118;
     public const double NotchHoverHeight = 28;
 
+    public const double NotchQuickPeekWidth = 300;
+    public const double NotchQuickPeekHeight = 82;
+
     public const double NotchClipboardWidth = 260;
     public const double NotchClipboardHeight = 40;
     public const double NotchClipboardActionWidth = 300;
@@ -51,6 +54,7 @@ public static class Constants
     public const int ClipboardFlashDurationMs = 2000;
     public const int ScreenshotFlashDurationMs = 2500;
     public const int ContextActionLeaveDelayMs = 900;
+    public const int QuickPeekLeaveGraceMs = 340;
     public const int DropResultDisplayDurationMs = 900;
     public const int MediaAmbientFlashDurationMs = 4000;
     public const int MaxAttentionEventsPerMinute = 5;
