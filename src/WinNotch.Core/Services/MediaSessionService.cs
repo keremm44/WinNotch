@@ -35,6 +35,9 @@ public sealed class MediaSessionChangedEventArgs : EventArgs
 public sealed class MediaSessionService : IDisposable
 {
     private const int AlbumArtDecodeWidth = 96;
+    private static readonly TimeSpan EmptySessionRetryInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan PlayingSessionGracePeriod = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan InactiveSessionGracePeriod = TimeSpan.FromSeconds(3);
 
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
     private GlobalSystemMediaTransportControlsSession? _currentSession;
@@ -122,16 +125,27 @@ public sealed class MediaSessionService : IDisposable
     {
         try
         {
-            await Task.Delay(750, cancellation.Token);
-            if (_disposed || cancellation.IsCancellationRequested) return;
+            // Chrome/YouTube can rebuild SMTC considerably later than the tab switch
+            // event (notably when mini-player is involved). Keep the last playing
+            // presentation while polling the manager; an inactive session clears fast.
+            TimeSpan gracePeriod = _lastInfo?.IsPlaying == true
+                ? PlayingSessionGracePeriod
+                : InactiveSessionGracePeriod;
+            DateTime deadline = DateTime.UtcNow + gracePeriod;
 
-            GlobalSystemMediaTransportControlsSession? session = SelectBestSession(manager);
-            if (session != null)
+            while (DateTime.UtcNow < deadline)
             {
+                await Task.Delay(EmptySessionRetryInterval, cancellation.Token);
+                if (_disposed || cancellation.IsCancellationRequested) return;
+
+                GlobalSystemMediaTransportControlsSession? session = SelectBestSession(manager);
+                if (session == null) continue;
+
                 AttachSession(session);
                 return;
             }
 
+            if (_disposed || cancellation.IsCancellationRequested) return;
             DetachSession();
             NotifyNoSession();
         }

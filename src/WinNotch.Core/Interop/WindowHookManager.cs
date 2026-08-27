@@ -196,14 +196,15 @@ public sealed class WindowHookManager : IDisposable
         if (!coversMonitor)
             return false;
 
-        // WS_MAXIMIZE plus normal window chrome is an ordinary maximize even when
-        // GetWindowRect extends behind an auto-hidden taskbar. Fullscreen Chromium
-        // either removes that chrome or is confirmed by the shell state above.
+        // Chromium can retain WS_MAXIMIZE/WS_CAPTION during F11 and HTML-video
+        // fullscreen. The decisive difference from an ordinary maximize is that its
+        // client content itself reaches every monitor edge. A normal maximized client
+        // remains constrained by the work area/title surface.
         if (decoratedMaximized)
-            return false;
+            return clientCoversMonitor;
 
-        // Borderless/Chromium fullscreen must occupy both the outer frame and actual
-        // client surface. This rejects oversized decorative/shadow-only windows.
+        // Borderless fullscreen must occupy both the outer frame and actual client
+        // surface. This rejects oversized decorative/shadow-only windows.
         return clientCoversMonitor;
     }
 

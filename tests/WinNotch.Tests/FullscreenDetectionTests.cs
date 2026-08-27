@@ -10,20 +10,23 @@ public class FullscreenDetectionTests
     {
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
-            clientCoversMonitor: true,
+            clientCoversMonitor: false,
             decoratedMaximized: true,
             shellFullscreen: false);
 
         Assert.False(result);
     }
 
-    [Fact]
-    public void BorderlessChromiumWindow_CoveringMonitor_IsFullscreen()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ChromiumClient_CoveringMonitor_IsFullscreen_EvenIfWindowKeepsDecoratedStyle(
+        bool decoratedMaximized)
     {
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
             clientCoversMonitor: true,
-            decoratedMaximized: false,
+            decoratedMaximized: decoratedMaximized,
             shellFullscreen: false);
 
         Assert.True(result);
