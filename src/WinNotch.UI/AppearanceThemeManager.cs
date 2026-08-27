@@ -29,7 +29,8 @@ public static class AppearanceThemeManager
         DensityProfile density = AppearanceResolver.ResolveDensity(settings);
 
         SetBrush(resources, "Brush.Notch.Base", palette.NotchBase);
-        SetBrush(resources, "Brush.Notch.Handle", palette.IsLightTheme ? "#52000000" : "#52FFFFFF");
+        SetBrush(resources, "Brush.Notch.Handle", AppearanceResolver.ResolveNotchHandleColor(settings, palette));
+        SetBrush(resources, "Brush.Notch.Edge", AppearanceResolver.ResolveNotchEdgeColor(settings, palette));
         SetBrush(resources, "Brush.Notch.AmbientSurface", palette.IsLightTheme ? "#10000000" : "#18FFFFFF");
         SetBrush(resources, "Brush.Notch.AmbientGlow", palette.AccentSubtle);
         SetBrush(resources, "Brush.Notch.AmbientIcon", palette.IsLightTheme ? "#CC17181B" : "#D8FFFFFF");
