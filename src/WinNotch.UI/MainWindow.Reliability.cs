@@ -70,8 +70,14 @@ public partial class MainWindow
         if (fullscreen)
         {
             _hiddenForFullscreen = true;
-            if (Visibility != Visibility.Hidden)
-                Visibility = Visibility.Hidden;
+
+            // Keep WPF and the native HWND synchronized. Geometry animation used to
+            // call SetWindowPos(SWP_SHOWWINDOW), making the HWND visible again while
+            // WPF still reported Visibility.Hidden; subsequent checks then skipped
+            // hiding it. Enforce the native state on every fullscreen verification.
+            Visibility = Visibility.Hidden;
+            if (_hWnd != IntPtr.Zero && User32.IsWindowVisible(_hWnd))
+                User32.ShowWindow(_hWnd, User32.SW_HIDE);
             return;
         }
 
@@ -81,7 +87,11 @@ public partial class MainWindow
         bool wasHiddenForFullscreen = _hiddenForFullscreen;
         _hiddenForFullscreen = false;
         if (!_manuallyHidden && (wasHiddenForFullscreen || Visibility != Visibility.Visible))
+        {
             Visibility = Visibility.Visible;
+            if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
+                User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
+        }
     }
 
     private void Reliability_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)

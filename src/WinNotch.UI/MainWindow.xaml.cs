@@ -197,7 +197,7 @@ public partial class MainWindow : Window
                 _hWnd,
                 User32.HWND_TOPMOST,
                 x, y, 0, 0,
-                User32.SWP_SHOWWINDOW | User32.SWP_NOACTIVATE | User32.SWP_NOSIZE);
+                User32.SWP_NOACTIVATE | User32.SWP_NOSIZE);
         }
         else
         {
@@ -223,7 +223,7 @@ public partial class MainWindow : Window
             _hWnd,
             User32.HWND_TOPMOST,
             x, screen.Bounds.Top, 0, 0,
-            User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW | User32.SWP_NOSIZE);
+            User32.SWP_NOACTIVATE | User32.SWP_NOSIZE);
     }
 
     private void DetectAndApplyTheme()

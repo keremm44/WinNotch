@@ -130,7 +130,15 @@ public sealed class WindowHookManager : IDisposable
 
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
-        if (hWnd == IntPtr.Zero || !User32.IsWindowVisible(hWnd) || User32.IsIconic(hWnd))
+        if (hWnd == IntPtr.Zero) return false;
+
+        // Foreground notifications can occasionally carry an owned Chromium/render
+        // HWND. Fullscreen geometry belongs to its top-level root window.
+        IntPtr root = User32.GetAncestor(hWnd, User32.GA_ROOT);
+        if (root != IntPtr.Zero)
+            hWnd = root;
+
+        if (!User32.IsWindowVisible(hWnd) || User32.IsIconic(hWnd))
             return false;
 
         try
@@ -193,19 +201,19 @@ public sealed class WindowHookManager : IDisposable
         if (shellFullscreen)
             return true;
 
+        // During Chromium's two-stage fullscreen transition the client reaches the
+        // monitor before DWM publishes new outer-frame bounds. Client coverage alone
+        // is therefore sufficient and avoids depending on the unreliable shell hint.
+        if (clientCoversMonitor)
+            return true;
+
         if (!coversMonitor)
             return false;
 
-        // Chromium can retain WS_MAXIMIZE/WS_CAPTION during F11 and HTML-video
-        // fullscreen. The decisive difference from an ordinary maximize is that its
-        // client content itself reaches every monitor edge. A normal maximized client
-        // remains constrained by the work area/title surface.
-        if (decoratedMaximized)
-            return clientCoversMonitor;
-
-        // Borderless fullscreen must occupy both the outer frame and actual client
-        // surface. This rejects oversized decorative/shadow-only windows.
-        return clientCoversMonitor;
+        // A decorated outer frame can cover the monitor when a normal maximized
+        // window has an auto-hidden taskbar. An undecorated monitor-sized root window
+        // is the borderless/exclusive fallback when client coordinates are unavailable.
+        return !decoratedMaximized;
     }
 
     private static bool ClientCoversMonitor(IntPtr hWnd, User32.RECT monitorBounds, int tolerancePx)

@@ -20,6 +20,8 @@ internal static partial class User32
     public const int WM_MOUSEACTIVATE = 0x0021;
     public const int WM_DISPLAYCHANGE = 0x007E;
     public const int MA_NOACTIVATE = 3;
+    public const int SW_HIDE = 0;
+    public const int SW_SHOWNOACTIVATE = 4;
 
     public static readonly IntPtr HWND_TOPMOST = new(-1);
 
@@ -92,7 +94,15 @@ internal static partial class User32
     [LibraryImport(DllName)]
     public static partial IntPtr GetForegroundWindow();
 
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
     public const uint GW_HWNDNEXT = 2;
+    public const uint GA_ROOT = 2;
+
+    [LibraryImport(DllName)]
+    public static partial IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
 
     [LibraryImport(DllName, EntryPoint = "GetWindowLongW", SetLastError = true)]
     public static partial int GetWindowLong(IntPtr hWnd, int nIndex);
