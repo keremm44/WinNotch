@@ -26,7 +26,10 @@ public partial class App : Application
             Debug.WriteLine("[WinNotch] OnStartup starting...");
 
             _settings = SettingsStore.Load();
-            Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}");
+            _settings.Appearance ??= new AppearanceSettings();
+            AppearanceResolver.NormalizeInPlace(_settings.Appearance);
+            AppearanceThemeManager.Apply(_settings.Appearance);
+            Debug.WriteLine($"[WinNotch] Settings loaded. Clipboard={_settings.ModuleB_Clipboard}, Media={_settings.ModuleC_Media}, Theme={_settings.Appearance.ThemePreset}");
 
             _mutex = new Mutex(true, Constants.MutexName, out bool createdNew);
             if (!createdNew)
@@ -36,8 +39,6 @@ public partial class App : Application
                 return;
             }
 
-            // The rebuild helper signals this event before replacing binaries so
-            // WPF/native hooks can dispose cleanly instead of being force-killed.
             _shutdownEvent = new EventWaitHandle(
                 false,
                 EventResetMode.AutoReset,
@@ -56,6 +57,7 @@ public partial class App : Application
             Debug.WriteLine("[WinNotch] Creating MainWindow...");
             _mainWindow = new MainWindow();
             _mainWindow.SetSettings(_settings);
+            _mainWindow.ApplyAppearanceSettings();
             _mainWindow.SettingsRequested += OnSettingsRequested;
             _mainWindow.Show();
 
@@ -127,7 +129,11 @@ public partial class App : Application
     private void ApplySettings(ModuleSettings settings)
     {
         _settings = settings;
+        _settings.Appearance ??= new AppearanceSettings();
+        AppearanceResolver.NormalizeInPlace(_settings.Appearance);
+        AppearanceThemeManager.Apply(_settings.Appearance);
         SettingsStore.Save(_settings);
+        _mainWindow?.ApplyAppearanceSettings();
         _mainWindow?.OnSettingsChanged();
     }
 
