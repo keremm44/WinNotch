@@ -45,7 +45,6 @@ public sealed class TrayIconManager : IDisposable
         moduleMenu.Items.Add(CreateModuleToggle("Dosya Rafı", nameof(ModuleSettings.ModuleA_DragDrop)));
         moduleMenu.Items.Add(CreateModuleToggle("Akıllı Pano", nameof(ModuleSettings.ModuleB_Clipboard)));
         moduleMenu.Items.Add(CreateModuleToggle("Medya Kontrolleri", nameof(ModuleSettings.ModuleC_Media)));
-        moduleMenu.Items.Add(CreateModuleToggle("Pencere Sabitleme", nameof(ModuleSettings.ModuleD_WindowPin)));
         moduleMenu.Items.Add(CreateModuleToggle("Ekran Görüntüleri", nameof(ModuleSettings.ModuleE_Screenshot)));
         menu.Items.Add(moduleMenu);
 
@@ -123,7 +122,6 @@ public sealed class TrayIconManager : IDisposable
             nameof(ModuleSettings.ModuleA_DragDrop) => _settings.ModuleA_DragDrop,
             nameof(ModuleSettings.ModuleB_Clipboard) => _settings.ModuleB_Clipboard,
             nameof(ModuleSettings.ModuleC_Media) => _settings.ModuleC_Media,
-            nameof(ModuleSettings.ModuleD_WindowPin) => _settings.ModuleD_WindowPin,
             nameof(ModuleSettings.ModuleE_Screenshot) => _settings.ModuleE_Screenshot,
             _ => true
         };
@@ -150,9 +148,6 @@ public sealed class TrayIconManager : IDisposable
                     break;
                 case nameof(ModuleSettings.ModuleC_Media):
                     _settings.ModuleC_Media = newValue;
-                    break;
-                case nameof(ModuleSettings.ModuleD_WindowPin):
-                    _settings.ModuleD_WindowPin = newValue;
                     break;
                 case nameof(ModuleSettings.ModuleE_Screenshot):
                     _settings.ModuleE_Screenshot = newValue;
