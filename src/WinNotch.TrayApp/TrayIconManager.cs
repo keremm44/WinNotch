@@ -1,13 +1,4 @@
 // WinNotch.TrayApp/TrayIconManager.cs
-// WHY: System tray provides the primary user interaction point.
-// Users can:
-// - Enable/disable each module (A-E)
-// - Open settings window
-// - View diagnostics (debug mode)
-// - Temporarily hide the notch
-// - Exit the application
-//
-// Using Hardcodet.NotifyIcon.Wpf for native NotifyIcon support.
 
 using System.Diagnostics;
 using System.Windows;
@@ -31,7 +22,7 @@ public sealed class TrayIconManager : IDisposable
 
         _trayIcon = new Hardcodet.Wpf.TaskbarNotification.TaskbarIcon
         {
-            ToolTipText = $"{Constants.AppName} — Sağ tıkla → Ayarlar",
+            ToolTipText = $"{Constants.AppName} — sağ tıkla ayarları aç",
             Visibility = Visibility.Visible
         };
 
@@ -43,31 +34,30 @@ public sealed class TrayIconManager : IDisposable
     {
         var menu = new ContextMenu();
 
-        var titleItem = new MenuItem
+        menu.Items.Add(new MenuItem
         {
-            Header = $"✦ {Constants.AppName}",
+            Header = Constants.AppName,
             IsEnabled = false
-        };
-        menu.Items.Add(titleItem);
+        });
         menu.Items.Add(new Separator());
 
-        var moduleMenu = new MenuItem { Header = "📦 Modüller" };
-        moduleMenu.Items.Add(CreateModuleToggle("Module A — Sürükle & Bırak", nameof(ModuleSettings.ModuleA_DragDrop)));
-        moduleMenu.Items.Add(CreateModuleToggle("Module B — Clipboard Dinleyici", nameof(ModuleSettings.ModuleB_Clipboard)));
-        moduleMenu.Items.Add(CreateModuleToggle("Module C — Medya Oynatıcı", nameof(ModuleSettings.ModuleC_Media)));
-        moduleMenu.Items.Add(CreateModuleToggle("Module D — Pencere Sabitleyici", nameof(ModuleSettings.ModuleD_WindowPin)));
-        moduleMenu.Items.Add(CreateModuleToggle("Module E — Ekran Görüntüsü", nameof(ModuleSettings.ModuleE_Screenshot)));
+        var moduleMenu = new MenuItem { Header = "Özellikler" };
+        moduleMenu.Items.Add(CreateModuleToggle("Dosya Rafı", nameof(ModuleSettings.ModuleA_DragDrop)));
+        moduleMenu.Items.Add(CreateModuleToggle("Akıllı Pano", nameof(ModuleSettings.ModuleB_Clipboard)));
+        moduleMenu.Items.Add(CreateModuleToggle("Medya Kontrolleri", nameof(ModuleSettings.ModuleC_Media)));
+        moduleMenu.Items.Add(CreateModuleToggle("Pencere Sabitleme", nameof(ModuleSettings.ModuleD_WindowPin)));
+        moduleMenu.Items.Add(CreateModuleToggle("Ekran Görüntüleri", nameof(ModuleSettings.ModuleE_Screenshot)));
         menu.Items.Add(moduleMenu);
 
-        var monitorMenu = new MenuItem { Header = "🖥️ Monitör" };
+        var monitorMenu = new MenuItem { Header = "Monitör" };
         var screens = System.Windows.Forms.Screen.AllScreens;
         for (int i = 0; i < screens.Length; i++)
         {
             int index = i;
             var screen = screens[i];
             string label = screens.Length == 1
-                ? "Varsayılan monitör"
-                : $"Monitör {i + 1}: {screen.DeviceName} ({screen.Bounds.Width}x{screen.Bounds.Height})";
+                ? $"Varsayılan · {screen.Bounds.Width}×{screen.Bounds.Height}"
+                : $"Monitör {i + 1} · {screen.Bounds.Width}×{screen.Bounds.Height}";
 
             var item = new MenuItem
             {
@@ -88,40 +78,38 @@ public sealed class TrayIconManager : IDisposable
 
         var diagItem = new MenuItem
         {
-            Header = "📊 Teşhis Paneli",
+            Header = "Teşhis paneli",
             IsCheckable = true,
             IsChecked = _settings.DiagnosticsEnabled
         };
         diagItem.Click += (_, _) =>
         {
-            // WPF already toggles IsChecked before Click fires.
             _settings.DiagnosticsEnabled = diagItem.IsChecked;
             OnSettingsChanged();
         };
         menu.Items.Add(diagItem);
 
-        var settingsItem = new MenuItem { Header = "⚙️ Ayarlar" };
+        var settingsItem = new MenuItem { Header = "Ayarlar" };
         settingsItem.Click += (_, _) => OnSettingsClicked();
         menu.Items.Add(settingsItem);
 
         var startupItem = new MenuItem
         {
-            Header = "🚀 Başlangıca Ekle",
+            Header = "Windows ile başlat",
             IsCheckable = true,
             IsChecked = _settings.AutoStart
         };
         startupItem.Click += (_, _) =>
         {
-            // WPF already toggles IsChecked before Click fires.
             _settings.AutoStart = startupItem.IsChecked;
-            ToggleAutoStart(_settings.AutoStart);
+            SetAutoStart(_settings.AutoStart);
             OnSettingsChanged();
         };
         menu.Items.Add(startupItem);
 
         menu.Items.Add(new Separator());
 
-        var exitItem = new MenuItem { Header = "✕ Çıkış" };
+        var exitItem = new MenuItem { Header = "Çıkış" };
         exitItem.Click += (_, _) => Application.Current.Shutdown();
         menu.Items.Add(exitItem);
 
@@ -150,8 +138,6 @@ public sealed class TrayIconManager : IDisposable
 
         item.Click += (_, _) =>
         {
-            // IsCheckable MenuItem toggles itself before the Click handler runs.
-            // Persist that actual value instead of inverting it a second time.
             bool newValue = item.IsChecked;
 
             switch (propertyName)
@@ -179,7 +165,7 @@ public sealed class TrayIconManager : IDisposable
         return item;
     }
 
-    private static void ToggleAutoStart(bool enable)
+    internal static void SetAutoStart(bool enable)
     {
         try
         {
@@ -190,8 +176,9 @@ public sealed class TrayIconManager : IDisposable
 
             if (enable)
             {
-                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                key.SetValue(Constants.RegistryValueName, $"\"{exePath}\"");
+                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(exePath))
+                    key.SetValue(Constants.RegistryValueName, $"\"{exePath}\"");
             }
             else
             {
@@ -200,24 +187,15 @@ public sealed class TrayIconManager : IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[TrayIconManager] Error toggling auto-start: {ex.Message}");
+            Debug.WriteLine($"[TrayIconManager] Auto-start update failed: {ex.Message}");
         }
     }
 
-    public void UpdateTooltip(string text)
-    {
-        _trayIcon.ToolTipText = text;
-    }
+    public void UpdateTooltip(string text) => _trayIcon.ToolTipText = text;
 
-    private void OnSettingsClicked()
-    {
-        SettingsRequested?.Invoke(this, EventArgs.Empty);
-    }
+    private void OnSettingsClicked() => SettingsRequested?.Invoke(this, EventArgs.Empty);
 
-    private void OnSettingsChanged()
-    {
-        SettingsChanged?.Invoke(this, _settings);
-    }
+    private void OnSettingsChanged() => SettingsChanged?.Invoke(this, _settings);
 
     public void Dispose()
     {
@@ -241,6 +219,5 @@ internal sealed class RelayCommand : System.Windows.Input.ICommand
 #pragma warning restore CS0067
 
     public bool CanExecute(object? parameter) => true;
-
     public void Execute(object? parameter) => _execute();
 }
