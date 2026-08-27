@@ -28,6 +28,8 @@
 
         <Border x:Name="NotchBorder"
                 Background="{DynamicResource Brush.Notch.Base}"
+                BorderBrush="{DynamicResource Brush.Notch.Edge}"
+                BorderThickness="1,0,1,1"
                 CornerRadius="{DynamicResource Radius.Notch}"
                 ClipToBounds="True"
                 HorizontalAlignment="Stretch"
