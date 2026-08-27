@@ -9,6 +9,7 @@ public enum StatePriority
     Hover = 5,
     Media = 10,
     Shelf = 15,
+    QuickPeek = 18,
     Clipboard = 20,
     Screenshot = 25,
     DropTarget = 40,
@@ -112,6 +113,7 @@ public sealed class NotchStateMachine
         NotchState.DropResult => NotchState.ShelfOccupied,
         NotchState.ShelfExpanded => NotchState.ShelfOccupied,
         NotchState.ShelfDraggingOut => NotchState.ShelfOccupied,
+        NotchState.QuickPeek => NotchState.Idle,
         _ => NotchState.Idle
     };
 
@@ -120,6 +122,7 @@ public sealed class NotchStateMachine
         NotchState.Hover => StatePriority.Hover,
         NotchState.MediaActive or NotchState.MediaAmbient => StatePriority.Media,
         NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.ShelfDraggingOut => StatePriority.Shelf,
+        NotchState.QuickPeek => StatePriority.QuickPeek,
         NotchState.ClipboardNotify => StatePriority.Clipboard,
         NotchState.ScreenshotNotify => StatePriority.Screenshot,
         NotchState.DragActive => StatePriority.DropTarget,
@@ -134,6 +137,7 @@ public static class StateDimensions
     {
         NotchState.Idle => (Constants.NotchIdleWidth, Constants.NotchIdleHeight),
         NotchState.Hover => (Constants.NotchHoverWidth, Constants.NotchHoverHeight),
+        NotchState.QuickPeek => (Constants.NotchQuickPeekWidth, Constants.NotchQuickPeekHeight),
         NotchState.DragActive => (Constants.NotchDropTargetWidth, Constants.NotchDropTargetHeight),
         NotchState.DropResult => (Constants.NotchDropResultWidth, Constants.NotchDropResultHeight),
         NotchState.ShelfOccupied => (Constants.NotchShelfWidth, Constants.NotchShelfHeight),
