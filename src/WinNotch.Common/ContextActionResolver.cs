@@ -77,7 +77,9 @@ public static class ContextActionResolver
         if (atIndex <= 0 || atIndex == value.Length - 1)
             return null;
 
-        string target = $"mailto:{Uri.EscapeDataString(value)}";
+        // Keep the address human-readable. Windows mailto handlers accept the
+        // normal address form more consistently than an encoded '@' character.
+        string target = $"mailto:{value}";
         return new ContextAction(
             ContextActionKind.ComposeEmail,
             "E-posta yaz",
