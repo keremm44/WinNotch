@@ -8,6 +8,8 @@ using WinNotch.Common;
 using WinNotch.Core.Interop;
 
 using UserControl = System.Windows.Controls.UserControl;
+using Button = System.Windows.Controls.Button;
+using Orientation = System.Windows.Controls.Orientation;
 using Point = System.Windows.Point;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Brush = System.Windows.Media.Brush;
