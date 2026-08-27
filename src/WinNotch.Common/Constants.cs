@@ -16,7 +16,9 @@ public static class Constants
     public const double NotchClipboardHeight = 36;
 
     public const double NotchScreenshotWidth = 260;
-    public const double NotchScreenshotHeight = 40;
+    // ClipboardToastView needs ~53 px for text + 32 px thumbnail + margins.
+    // 56 px prevents functional clipping without redesigning the visual layout.
+    public const double NotchScreenshotHeight = 56;
 
     public const double NotchDropTargetWidth = 280;
     public const double NotchDropTargetHeight = 60;
