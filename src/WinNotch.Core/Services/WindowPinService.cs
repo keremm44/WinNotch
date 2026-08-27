@@ -63,9 +63,8 @@ public sealed class WindowPinService : IDisposable
     {
         if (_disposed || hWnd == IntPtr.Zero || !IsValidWindow(hWnd)) return false;
 
-        // A maximized/fullscreen TOPMOST window can cover the entire desktop and
-        // make every subsequently opened normal window appear to be broken. The
-        // feature is intended for floating utility windows, so reject that case.
+        // Never pin a window that already occupies the desktop. A full-screen
+        // TOPMOST window can make every other normal window appear inaccessible.
         if (WindowHookManager.IsWindowFullscreen(hWnd) || WindowHookManager.IsWindowMaximized(hWnd))
             return false;
 
@@ -105,8 +104,6 @@ public sealed class WindowPinService : IDisposable
     {
         if (_disposed || hWnd == IntPtr.Zero) return false;
 
-        // A closed window does not need a native NOTOPMOST call. Remove the stale
-        // handle and report success so UI state can clean itself up.
         if (!IsValidWindow(hWnd))
         {
             _pinnedWindows.Remove(hWnd);
@@ -143,6 +140,31 @@ public sealed class WindowPinService : IDisposable
                 $"[WindowPinService] Error unpinning window: {ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Safety pass for windows that were pinned while small and were later
+    /// maximized or switched to full screen. Such a window must immediately lose
+    /// TOPMOST or it can cover the whole desktop, including WinNotch itself.
+    /// </summary>
+    public int UnpinUnsafeWindows()
+    {
+        if (_disposed) return 0;
+
+        PruneClosedWindows();
+        int unpinned = 0;
+
+        foreach (IntPtr hWnd in _pinnedWindows.ToArray())
+        {
+            if (WindowHookManager.IsWindowFullscreen(hWnd) ||
+                WindowHookManager.IsWindowMaximized(hWnd))
+            {
+                if (UnpinWindow(hWnd))
+                    unpinned++;
+            }
+        }
+
+        return unpinned;
     }
 
     public bool TogglePin(IntPtr hWnd)
