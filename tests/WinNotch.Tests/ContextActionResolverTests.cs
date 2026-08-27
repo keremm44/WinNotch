@@ -52,6 +52,27 @@ public class ContextActionResolverTests
     }
 
     [Fact]
+    public void QuotedExplorerPath_IsUnwrappedBeforeExecution()
+    {
+        ContextAction? action = ContextActionResolver.ResolveClipboard(
+            ClipboardContentType.FilePath,
+            "\"C:\\Users\\test\\report.pdf\"");
+
+        Assert.NotNull(action);
+        Assert.Equal(@"C:\Users\test\report.pdf", action!.Target);
+    }
+
+    [Fact]
+    public void MultipleFilePaths_DoNotResolveAsOneExplorerAction()
+    {
+        ContextAction? action = ContextActionResolver.ResolveClipboard(
+            ClipboardContentType.FilePath,
+            "\"C:\\one.txt\"\r\n\"C:\\two.txt\"");
+
+        Assert.Null(action);
+    }
+
+    [Fact]
     public void Email_ResolvesToComposeAction()
     {
         ContextAction? action = ContextActionResolver.ResolveClipboard(
@@ -60,7 +81,7 @@ public class ContextActionResolverTests
 
         Assert.NotNull(action);
         Assert.Equal(ContextActionKind.ComposeEmail, action!.Kind);
-        Assert.StartsWith("mailto:", action.Target, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("mailto:hello@example.com", action.Target);
     }
 
     [Theory]
