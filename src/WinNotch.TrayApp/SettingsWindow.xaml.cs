@@ -94,7 +94,7 @@ public partial class SettingsWindow : Window
         {
             RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent)
         });
-        presenter.SetValue(TextElement.ForegroundProperty, new System.Windows.Data.Binding("Foreground")
+        presenter.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, new System.Windows.Data.Binding("Foreground")
         {
             RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent)
         });
