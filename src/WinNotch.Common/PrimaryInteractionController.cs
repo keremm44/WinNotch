@@ -14,8 +14,10 @@ public static class PrimaryInteractionController
         NotchState.ShelfOccupied or NotchState.DropResult
             => new(PrimaryInteractionKind.ExpandShelf, NotchState.ShelfExpanded),
 
+        // Media expansion is hover-driven; clicking the ambient surface must not
+        // create a second, competing expansion path.
         NotchState.MediaAmbient
-            => new(PrimaryInteractionKind.ExpandMedia, NotchState.MediaActive),
+            => new(PrimaryInteractionKind.None, null),
 
         NotchState.ClipboardNotify or NotchState.ScreenshotNotify
             => new(PrimaryInteractionKind.ExpandContextAction, state),
@@ -32,7 +34,6 @@ public enum PrimaryInteractionKind
     None,
     OpenQuickPeek,
     ExpandShelf,
-    ExpandMedia,
     ExpandContextAction,
     CollapseToPersistent
 }

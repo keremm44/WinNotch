@@ -642,10 +642,14 @@ public partial class MainWindow : Window
 
                 // Timeline/playback/property updates are data updates, not UI state
                 // transitions. In particular they must never collapse MediaActive.
-                // Establish ambient only when media first appears or when an idle-like
-                // state needs reconciliation; left click is the sole ambient expand.
+                // Establish the media surface only when media first appears or an
+                // idle-like state needs reconciliation; hover decides its size.
                 if (_currentState is NotchState.Idle or NotchState.Hover)
-                    TransitionToState(NotchState.MediaAmbient, force: true);
+                {
+                    TransitionToState(
+                        RootGrid.IsMouseOver ? NotchState.MediaActive : NotchState.MediaAmbient,
+                        force: true);
+                }
 
                 return;
             }

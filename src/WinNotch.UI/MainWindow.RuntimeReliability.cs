@@ -60,6 +60,10 @@ public partial class MainWindow
             return;
 
         if (_currentState is NotchState.Idle or NotchState.Hover)
-            TransitionToState(NotchState.MediaAmbient, force: true);
+        {
+            TransitionToState(
+                RootGrid.IsMouseOver ? NotchState.MediaActive : NotchState.MediaAmbient,
+                force: true);
+        }
     }
 }

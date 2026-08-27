@@ -158,27 +158,53 @@ public sealed class WindowHookManager : IDisposable
                 CoversMonitor(windowRect.Left, windowRect.Top, windowRect.Right, windowRect.Bottom,
                     mi.rcMonitor, tolerancePx);
 
-            if (!frameCoversMonitor && !windowCoversMonitor) return false;
+            bool coversMonitor = frameCoversMonitor || windowCoversMonitor;
 
             int style = User32.GetWindowLong(hWnd, User32.GWL_STYLE);
             const int WS_MAXIMIZE = 0x01000000;
             const int WS_CAPTION = 0x00C00000;
             const int WS_THICKFRAME = 0x00040000;
-            bool ordinaryMaximizeCandidate =
+            bool decoratedMaximized =
                 (style & WS_MAXIMIZE) != 0 && (style & (WS_CAPTION | WS_THICKFRAME)) != 0;
+            bool clientCoversMonitor = ClientCoversMonitor(hWnd, mi.rcMonitor, tolerancePx);
+            bool shellFullscreen = Shell32.IsFullscreenModeActive();
 
-            // A normal maximized window's outer DWM frame can cover rcMonitor too,
-            // especially with an auto-hidden taskbar. Its client content still starts
-            // below the title/tab bar. F11 Chromium/video has a monitor-filling client.
-            if (ordinaryMaximizeCandidate && !ClientCoversMonitor(hWnd, mi.rcMonitor, tolerancePx))
-                return false;
-
-            return true;
+            return ClassifyFullscreen(
+                coversMonitor,
+                clientCoversMonitor,
+                decoratedMaximized,
+                shellFullscreen);
         }
         catch
         {
             return false;
         }
+    }
+
+    internal static bool ClassifyFullscreen(
+        bool coversMonitor,
+        bool clientCoversMonitor,
+        bool decoratedMaximized,
+        bool shellFullscreen)
+    {
+        // Shell state closes the event/geometry gap for Chromium's F11/HTML-video
+        // transition and exclusive Direct3D. It never classifies an ordinary maximize
+        // because Windows does not enter a fullscreen notification state for maximize.
+        if (shellFullscreen)
+            return true;
+
+        if (!coversMonitor)
+            return false;
+
+        // WS_MAXIMIZE plus normal window chrome is an ordinary maximize even when
+        // GetWindowRect extends behind an auto-hidden taskbar. Fullscreen Chromium
+        // either removes that chrome or is confirmed by the shell state above.
+        if (decoratedMaximized)
+            return false;
+
+        // Borderless/Chromium fullscreen must occupy both the outer frame and actual
+        // client surface. This rejects oversized decorative/shadow-only windows.
+        return clientCoversMonitor;
     }
 
     private static bool ClientCoversMonitor(IntPtr hWnd, User32.RECT monitorBounds, int tolerancePx)

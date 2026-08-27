@@ -39,6 +39,7 @@ public sealed class MediaSessionService : IDisposable
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
     private GlobalSystemMediaTransportControlsSession? _currentSession;
     private MediaSessionInfo? _lastInfo;
+    private CancellationTokenSource? _noSessionConfirmation;
     private bool _disposed;
     private long _updateVersion;
 
@@ -91,6 +92,7 @@ public sealed class MediaSessionService : IDisposable
         GlobalSystemMediaTransportControlsSession? session = SelectBestSession(manager);
         if (session != null)
         {
+            CancelNoSessionConfirmation();
             AttachSession(session);
             return;
         }
@@ -98,8 +100,63 @@ public sealed class MediaSessionService : IDisposable
         if (!clearWhenEmpty && _currentSession != null)
             return;
 
-        DetachSession();
-        NotifyNoSession();
+        // Chromium can briefly remove its SMTC session while switching tabs and add
+        // the same playing session back on the next browser turn. Confirm emptiness
+        // before publishing HasSession=false so the persistent ambient state does not
+        // flash to Idle and get stranded there.
+        ScheduleNoSessionConfirmation(manager);
+    }
+
+    private void ScheduleNoSessionConfirmation(
+        GlobalSystemMediaTransportControlsSessionManager manager)
+    {
+        CancelNoSessionConfirmation();
+        var cancellation = new CancellationTokenSource();
+        _noSessionConfirmation = cancellation;
+        _ = ConfirmNoSessionAsync(manager, cancellation);
+    }
+
+    private async Task ConfirmNoSessionAsync(
+        GlobalSystemMediaTransportControlsSessionManager manager,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(750, cancellation.Token);
+            if (_disposed || cancellation.IsCancellationRequested) return;
+
+            GlobalSystemMediaTransportControlsSession? session = SelectBestSession(manager);
+            if (session != null)
+            {
+                AttachSession(session);
+                return;
+            }
+
+            DetachSession();
+            NotifyNoSession();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(ref _noSessionConfirmation, null, cancellation),
+                    cancellation))
+            {
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private void CancelNoSessionConfirmation()
+    {
+        CancellationTokenSource? pending =
+            Interlocked.Exchange(ref _noSessionConfirmation, null);
+        if (pending == null) return;
+
+        pending.Cancel();
+        pending.Dispose();
     }
 
     private GlobalSystemMediaTransportControlsSession? SelectBestSession(
@@ -408,6 +465,7 @@ public sealed class MediaSessionService : IDisposable
         if (_disposed) return;
         _disposed = true;
         Interlocked.Increment(ref _updateVersion);
+        CancelNoSessionConfirmation();
 
         DetachSession();
 

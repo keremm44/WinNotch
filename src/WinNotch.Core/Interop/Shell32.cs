@@ -43,6 +43,23 @@ internal static partial class Shell32
     public static partial int SHQueryUserNotificationState(
         out QUERY_USER_NOTIFICATION_STATE queryUserNotificationState);
 
+    public static bool IsFullscreenModeActive()
+    {
+        try
+        {
+            if (SHQueryUserNotificationState(out var state) != 0)
+                return false;
+
+            return state is QUERY_USER_NOTIFICATION_STATE.QUNS_BUSY or
+                QUERY_USER_NOTIFICATION_STATE.QUNS_RUNNING_D3D_FULL_SCREEN or
+                QUERY_USER_NOTIFICATION_STATE.QUNS_APP;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // SHELL OPERATIONS
     // ═══════════════════════════════════════════════════════════════

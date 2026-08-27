@@ -21,6 +21,12 @@ public partial class MainWindow
         if (_isDragging || _isDraggingOut)
             return;
 
+        if (_currentState == NotchState.MediaAmbient)
+        {
+            TransitionToState(NotchState.MediaActive, force: true);
+            return;
+        }
+
         if (_currentState == NotchState.Idle)
             TransitionToState(NotchState.Hover, force: true);
 
@@ -64,7 +70,6 @@ public partial class MainWindow
                 break;
 
             case PrimaryInteractionKind.ExpandShelf:
-            case PrimaryInteractionKind.ExpandMedia:
                 if (decision.TargetState is NotchState target)
                     TransitionToState(target, force: true);
                 break;

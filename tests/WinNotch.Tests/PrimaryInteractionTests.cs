@@ -26,11 +26,11 @@ public class PrimaryInteractionTests
     }
 
     [Fact]
-    public void MediaAmbient_ExpandsMedia()
+    public void MediaAmbient_IgnoresPrimaryClick_BecauseExpansionIsHoverDriven()
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(NotchState.MediaAmbient);
-        Assert.Equal(PrimaryInteractionKind.ExpandMedia, decision.Kind);
-        Assert.Equal(NotchState.MediaActive, decision.TargetState);
+        Assert.Equal(PrimaryInteractionKind.None, decision.Kind);
+        Assert.Null(decision.TargetState);
     }
 
     [Theory]
