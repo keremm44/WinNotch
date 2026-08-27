@@ -1,6 +1,5 @@
 // WinNotch.Core/Services/MediaSessionService.cs
-// Event-driven SMTC integration. Album artwork is decoded only to the size
-// needed by the tiny WinNotch surface so large source images do not stay decoded.
+// Event-driven SMTC integration with capability-aware playback controls.
 
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -18,6 +17,10 @@ public sealed class MediaSessionInfo
     public BitmapSource? AlbumArt { get; init; }
     public bool IsPlaying { get; init; }
     public bool HasSession { get; init; }
+    public bool CanPlay { get; init; }
+    public bool CanPause { get; init; }
+    public bool CanSkipNext { get; init; }
+    public bool CanSkipPrevious { get; init; }
 }
 
 public sealed class MediaSessionChangedEventArgs : EventArgs
@@ -27,8 +30,6 @@ public sealed class MediaSessionChangedEventArgs : EventArgs
 
 public sealed class MediaSessionService : IDisposable
 {
-    // The UI renders artwork at a few dozen pixels. 96 px gives enough headroom
-    // for DPI scaling without decoding arbitrary 1000+ px album covers.
     private const int AlbumArtDecodeWidth = 96;
 
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
@@ -73,9 +74,7 @@ public sealed class MediaSessionService : IDisposable
 
         var session = sender.GetCurrentSession();
         if (session != null)
-        {
             AttachSession(session);
-        }
         else
         {
             DetachSession();
@@ -95,15 +94,13 @@ public sealed class MediaSessionService : IDisposable
 
     private void DetachSession()
     {
-        // Invalidate async work belonging to the old session before detaching it.
         Interlocked.Increment(ref _updateVersion);
 
-        if (_currentSession != null)
-        {
-            _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
-            _currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-            _currentSession = null;
-        }
+        if (_currentSession == null) return;
+
+        _currentSession.MediaPropertiesChanged -= OnSessionPropertyChanged;
+        _currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+        _currentSession = null;
     }
 
     private void OnSessionPropertyChanged(
@@ -136,25 +133,29 @@ public sealed class MediaSessionService : IDisposable
                 return;
 
             var playbackInfo = session.GetPlaybackInfo();
+            var controls = playbackInfo.Controls;
 
             BitmapSource? albumArt = null;
             if (mediaProperties.Thumbnail != null)
                 albumArt = await ReadThumbnailAsync(mediaProperties.Thumbnail);
 
-            // A newer metadata/playback event may have completed while artwork decoded.
             if (_disposed || version != Volatile.Read(ref _updateVersion) ||
                 !ReferenceEquals(session, _currentSession))
                 return;
 
             var info = new MediaSessionInfo
             {
-                Title = mediaProperties.Title ?? "Unknown",
-                Artist = mediaProperties.Artist ?? "Unknown",
-                AlbumTitle = mediaProperties.AlbumTitle ?? "Unknown",
+                Title = mediaProperties.Title ?? "Bilinmeyen medya",
+                Artist = mediaProperties.Artist ?? string.Empty,
+                AlbumTitle = mediaProperties.AlbumTitle ?? string.Empty,
                 AlbumArt = albumArt,
                 IsPlaying = playbackInfo.PlaybackStatus ==
                     GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
-                HasSession = true
+                HasSession = true,
+                CanPlay = controls?.IsPlayEnabled == true,
+                CanPause = controls?.IsPauseEnabled == true,
+                CanSkipNext = controls?.IsNextEnabled == true,
+                CanSkipPrevious = controls?.IsPreviousEnabled == true
             };
 
             SessionChanged?.Invoke(this, new MediaSessionChangedEventArgs { Session = info });
@@ -193,10 +194,19 @@ public sealed class MediaSessionService : IDisposable
         try
         {
             var playbackInfo = _currentSession.GetPlaybackInfo();
-            if (playbackInfo.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
-                _ = _currentSession.TryPauseAsync().AsTask();
-            else
+            var controls = playbackInfo.Controls;
+            bool isPlaying = playbackInfo.PlaybackStatus ==
+                GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+
+            if (isPlaying)
+            {
+                if (controls?.IsPauseEnabled == true)
+                    _ = _currentSession.TryPauseAsync().AsTask();
+            }
+            else if (controls?.IsPlayEnabled == true)
+            {
                 _ = _currentSession.TryPlayAsync().AsTask();
+            }
         }
         catch (Exception ex)
         {
@@ -207,14 +217,30 @@ public sealed class MediaSessionService : IDisposable
 
     public void NextTrack()
     {
-        if (_currentSession != null)
-            _ = _currentSession.TrySkipNextAsync().AsTask();
+        if (_currentSession == null) return;
+        try
+        {
+            if (_currentSession.GetPlaybackInfo().Controls?.IsNextEnabled == true)
+                _ = _currentSession.TrySkipNextAsync().AsTask();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MediaSessionService] Next failed: {ex.Message}");
+        }
     }
 
     public void PreviousTrack()
     {
-        if (_currentSession != null)
-            _ = _currentSession.TrySkipPreviousAsync().AsTask();
+        if (_currentSession == null) return;
+        try
+        {
+            if (_currentSession.GetPlaybackInfo().Controls?.IsPreviousEnabled == true)
+                _ = _currentSession.TrySkipPreviousAsync().AsTask();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MediaSessionService] Previous failed: {ex.Message}");
+        }
     }
 
     private void NotifyNoSession()
