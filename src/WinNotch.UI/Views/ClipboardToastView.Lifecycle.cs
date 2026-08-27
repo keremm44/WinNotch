@@ -15,7 +15,10 @@ public partial class ClipboardToastView
         DependencyPropertyChangedEventArgs e)
     {
         if (IsVisible)
+        {
+            PublishMeaningfulContextIfAvailable();
             return;
+        }
 
         CancelCollapseGrace();
         CollapseActions(notify: false);
