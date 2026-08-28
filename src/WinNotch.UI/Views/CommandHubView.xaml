@@ -41,8 +41,42 @@
 
         <Style x:Key="HubCompactButton" TargetType="Button" BasedOn="{StaticResource HubCommandButton}">
             <Setter Property="FontSize" Value="9"/>
+            <Setter Property="MinHeight" Value="28"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Padding" Value="4,2"/>
+        </Style>
+
+        <Style x:Key="HubComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemSurface" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}" CornerRadius="5">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HubComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7,4"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource HubComboBoxItem}"/>
         </Style>
 
         <Style x:Key="HubIconSurface" TargetType="Border">
@@ -176,6 +210,7 @@
             <Grid Grid.Row="2" Margin="0,5,0,5">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="74"/></Grid.ColumnDefinitions>
                 <ComboBox x:Name="TransformKindCombo" Grid.Column="0" SelectedIndex="0" FontSize="9"
+                          Style="{StaticResource HubComboBox}"
                           SelectionChanged="TransformKindCombo_SelectionChanged">
                     <ComboBoxItem Content="Boşlukları temizle" Tag="CleanWhitespace"/>
                     <ComboBoxItem Content="BÜYÜK HARF" Tag="Uppercase"/>
@@ -234,8 +269,8 @@
 
         <Grid x:Name="TimerPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/><RowDefinition Height="48"/>
-                <RowDefinition Height="34"/><RowDefinition Height="*"/>
+                <RowDefinition Height="22"/><RowDefinition Height="54"/>
+                <RowDefinition Height="38"/><RowDefinition Height="34"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
@@ -251,6 +286,7 @@
             <Grid Grid.Row="2" Margin="0,3">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
                 <ComboBox x:Name="TimerDurationCombo" Grid.Column="0" SelectedIndex="1" FontSize="9"
+                          Style="{StaticResource HubComboBox}"
                           IsEditable="True" ToolTip="1–1440 dakika">
                     <ComboBoxItem Content="1 dakika" Tag="1"/><ComboBoxItem Content="5 dakika" Tag="5"/>
                     <ComboBoxItem Content="10 dakika" Tag="10"/><ComboBoxItem Content="25 dakika" Tag="25"/>

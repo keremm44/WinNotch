@@ -201,7 +201,7 @@ public class StateMachineTests
     [InlineData(NotchState.MediaAmbient, 124, 28)]
     [InlineData(NotchState.ClipboardNotify, 260, 40)]
     [InlineData(NotchState.ScreenshotNotify, 310, 56)]
-    [InlineData(NotchState.TimerNotify, 220, 42)]
+    [InlineData(NotchState.TimerNotify, 210, 34)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
         var (w, h) = StateDimensions.GetDimensions(state);

@@ -185,6 +185,8 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         SmartClipboardPanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(200);
+        SetEditorMode(true);
         SmartClipboardStatusText.Text = "Panodan metin alınıyor";
         SmartClipboardRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -194,6 +196,8 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         SmartClipboardPanel.Visibility = Visibility.Collapsed;
         HubHomePanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(Constants.NotchCommandHubHeight);
+        SetEditorMode(false);
         _smartClipboardSource = string.Empty;
         SmartClipboardInput.Clear();
         SmartClipboardOutput.Clear();
@@ -348,6 +352,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TimerPanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(180);
         SetEditorMode(true);
         TimerRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -357,6 +362,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         TimerPanel.Visibility = Visibility.Collapsed;
         HubHomePanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(Constants.NotchCommandHubHeight);
         SetEditorMode(false);
     }
 
@@ -400,6 +406,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TemporaryNotePanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(210);
         SetEditorMode(true);
         TemporaryNoteRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -409,6 +416,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         TemporaryNotePanel.Visibility = Visibility.Collapsed;
         HubHomePanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(Constants.NotchCommandHubHeight);
         SetEditorMode(false);
     }
 
