@@ -46,6 +46,15 @@
             <Setter Property="Padding" Value="4,2"/>
         </Style>
 
+        <Style x:Key="HubBackButton" TargetType="Button" BasedOn="{StaticResource HubCompactButton}">
+            <Setter Property="Width" Value="58"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+
         <Style x:Key="HubChoiceItem" TargetType="ListBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
@@ -205,12 +214,12 @@
 
         <Grid x:Name="SmartClipboardPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/><RowDefinition Height="50"/>
-                <RowDefinition Height="66"/><RowDefinition Height="*"/>
-                <RowDefinition Height="34"/>
+                <RowDefinition Height="32"/><RowDefinition Height="52"/>
+                <RowDefinition Height="70"/><RowDefinition Height="*"/>
+                <RowDefinition Height="36"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                <Button Style="{StaticResource HubBackButton}"
                         Content="← Geri" Click="SmartClipboardBackButton_Click"/>
                 <TextBlock Text="Akıllı Pano" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
@@ -246,12 +255,12 @@
 
         <Grid x:Name="TemporaryNotePanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/>
-                <RowDefinition Height="*"/>
                 <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="38"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                <Button Style="{StaticResource HubBackButton}"
                         Content="← Geri" Click="TemporaryNoteBackButton_Click"/>
                 <TextBlock Text="Geçici Not" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
@@ -283,12 +292,12 @@
 
         <Grid x:Name="TimerPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/><RowDefinition Height="54"/>
-                <RowDefinition Height="38"/><RowDefinition Height="38"/>
-                <RowDefinition Height="34"/>
+                <RowDefinition Height="32"/><RowDefinition Height="58"/>
+                <RowDefinition Height="42"/><RowDefinition Height="42"/>
+                <RowDefinition Height="38"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                <Button Style="{StaticResource HubBackButton}"
                         Content="← Geri" Click="TimerBackButton_Click"/>
                 <TextBlock Text="Zamanlayıcı" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
@@ -331,12 +340,12 @@
 
         <Grid x:Name="QrPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/><RowDefinition Height="58"/>
-                <RowDefinition Height="34"/><RowDefinition Height="*"/>
-                <RowDefinition Height="34"/>
+                <RowDefinition Height="32"/><RowDefinition Height="62"/>
+                <RowDefinition Height="40"/><RowDefinition Height="*"/>
+                <RowDefinition Height="38"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                <Button Style="{StaticResource HubBackButton}"
                         Content="← Geri" Click="QrBackButton_Click"/>
                 <TextBlock Text="QR Oluştur" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>

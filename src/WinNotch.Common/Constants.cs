@@ -14,6 +14,10 @@ public static class Constants
 
     public const double NotchCommandHubWidth = 440;
     public const double NotchCommandHubHeight = 142;
+    public const double NotchSmartClipboardHeight = 280;
+    public const double NotchTemporaryNoteHeight = 260;
+    public const double NotchTimerPanelHeight = 230;
+    public const double NotchQrPanelHeight = 320;
 
     public const double NotchTimerNotifyWidth = 210;
     public const double NotchTimerNotifyHeight = 34;

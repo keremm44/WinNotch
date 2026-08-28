@@ -185,7 +185,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         SmartClipboardPanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(280);
+        SetPreferredHeight(Constants.NotchSmartClipboardHeight);
         SetEditorMode(true);
         SmartClipboardStatusText.Text = "Panodan metin alınıyor";
         SmartClipboardRequested?.Invoke(this, EventArgs.Empty);
@@ -256,7 +256,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         QrPanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(300);
+        SetPreferredHeight(Constants.NotchQrPanelHeight);
         SetEditorMode(true);
         Dispatcher.BeginInvoke(() => QrInputTextBox.Focus());
     }
@@ -352,7 +352,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TimerPanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(230);
+        SetPreferredHeight(Constants.NotchTimerPanelHeight);
         SetEditorMode(true);
         TimerRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -409,7 +409,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TemporaryNotePanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(260);
+        SetPreferredHeight(Constants.NotchTemporaryNoteHeight);
         SetEditorMode(true);
         TemporaryNoteRequested?.Invoke(this, EventArgs.Empty);
     }
