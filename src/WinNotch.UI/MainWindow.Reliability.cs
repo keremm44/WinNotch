@@ -12,11 +12,18 @@ namespace WinNotch.UI;
 
 public partial class MainWindow
 {
+    private enum ShellPresentationState
+    {
+        Unknown,
+        Normal,
+        Fullscreen
+    }
+
     private DispatcherTimer? _fullscreenFallbackTimer;
     private uint _shellHookMessage;
     private bool _shellHookRegistered;
-    private IntPtr _shellFullscreenWindow;
-    private long _shellFullscreenSignalAt;
+    private IntPtr _shellPresentationWindow;
+    private ShellPresentationState _shellPresentationState;
     private ContextMenu? _managedContextMenu;
     private bool _suppressPrimaryClickAfterMenuDismiss;
     private bool _reliabilityLayerInitialized;
@@ -102,7 +109,7 @@ public partial class MainWindow
 
         _shellHookRegistered = false;
         _shellHookMessage = 0;
-        ClearShellFullscreenSignal();
+        ClearShellPresentationState();
     }
 
     private bool TryHandleShellFullscreenMessage(int message, IntPtr codeValue, IntPtr windowValue)
@@ -112,32 +119,45 @@ public partial class MainWindow
             return false;
 
         int code = unchecked((int)codeValue.ToInt64()) & 0x7FFF;
-        IntPtr root = NormalizeRootWindow(windowValue);
-        if (root == IntPtr.Zero)
-            root = NormalizeRootWindow(User32.GetForegroundWindow());
+
+        // The shell message can carry a transient Chromium-owned HWND while styles
+        // are being restored. The foreground root is the stable identity used by the
+        // detector and is therefore preferred for both entering and leaving F11.
+        IntPtr foregroundRoot = NormalizeRootWindow(User32.GetForegroundWindow());
+        IntPtr messageRoot = NormalizeRootWindow(windowValue);
+        IntPtr presentationRoot = foregroundRoot != IntPtr.Zero ? foregroundRoot : messageRoot;
 
         if (code == User32.HSHELL_WINDOWFULLSCREEN)
         {
-            _shellFullscreenWindow = root;
-            _shellFullscreenSignalAt = Environment.TickCount64;
+            SetShellPresentationState(presentationRoot, ShellPresentationState.Fullscreen);
             VerifyAutomaticFullscreenVisibility();
         }
         else if (code == User32.HSHELL_WINDOWNORMAL)
         {
-            // Explorer can report a transient/owned HWND while Chrome restores its
-            // root window. A normal-shell signal always ends our transition hint;
-            // geometry remains the authority if another fullscreen app is active.
-            ClearShellFullscreenSignal();
-            VerifyAutomaticFullscreenVisibility();
+            // This is authoritative for F11 exit. Do not immediately ask geometry to
+            // overrule it: maximized Chromium can remain borderless and monitor-sized.
+            IntPtr normalRoot = presentationRoot != IntPtr.Zero
+                ? presentationRoot
+                : _shellPresentationWindow;
+            SetShellPresentationState(normalRoot, ShellPresentationState.Normal);
+            ApplyAutomaticFullscreenVisibility(false);
         }
 
         return true;
     }
 
-    private void ClearShellFullscreenSignal()
+    private void SetShellPresentationState(IntPtr window, ShellPresentationState state)
     {
-        _shellFullscreenWindow = IntPtr.Zero;
-        _shellFullscreenSignalAt = 0;
+        _shellPresentationWindow = window;
+        _shellPresentationState = window == IntPtr.Zero
+            ? ShellPresentationState.Unknown
+            : state;
+    }
+
+    private void ClearShellPresentationState()
+    {
+        _shellPresentationWindow = IntPtr.Zero;
+        _shellPresentationState = ShellPresentationState.Unknown;
     }
 
     private void FullscreenFallbackTimer_Tick(object? sender, EventArgs e)
@@ -150,6 +170,13 @@ public partial class MainWindow
             return;
 
         IntPtr foreground = NormalizeRootWindow(User32.GetForegroundWindow());
+        if (_shellPresentationWindow != IntPtr.Zero &&
+            foreground != IntPtr.Zero &&
+            foreground != _shellPresentationWindow)
+        {
+            ClearShellPresentationState();
+        }
+
         IntPtr foregroundMonitor = foreground == IntPtr.Zero
             ? IntPtr.Zero
             : User32.MonitorFromWindow(foreground, User32.MONITOR_DEFAULTTONEAREST);
@@ -157,21 +184,15 @@ public partial class MainWindow
             ? IntPtr.Zero
             : User32.MonitorFromWindow(_hWnd, User32.MONITOR_DEFAULTTONEAREST);
         bool sameMonitor = foregroundMonitor != IntPtr.Zero && foregroundMonitor == notchMonitor;
-        long shellSignalAge = _shellFullscreenSignalAt == 0
-            ? long.MaxValue
-            : Environment.TickCount64 - _shellFullscreenSignalAt;
-        bool shellHintFresh = shellSignalAge >= 0 &&
-            shellSignalAge <= Constants.ShellFullscreenTransitionGraceMs;
-        if (!shellHintFresh && _shellFullscreenWindow != IntPtr.Zero)
-            ClearShellFullscreenSignal();
+        bool shellStateApplies = foreground != IntPtr.Zero &&
+            foreground == _shellPresentationWindow;
 
-        bool shellReportedFullscreen = shellHintFresh && foreground != IntPtr.Zero &&
-            foreground == _shellFullscreenWindow &&
-            User32.IsWindowVisible(foreground) && !User32.IsIconic(foreground);
-        bool geometryFullscreen = foreground != IntPtr.Zero &&
-            WindowHookManager.IsWindowFullscreen(foreground);
+        bool fullscreenEvidence = shellStateApplies
+            ? _shellPresentationState == ShellPresentationState.Fullscreen
+            : WindowHookManager.IsWindowFullscreen(foreground);
         bool fullscreen = foreground != IntPtr.Zero && foreground != _hWnd && sameMonitor &&
-            (shellReportedFullscreen || geometryFullscreen);
+            User32.IsWindowVisible(foreground) && !User32.IsIconic(foreground) &&
+            fullscreenEvidence;
         ApplyAutomaticFullscreenVisibility(fullscreen);
     }
 
