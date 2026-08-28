@@ -12,6 +12,9 @@ namespace WinNotch.UI;
 public partial class MainWindow
 {
     private DispatcherTimer? _fullscreenFallbackTimer;
+    private uint _shellHookMessage;
+    private bool _shellHookRegistered;
+    private IntPtr _shellFullscreenWindow;
     private ContextMenu? _managedContextMenu;
     private bool _suppressPrimaryClickAfterMenuDismiss;
     private bool _reliabilityLayerInitialized;
@@ -32,6 +35,7 @@ public partial class MainWindow
     protected override void OnClosed(EventArgs e)
     {
         StopFullscreenFallbackChecks();
+        StopShellFullscreenTracking();
         CloseManagedContextMenu();
 
         RootGrid.PreviewMouseRightButtonUp -= Reliability_PreviewMouseRightButtonUp;
@@ -46,9 +50,11 @@ public partial class MainWindow
         if (!shouldRun)
         {
             StopFullscreenFallbackChecks();
+            StopShellFullscreenTracking();
             return;
         }
 
+        StartShellFullscreenTracking();
         if (_fullscreenFallbackTimer != null) return;
         _fullscreenFallbackTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -68,6 +74,57 @@ public partial class MainWindow
         _fullscreenFallbackTimer = null;
     }
 
+    private void StartShellFullscreenTracking()
+    {
+        if (_shellHookRegistered || _hWnd == IntPtr.Zero)
+            return;
+
+        _shellHookMessage = User32.RegisterWindowMessage("SHELLHOOK");
+        if (_shellHookMessage == 0)
+            return;
+
+        _shellHookRegistered = User32.RegisterShellHookWindow(_hWnd);
+        if (!_shellHookRegistered)
+            _shellHookMessage = 0;
+    }
+
+    private void StopShellFullscreenTracking()
+    {
+        if (_shellHookRegistered && _hWnd != IntPtr.Zero)
+            User32.DeregisterShellHookWindow(_hWnd);
+
+        _shellHookRegistered = false;
+        _shellHookMessage = 0;
+        _shellFullscreenWindow = IntPtr.Zero;
+    }
+
+    private bool TryHandleShellFullscreenMessage(int message, IntPtr codeValue, IntPtr windowValue)
+    {
+        if (!_shellHookRegistered || _shellHookMessage == 0 ||
+            unchecked((uint)message) != _shellHookMessage)
+            return false;
+
+        int code = unchecked((int)codeValue.ToInt64()) & 0x7FFF;
+        IntPtr root = NormalizeRootWindow(windowValue);
+        if (root == IntPtr.Zero)
+            root = NormalizeRootWindow(User32.GetForegroundWindow());
+
+        if (code == User32.HSHELL_WINDOWFULLSCREEN)
+        {
+            _shellFullscreenWindow = root;
+            VerifyAutomaticFullscreenVisibility();
+        }
+        else if (code == User32.HSHELL_WINDOWNORMAL)
+        {
+            if (_shellFullscreenWindow == IntPtr.Zero || root == IntPtr.Zero ||
+                root == _shellFullscreenWindow)
+                _shellFullscreenWindow = IntPtr.Zero;
+            VerifyAutomaticFullscreenVisibility();
+        }
+
+        return true;
+    }
+
     private void FullscreenFallbackTimer_Tick(object? sender, EventArgs e)
         => VerifyAutomaticFullscreenVisibility();
 
@@ -77,7 +134,7 @@ public partial class MainWindow
             !string.Equals(_settings.VisibilityMode, "Auto", StringComparison.OrdinalIgnoreCase))
             return;
 
-        IntPtr foreground = User32.GetForegroundWindow();
+        IntPtr foreground = NormalizeRootWindow(User32.GetForegroundWindow());
         IntPtr foregroundMonitor = foreground == IntPtr.Zero
             ? IntPtr.Zero
             : User32.MonitorFromWindow(foreground, User32.MONITOR_DEFAULTTONEAREST);
@@ -85,9 +142,23 @@ public partial class MainWindow
             ? IntPtr.Zero
             : User32.MonitorFromWindow(_hWnd, User32.MONITOR_DEFAULTTONEAREST);
         bool sameMonitor = foregroundMonitor != IntPtr.Zero && foregroundMonitor == notchMonitor;
+        bool shellReportedFullscreen = foreground != IntPtr.Zero &&
+            foreground == _shellFullscreenWindow &&
+            User32.IsWindowVisible(foreground) && !User32.IsIconic(foreground);
+        bool geometryFullscreen = foreground != IntPtr.Zero &&
+            WindowHookManager.IsWindowFullscreen(foreground);
         bool fullscreen = foreground != IntPtr.Zero && foreground != _hWnd && sameMonitor &&
-                          WindowHookManager.IsWindowFullscreen(foreground);
+            (shellReportedFullscreen || geometryFullscreen);
         ApplyAutomaticFullscreenVisibility(fullscreen);
+    }
+
+    private static IntPtr NormalizeRootWindow(IntPtr window)
+    {
+        if (window == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        IntPtr root = User32.GetAncestor(window, User32.GA_ROOT);
+        return root == IntPtr.Zero ? window : root;
     }
 
     private void ApplyAutomaticFullscreenVisibility(bool fullscreen)
@@ -98,6 +169,7 @@ public partial class MainWindow
         if (fullscreen)
         {
             _hiddenForFullscreen = true;
+            CloseManagedContextMenu();
 
             // Hiding a hovered window does not reliably produce MouseLeave. Normalize
             // hover-only states now so fullscreen exit restores the compact persistent

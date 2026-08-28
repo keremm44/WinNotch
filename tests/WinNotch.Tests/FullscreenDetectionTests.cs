@@ -5,6 +5,18 @@ namespace WinNotch.Tests;
 
 public class FullscreenDetectionTests
 {
+    [Theory]
+    [InlineData(0u, 8)]
+    [InlineData(96u, 8)]
+    [InlineData(120u, 10)]
+    [InlineData(144u, 12)]
+    [InlineData(192u, 16)]
+    [InlineData(480u, 32)]
+    public void GeometryTolerance_ScalesWithWindowDpi(uint dpi, int expected)
+    {
+        Assert.Equal(expected, WindowHookManager.GeometryToleranceForDpi(dpi));
+    }
+
     [Fact]
     public void NormalMaximize_IsNotFullscreen_EvenWhenAutoHideMakesAllBoundsMatchMonitor()
     {

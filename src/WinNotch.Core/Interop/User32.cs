@@ -20,6 +20,11 @@ internal static partial class User32
     public const int WM_MOUSEACTIVATE = 0x0021;
     public const int WM_DISPLAYCHANGE = 0x007E;
     public const int MA_NOACTIVATE = 3;
+
+    // Undocumented but stable shell-hook notifications emitted by Explorer when a
+    // top-level window enters/leaves its fullscreen presentation state.
+    public const int HSHELL_WINDOWFULLSCREEN = 53;
+    public const int HSHELL_WINDOWNORMAL = 54;
     public const int SW_HIDE = 0;
     public const int SW_SHOWNOACTIVATE = 4;
 
@@ -93,6 +98,21 @@ internal static partial class User32
 
     [LibraryImport(DllName)]
     public static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport(DllName, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool RegisterShellHookWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeregisterShellHookWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName, EntryPoint = "RegisterWindowMessageW", SetLastError = true,
+        StringMarshalling = StringMarshalling.Utf16)]
+    public static partial uint RegisterWindowMessage(string messageName);
+
+    [LibraryImport(DllName)]
+    public static partial uint GetDpiForWindow(IntPtr hWnd);
 
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]

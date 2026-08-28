@@ -35,7 +35,7 @@ public sealed class WindowHookManager : IDisposable
 
         _foregroundCallback = OnForegroundChanged;
         _locationCallback = OnLocationChanged;
-        _lastForegroundWindow = User32.GetForegroundWindow();
+        _lastForegroundWindow = NormalizeRootWindow(User32.GetForegroundWindow());
 
         _foregroundHook = User32.SetWinEventHook(
             User32.EVENT_SYSTEM_FOREGROUND,
@@ -76,7 +76,7 @@ public sealed class WindowHookManager : IDisposable
     {
         if (_disposed) return;
 
-        IntPtr hwnd = User32.GetForegroundWindow();
+        IntPtr hwnd = NormalizeRootWindow(User32.GetForegroundWindow());
         if (hwnd == IntPtr.Zero) return;
 
         _lastForegroundWindow = hwnd;
@@ -90,8 +90,9 @@ public sealed class WindowHookManager : IDisposable
     {
         if (_disposed || hwnd == IntPtr.Zero) return;
 
-        _lastForegroundWindow = hwnd;
-        RaiseWindowChanged(hwnd);
+        IntPtr root = NormalizeRootWindow(hwnd);
+        _lastForegroundWindow = root;
+        RaiseWindowChanged(root);
     }
 
     private void OnLocationChanged(
@@ -102,12 +103,13 @@ public sealed class WindowHookManager : IDisposable
         if (_disposed || hwnd == IntPtr.Zero) return;
         if (idObject != OBJID_WINDOW || idChild != 0) return;
 
-        IntPtr foreground = User32.GetForegroundWindow();
+        IntPtr foreground = NormalizeRootWindow(User32.GetForegroundWindow());
         if (foreground != IntPtr.Zero)
             _lastForegroundWindow = foreground;
 
-        if (hwnd != _lastForegroundWindow) return;
-        RaiseWindowChanged(hwnd);
+        IntPtr changedRoot = NormalizeRootWindow(hwnd);
+        if (changedRoot != _lastForegroundWindow) return;
+        RaiseWindowChanged(changedRoot);
     }
 
     private void RaiseWindowChanged(IntPtr hwnd)
@@ -128,15 +130,19 @@ public sealed class WindowHookManager : IDisposable
         }
     }
 
+    private static IntPtr NormalizeRootWindow(IntPtr window)
+    {
+        if (window == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        IntPtr root = User32.GetAncestor(window, User32.GA_ROOT);
+        return root == IntPtr.Zero ? window : root;
+    }
+
     public static bool IsWindowFullscreen(IntPtr hWnd)
     {
+        hWnd = NormalizeRootWindow(hWnd);
         if (hWnd == IntPtr.Zero) return false;
-
-        // Foreground notifications can occasionally carry an owned Chromium/render
-        // HWND. Fullscreen geometry belongs to its top-level root window.
-        IntPtr root = User32.GetAncestor(hWnd, User32.GA_ROOT);
-        if (root != IntPtr.Zero)
-            hWnd = root;
 
         if (!User32.IsWindowVisible(hWnd) || User32.IsIconic(hWnd))
             return false;
@@ -149,7 +155,10 @@ public sealed class WindowHookManager : IDisposable
             var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
             if (!GetMonitorInfo(hMonitor, ref mi)) return false;
 
-            const int tolerancePx = 8;
+            // Resize-frame metrics scale with the target window's DPI. A fixed 8px
+            // tolerance rejects valid fullscreen Chromium windows at 150–200% scaling.
+            uint dpi = User32.GetDpiForWindow(hWnd);
+            int tolerancePx = GeometryToleranceForDpi(dpi);
             bool frameCoversMonitor =
                 DwmApi.DwmGetWindowAttribute(
                     hWnd,
@@ -212,6 +221,12 @@ public sealed class WindowHookManager : IDisposable
         // transition. Outer geometry remains a fallback for exclusive/borderless apps
         // whose client coordinates cannot be queried.
         return clientCoversMonitor || coversMonitor;
+    }
+
+    internal static int GeometryToleranceForDpi(uint dpi)
+    {
+        uint effectiveDpi = dpi == 0 ? 96u : dpi;
+        return Math.Clamp((int)Math.Ceiling(8.0 * effectiveDpi / 96.0), 8, 32);
     }
 
     private static bool ClientCoversMonitor(IntPtr hWnd, User32.RECT monitorBounds, int tolerancePx)

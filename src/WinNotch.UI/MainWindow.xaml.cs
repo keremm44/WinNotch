@@ -230,6 +230,12 @@ public partial class MainWindow : Window
 
     private IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (TryHandleShellFullscreenMessage(msg, wParam, lParam))
+        {
+            handled = true;
+            return IntPtr.Zero;
+        }
+
         if (msg == ClipboardListener.WM_CLIPBOARDUPDATE)
         {
             _clipboardService?.OnClipboardUpdate();
