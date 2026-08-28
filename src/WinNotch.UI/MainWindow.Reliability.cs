@@ -12,6 +12,8 @@ namespace WinNotch.UI;
 public partial class MainWindow
 {
     private DispatcherTimer? _fullscreenFallbackTimer;
+    private ContextMenu? _managedContextMenu;
+    private bool _suppressPrimaryClickAfterMenuDismiss;
     private bool _reliabilityLayerInitialized;
     private bool _hiddenForFullscreen;
 
@@ -22,6 +24,7 @@ public partial class MainWindow
         _reliabilityLayerInitialized = true;
 
         RootGrid.PreviewMouseRightButtonUp += Reliability_PreviewMouseRightButtonUp;
+        RootGrid.PreviewMouseLeftButtonDown += Reliability_PreviewMouseLeftButtonDown;
         UpdateFullscreenFallbackChecks();
         VerifyAutomaticFullscreenVisibility();
     }
@@ -29,8 +32,10 @@ public partial class MainWindow
     protected override void OnClosed(EventArgs e)
     {
         StopFullscreenFallbackChecks();
+        CloseManagedContextMenu();
 
         RootGrid.PreviewMouseRightButtonUp -= Reliability_PreviewMouseRightButtonUp;
+        RootGrid.PreviewMouseLeftButtonDown -= Reliability_PreviewMouseLeftButtonDown;
         base.OnClosed(e);
     }
 
@@ -125,6 +130,27 @@ public partial class MainWindow
         }
     }
 
+    private void Reliability_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_managedContextMenu?.IsOpen != true)
+            return;
+
+        // A dismiss click must not also execute the surface underneath (for example,
+        // opening Command Hub). Consume its matching button-up in the primary handler.
+        _suppressPrimaryClickAfterMenuDismiss = true;
+        CloseManagedContextMenu();
+        e.Handled = true;
+    }
+
+    private bool ConsumeManagedContextMenuDismissal()
+    {
+        if (!_suppressPrimaryClickAfterMenuDismiss)
+            return false;
+
+        _suppressPrimaryClickAfterMenuDismiss = false;
+        return true;
+    }
+
     private void Reliability_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
@@ -133,9 +159,12 @@ public partial class MainWindow
 
     private void ShowManagedContextMenu()
     {
+        CloseManagedContextMenu();
+
         var menu = new ContextMenu
         {
-            PlacementTarget = RootGrid
+            PlacementTarget = RootGrid,
+            StaysOpen = false
         };
         menu.Closed += ManagedContextMenu_Closed;
 
@@ -153,14 +182,28 @@ public partial class MainWindow
         exitItem.Click += (_, _) => WpfApplication.Current.Shutdown();
         menu.Items.Add(exitItem);
 
+        _managedContextMenu = menu;
         menu.IsOpen = true;
     }
 
-    private static void ManagedContextMenu_Closed(object sender, RoutedEventArgs e)
+    private void CloseManagedContextMenu()
+    {
+        if (_managedContextMenu?.IsOpen == true)
+            _managedContextMenu.IsOpen = false;
+    }
+
+    private void ManagedContextMenu_Closed(object sender, RoutedEventArgs e)
     {
         if (sender is not ContextMenu menu) return;
+        // WPF may close the popup from its mouse capture before the click is
+        // re-routed to RootGrid. Remember that same click so MouseUp cannot open Hub.
+        if (Mouse.LeftButton == MouseButtonState.Pressed && RootGrid.IsMouseOver)
+            _suppressPrimaryClickAfterMenuDismiss = true;
+
         menu.Closed -= ManagedContextMenu_Closed;
         menu.Items.Clear();
         menu.PlacementTarget = null;
+        if (ReferenceEquals(_managedContextMenu, menu))
+            _managedContextMenu = null;
     }
 }

@@ -56,7 +56,16 @@ public partial class MainWindow
 
     private void RootGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left || _isDragging || _isDraggingOut)
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+
+        if (ConsumeManagedContextMenuDismissal())
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (_isDragging || _isDraggingOut)
             return;
 
         // Transport, shelf and hub buttons retain their own actions.
