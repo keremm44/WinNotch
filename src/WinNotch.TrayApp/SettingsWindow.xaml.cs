@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using WinNotch.Common;
+using WinNotch.UI;
 
 namespace WinNotch.TrayApp;
 
