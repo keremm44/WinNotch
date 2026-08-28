@@ -16,6 +16,7 @@ public partial class MainWindow
     private uint _shellHookMessage;
     private bool _shellHookRegistered;
     private IntPtr _shellFullscreenWindow;
+    private long _shellFullscreenSignalAt;
     private ContextMenu? _managedContextMenu;
     private bool _suppressPrimaryClickAfterMenuDismiss;
     private bool _reliabilityLayerInitialized;
@@ -101,7 +102,7 @@ public partial class MainWindow
 
         _shellHookRegistered = false;
         _shellHookMessage = 0;
-        _shellFullscreenWindow = IntPtr.Zero;
+        ClearShellFullscreenSignal();
     }
 
     private bool TryHandleShellFullscreenMessage(int message, IntPtr codeValue, IntPtr windowValue)
@@ -118,17 +119,25 @@ public partial class MainWindow
         if (code == User32.HSHELL_WINDOWFULLSCREEN)
         {
             _shellFullscreenWindow = root;
+            _shellFullscreenSignalAt = Environment.TickCount64;
             VerifyAutomaticFullscreenVisibility();
         }
         else if (code == User32.HSHELL_WINDOWNORMAL)
         {
-            if (_shellFullscreenWindow == IntPtr.Zero || root == IntPtr.Zero ||
-                root == _shellFullscreenWindow)
-                _shellFullscreenWindow = IntPtr.Zero;
+            // Explorer can report a transient/owned HWND while Chrome restores its
+            // root window. A normal-shell signal always ends our transition hint;
+            // geometry remains the authority if another fullscreen app is active.
+            ClearShellFullscreenSignal();
             VerifyAutomaticFullscreenVisibility();
         }
 
         return true;
+    }
+
+    private void ClearShellFullscreenSignal()
+    {
+        _shellFullscreenWindow = IntPtr.Zero;
+        _shellFullscreenSignalAt = 0;
     }
 
     private void FullscreenFallbackTimer_Tick(object? sender, EventArgs e)
@@ -148,7 +157,15 @@ public partial class MainWindow
             ? IntPtr.Zero
             : User32.MonitorFromWindow(_hWnd, User32.MONITOR_DEFAULTTONEAREST);
         bool sameMonitor = foregroundMonitor != IntPtr.Zero && foregroundMonitor == notchMonitor;
-        bool shellReportedFullscreen = foreground != IntPtr.Zero &&
+        long shellSignalAge = _shellFullscreenSignalAt == 0
+            ? long.MaxValue
+            : Environment.TickCount64 - _shellFullscreenSignalAt;
+        bool shellHintFresh = shellSignalAge >= 0 &&
+            shellSignalAge <= Constants.ShellFullscreenTransitionGraceMs;
+        if (!shellHintFresh && _shellFullscreenWindow != IntPtr.Zero)
+            ClearShellFullscreenSignal();
+
+        bool shellReportedFullscreen = shellHintFresh && foreground != IntPtr.Zero &&
             foreground == _shellFullscreenWindow &&
             User32.IsWindowVisible(foreground) && !User32.IsIconic(foreground);
         bool geometryFullscreen = foreground != IntPtr.Zero &&

@@ -23,8 +23,7 @@ public class FullscreenDetectionTests
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
             clientCoversMonitor: true,
-            decoratedMaximized: true,
-            shellFullscreen: false);
+            decoratedMaximized: true);
 
         Assert.False(result);
     }
@@ -35,22 +34,20 @@ public class FullscreenDetectionTests
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
             clientCoversMonitor: true,
-            decoratedMaximized: false,
-            shellFullscreen: false);
+            decoratedMaximized: false);
 
         Assert.True(result);
     }
 
     [Fact]
-    public void ShellFullscreen_BridgesChromiumGeometryTransition()
+    public void NoGeometryEvidence_IsNotPersistentlyFullscreen()
     {
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: false,
             clientCoversMonitor: false,
-            decoratedMaximized: true,
-            shellFullscreen: true);
+            decoratedMaximized: false);
 
-        Assert.True(result);
+        Assert.False(result);
     }
 
     [Fact]
@@ -59,8 +56,7 @@ public class FullscreenDetectionTests
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: false,
             clientCoversMonitor: true,
-            decoratedMaximized: false,
-            shellFullscreen: false);
+            decoratedMaximized: false);
 
         Assert.True(result);
     }
@@ -71,8 +67,7 @@ public class FullscreenDetectionTests
         bool result = WindowHookManager.ClassifyFullscreen(
             coversMonitor: true,
             clientCoversMonitor: false,
-            decoratedMaximized: true,
-            shellFullscreen: false);
+            decoratedMaximized: true);
 
         Assert.False(result);
     }

@@ -184,13 +184,14 @@ public sealed class WindowHookManager : IDisposable
             bool decoratedMaximized =
                 (style & WS_MAXIMIZE) != 0 && (style & (WS_CAPTION | WS_THICKFRAME)) != 0;
             bool clientCoversMonitor = ClientCoversMonitor(hWnd, mi.rcMonitor, tolerancePx);
-            bool shellFullscreen = Shell32.IsFullscreenModeActive();
 
+            // Explorer shell-hook messages bridge the short Chromium transition in
+            // MainWindow. Do not treat global notification/busy state as permanent
+            // evidence here; it can remain stale after F11 exits.
             return ClassifyFullscreen(
                 coversMonitor,
                 clientCoversMonitor,
-                decoratedMaximized,
-                shellFullscreen);
+                decoratedMaximized);
         }
         catch
         {
@@ -201,15 +202,8 @@ public sealed class WindowHookManager : IDisposable
     internal static bool ClassifyFullscreen(
         bool coversMonitor,
         bool clientCoversMonitor,
-        bool decoratedMaximized,
-        bool shellFullscreen)
+        bool decoratedMaximized)
     {
-        // Shell state closes the event/geometry gap for Chromium's F11/HTML-video
-        // transition and exclusive Direct3D. It never classifies an ordinary maximize
-        // because Windows does not enter a fullscreen notification state for maximize.
-        if (shellFullscreen)
-            return true;
-
         // A normal maximized window remains decorated. Its outer/client bounds can
         // still match rcMonitor with an auto-hidden taskbar, so geometry alone must
         // never override this style signal. Chromium's Windows fullscreen handler
