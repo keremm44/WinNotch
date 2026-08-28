@@ -7,7 +7,6 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using WinNotch.Common;
-using WinNotch.UI;
 
 namespace WinNotch.TrayApp;
 
@@ -49,7 +48,7 @@ public partial class SettingsWindow : Window
 
     private void ApplyWindowBackdrop()
     {
-        bool darkTheme = !AppearanceThemeManager.IsLightTheme(_settings.Appearance);
+        bool darkTheme = !AppearanceResolver.ResolvePalette(_settings.Appearance).IsLightTheme;
         bool applied = WindowBackdrop.TryApply(this, darkTheme);
         RootChrome.SetResourceReference(
             Border.BackgroundProperty,
