@@ -142,8 +142,8 @@
                 <Button Grid.Column="0" Style="{StaticResource HubCompactButton}" Click="SmartClipboardButton_Click">
                     <StackPanel><TextBlock Text="Akıllı Pano" FontWeight="SemiBold"/><TextBlock Text="Metni dönüştür" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
-                <Button Grid.Column="2" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="2. adım: Geçici not">
-                    <StackPanel><TextBlock Text="Not" FontWeight="SemiBold"/><TextBlock Text="Sıradaki" FontSize="8"/></StackPanel>
+                <Button Grid.Column="2" Style="{StaticResource HubCompactButton}" Click="TemporaryNoteButton_Click">
+                    <StackPanel><TextBlock Text="Not" FontWeight="SemiBold"/><TextBlock Text="Geçici taslak" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
                 <Button Grid.Column="4" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="3. adım: Zamanlayıcı">
                     <StackPanel><TextBlock Text="Zamanlayıcı" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
@@ -193,6 +193,43 @@
                      VerticalScrollBarVisibility="Auto" Padding="7,4" FontSize="9"
                      Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
                      BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"/>
+        </Grid>
+
+        <Grid x:Name="TemporaryNotePanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="22"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="32"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                        Content="← Geri" Click="TemporaryNoteBackButton_Click"/>
+                <TextBlock Text="Geçici Not" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                <TextBlock x:Name="TemporaryNoteStatusText" Text="Bu oturumda saklanır"
+                           HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="8.5"
+                           Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+            </Grid>
+            <TextBox x:Name="TemporaryNoteTextBox" Grid.Row="1" AcceptsReturn="True"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MaxLength="10000"
+                     Padding="7,5" FontSize="9" TextChanged="TemporaryNoteTextBox_TextChanged"
+                     Background="{DynamicResource Brush.Surface.Soft}"
+                     Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                     CaretBrush="{DynamicResource Brush.Accent.Primary}"
+                     BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"/>
+            <Grid Grid.Row="2" Margin="0,5,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="72"/><ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="72"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Uygulama kapanınca silinir" FontSize="8.5"
+                           VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+                <Button Grid.Column="2" Style="{StaticResource HubCompactButton}"
+                        Content="Temizle" Click="ClearTemporaryNoteButton_Click"/>
+                <Button Grid.Column="4" Style="{StaticResource HubCompactButton}"
+                        Content="Kopyala" Click="CopyTemporaryNoteButton_Click"/>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

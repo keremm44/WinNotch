@@ -19,6 +19,7 @@ internal static partial class User32
     public const int HTCLIENT = 1;
     public const int WM_MOUSEACTIVATE = 0x0021;
     public const int WM_DISPLAYCHANGE = 0x007E;
+    public const int MA_ACTIVATE = 1;
     public const int MA_NOACTIVATE = 3;
 
     // Undocumented but stable shell-hook notifications emitted by Explorer when a
@@ -98,6 +99,10 @@ internal static partial class User32
 
     [LibraryImport(DllName)]
     public static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(IntPtr hWnd);
 
     [LibraryImport(DllName, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

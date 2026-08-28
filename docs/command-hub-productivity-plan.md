@@ -16,12 +16,12 @@ text, and copying does not close Command Hub.
 
 ## 2. Temporary note
 
-- Keep one lightweight draft with explicit clear/copy controls.
-- Persist atomically under `%LOCALAPPDATA%/WinNotch` only when the text changes.
-- Apply a strict size cap and never create a background worker or autosave timer.
+- Keep one lightweight in-memory draft with explicit clear/copy controls.
+- Retain it while Command Hub opens/closes, but erase it when WinNotch exits.
+- Apply a strict size cap and never create a file, background worker or autosave timer.
 
-Acceptance: draft survives Command Hub close/application restart, clear is explicit,
-and empty notes leave no retained file.
+Acceptance: draft survives Command Hub close during the current process, clear is
+explicit, and no note content is written to disk.
 
 ## 3. Timer
 

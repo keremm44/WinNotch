@@ -14,6 +14,9 @@ public partial class MainWindow
 {
     private readonly LastMeaningfulClipboardContextCache _lastMeaningfulClipboard = new();
     private System.Windows.Threading.DispatcherTimer? _commandHubLeaveTimer;
+    private readonly TemporaryNoteSession _temporaryNote = new();
+    private bool _commandHubEditorActive;
+    private IntPtr _commandHubPreviousForeground;
 
     private void RootGrid_PrimaryMouseEnter(object sender, MouseEventArgs e)
     {
@@ -200,6 +203,52 @@ public partial class MainWindow
             // Clipboard contention is transient; keep the transformed output visible
             // so the user can retry without losing work.
         }
+    }
+
+    private void OnCommandHubTemporaryNoteRequested(object? sender, EventArgs e)
+    {
+        if (_currentState == NotchState.CommandHub && sender is Views.CommandHubView hub)
+            hub.SetTemporaryNote(_temporaryNote.Text);
+    }
+
+    private void OnCommandHubTemporaryNoteChanged(
+        object? sender,
+        Views.TemporaryNoteChangedEventArgs e)
+    {
+        if (_currentState != NotchState.CommandHub)
+            return;
+
+        _temporaryNote.Update(e.Text);
+    }
+
+    private void OnCommandHubEditorModeChanged(
+        object? sender,
+        Views.CommandHubEditorModeEventArgs e)
+        => SetCommandHubEditorActivation(e.IsActive);
+
+    private void SetCommandHubEditorActivation(bool active)
+    {
+        if (_commandHubEditorActive == active || _hWnd == IntPtr.Zero)
+            return;
+
+        _commandHubEditorActive = active;
+        int exStyle = User32.GetWindowLong(_hWnd, User32.GWL_EXSTYLE);
+        if (active)
+        {
+            _commandHubPreviousForeground = User32.GetForegroundWindow();
+            User32.SetExtendedStyle(_hWnd, exStyle & ~User32.WS_EX_NOACTIVATE);
+            Activate();
+            return;
+        }
+
+        User32.SetExtendedStyle(_hWnd, exStyle | User32.WS_EX_NOACTIVATE);
+        if (User32.GetForegroundWindow() == _hWnd &&
+            _commandHubPreviousForeground != IntPtr.Zero &&
+            _commandHubPreviousForeground != _hWnd)
+        {
+            User32.SetForegroundWindow(_commandHubPreviousForeground);
+        }
+        _commandHubPreviousForeground = IntPtr.Zero;
     }
 
     private NotchState GetStateAfterCommandHub()

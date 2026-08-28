@@ -87,6 +87,9 @@ public partial class MainWindow : Window
         _commandHubView.SettingsRequested += OnCommandHubSettingsRequested;
         _commandHubView.SmartClipboardRequested += OnCommandHubSmartClipboardRequested;
         _commandHubView.ClipboardTextCopyRequested += OnCommandHubClipboardTextCopyRequested;
+        _commandHubView.TemporaryNoteRequested += OnCommandHubTemporaryNoteRequested;
+        _commandHubView.TemporaryNoteChanged += OnCommandHubTemporaryNoteChanged;
+        _commandHubView.EditorModeChanged += OnCommandHubEditorModeChanged;
         _commandHubView.ApplyAppearance(_settings.Appearance);
         _commandHubView.SetClipboardContext(_lastMeaningfulClipboard.Current);
         _commandHubView.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
@@ -102,6 +105,10 @@ public partial class MainWindow : Window
         _commandHubView.SettingsRequested -= OnCommandHubSettingsRequested;
         _commandHubView.SmartClipboardRequested -= OnCommandHubSmartClipboardRequested;
         _commandHubView.ClipboardTextCopyRequested -= OnCommandHubClipboardTextCopyRequested;
+        _commandHubView.TemporaryNoteRequested -= OnCommandHubTemporaryNoteRequested;
+        _commandHubView.TemporaryNoteChanged -= OnCommandHubTemporaryNoteChanged;
+        _commandHubView.EditorModeChanged -= OnCommandHubEditorModeChanged;
+        SetCommandHubEditorActivation(false);
         CommandHubHost.Content = null;
         _commandHubView = null;
     }
@@ -268,7 +275,9 @@ public partial class MainWindow : Window
         if (msg == User32.WM_MOUSEACTIVATE)
         {
             handled = true;
-            return new IntPtr(User32.MA_NOACTIVATE);
+            return new IntPtr(_commandHubEditorActive
+                ? User32.MA_ACTIVATE
+                : User32.MA_NOACTIVATE);
         }
 
         if (msg == User32.WM_DISPLAYCHANGE)
