@@ -16,6 +16,7 @@ public partial class MainWindow
     private System.Windows.Threading.DispatcherTimer? _commandHubLeaveTimer;
     private readonly TemporaryNoteSession _temporaryNote = new();
     private bool _commandHubEditorActive;
+    private bool _commandHubModalActionActive;
     private IntPtr _commandHubPreviousForeground;
 
     private void RootGrid_PrimaryMouseEnter(object sender, MouseEventArgs e)
@@ -170,18 +171,7 @@ public partial class MainWindow
         if (_currentState != NotchState.CommandHub || sender is not Views.CommandHubView hub)
             return;
 
-        string? text = null;
-        try
-        {
-            if (System.Windows.Clipboard.ContainsText())
-                text = System.Windows.Clipboard.GetText();
-        }
-        catch
-        {
-            // Another process can briefly lock the clipboard. The tool remains open
-            // and reports the empty/error state instead of blocking the UI thread.
-        }
-
+        ClipboardService.TryReadSafeText(out string? text);
         hub.SetSmartClipboardText(text);
     }
 
@@ -285,7 +275,8 @@ public partial class MainWindow
 
     private void MainWindow_CommandHubEditorDeactivated(object? sender, EventArgs e)
     {
-        if (!_commandHubEditorActive || _currentState != NotchState.CommandHub)
+        if (!_commandHubEditorActive || _commandHubModalActionActive ||
+            _currentState != NotchState.CommandHub)
             return;
 
         SetCommandHubEditorActivation(false);

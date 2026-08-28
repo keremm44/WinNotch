@@ -31,7 +31,14 @@ public partial class MainWindow
         if (_countdownTimer.Status == CountdownTimerStatus.Running)
         {
             if (_countdownTimer.Pause(DateTimeOffset.Now))
+            {
                 StopCountdownTicking();
+            }
+            else if (_countdownTimer.Status == CountdownTimerStatus.Completed)
+            {
+                CompleteCountdown();
+                return;
+            }
         }
         else if (_countdownTimer.Status == CountdownTimerStatus.Paused &&
                  _countdownTimer.Resume(DateTimeOffset.Now))
@@ -69,11 +76,19 @@ public partial class MainWindow
     private void CountdownDispatcherTimer_Tick(object? sender, EventArgs e)
     {
         bool completed = _countdownTimer.Update(DateTimeOffset.Now);
-        RefreshCommandHubTimer();
         if (!completed)
+        {
+            RefreshCommandHubTimer();
             return;
+        }
 
+        CompleteCountdown();
+    }
+
+    private void CompleteCountdown()
+    {
         StopCountdownTicking();
+        RefreshCommandHubTimer();
         TransitionToState(
             NotchState.TimerNotify,
             StatePriority.Timer,

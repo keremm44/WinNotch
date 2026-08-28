@@ -10,6 +10,9 @@
     <NeutralLanguage>tr-TR</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.8.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\WinNotch.Common\WinNotch.Common.csproj" />
     <ProjectReference Include="..\WinNotch.Core\WinNotch.Core.csproj" />
   </ItemGroup>

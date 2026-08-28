@@ -27,6 +27,9 @@ public sealed partial class ClipboardListener : IDisposable
     public const int WM_CLIPBOARDUPDATE = 0x031D;
     public const uint CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR = 0x4010;
 
+    internal static bool IsCurrentContentExcluded()
+        => NativeMethods.IsClipboardFormatAvailable(CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR);
+
     private IntPtr _hWnd;
     private bool _isListening;
     private bool _disposed;

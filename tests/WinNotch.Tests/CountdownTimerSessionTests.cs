@@ -31,6 +31,15 @@ public class CountdownTimerSessionTests
     }
 
     [Fact]
+    public void PauseAtDeadline_LeavesSessionCompleted()
+    {
+        var timer = new CountdownTimerSession();
+        timer.Start(TimeSpan.FromSeconds(1), Now);
+        Assert.False(timer.Pause(Now.AddSeconds(1)));
+        Assert.Equal(CountdownTimerStatus.Completed, timer.Status);
+    }
+
+    [Fact]
     public void Cancel_ReleasesActiveCountdown()
     {
         var timer = new CountdownTimerSession();

@@ -191,7 +191,7 @@ public class StateMachineTests
     [Theory]
     [InlineData(NotchState.Idle, 100, 22)]
     [InlineData(NotchState.Hover, 118, 28)]
-    [InlineData(NotchState.CommandHub, 360, 94)]
+    [InlineData(NotchState.CommandHub, 440, 142)]
     [InlineData(NotchState.DragActive, 290, 62)]
     [InlineData(NotchState.DropResult, 340, 100)]
     [InlineData(NotchState.ShelfOccupied, 230, 40)]
@@ -201,6 +201,7 @@ public class StateMachineTests
     [InlineData(NotchState.MediaAmbient, 124, 28)]
     [InlineData(NotchState.ClipboardNotify, 260, 40)]
     [InlineData(NotchState.ScreenshotNotify, 310, 56)]
+    [InlineData(NotchState.TimerNotify, 220, 42)]
     public void StateDimensions_ReturnCorrectValues(NotchState state, double expectedWidth, double expectedHeight)
     {
         var (w, h) = StateDimensions.GetDimensions(state);

@@ -148,8 +148,8 @@
                 <Button Grid.Column="4" Style="{StaticResource HubCompactButton}" Click="TimerButton_Click">
                     <StackPanel><TextBlock Text="Zamanlayıcı" FontWeight="SemiBold"/><TextBlock x:Name="TimerHomeHintText" Text="Hazır" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
-                <Button Grid.Column="6" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="4. adım: QR oluşturma">
-                    <StackPanel><TextBlock Text="QR" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
+                <Button Grid.Column="6" Style="{StaticResource HubCompactButton}" Click="QrButton_Click">
+                    <StackPanel><TextBlock Text="QR" FontWeight="SemiBold"/><TextBlock Text="Kod oluştur" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
             </Grid>
         </Grid>
@@ -265,6 +265,45 @@
                         Content="Duraklat" IsEnabled="False" Click="TimerPauseButton_Click"/>
                 <Button x:Name="TimerCancelButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
                         Content="İptal" IsEnabled="False" Click="TimerCancelButton_Click"/>
+            </Grid>
+        </Grid>
+
+        <Grid x:Name="QrPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="22"/><RowDefinition Height="58"/>
+                <RowDefinition Height="34"/><RowDefinition Height="*"/>
+                <RowDefinition Height="34"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                        Content="← Geri" Click="QrBackButton_Click"/>
+                <TextBlock Text="QR Oluştur" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                <TextBlock x:Name="QrStatusText" Text="Metin girin" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+            </Grid>
+            <TextBox x:Name="QrInputTextBox" Grid.Row="1" AcceptsReturn="True" MaxLength="2048"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Padding="7,5" FontSize="9"
+                     Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                     CaretBrush="{DynamicResource Brush.Accent.Primary}"
+                     BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"/>
+            <Grid Grid.Row="2" Margin="0,5">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Style="{StaticResource HubCompactButton}" Content="Panodan al"
+                        Click="QrPasteButton_Click"/>
+                <Button Grid.Column="2" Style="{StaticResource HubCompactButton}" Content="QR oluştur"
+                        Click="QrGenerateButton_Click"/>
+            </Grid>
+            <Border Grid.Row="3" Width="132" Height="132" HorizontalAlignment="Center"
+                    Background="White" CornerRadius="4" Padding="5">
+                <Image x:Name="QrPreviewImage" Stretch="Uniform" SnapsToDevicePixels="True"/>
+            </Border>
+            <Grid Grid.Row="4" Margin="0,5,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Button x:Name="QrCopyButton" Grid.Column="0" Style="{StaticResource HubCompactButton}"
+                        Content="Görseli kopyala" IsEnabled="False" Click="QrCopyButton_Click"/>
+                <Button x:Name="QrSaveButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
+                        Content="PNG kaydet" IsEnabled="False" Click="QrSaveButton_Click"/>
             </Grid>
         </Grid>
     </Grid>

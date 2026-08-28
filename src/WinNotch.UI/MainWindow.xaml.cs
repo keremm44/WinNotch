@@ -95,6 +95,9 @@ public partial class MainWindow : Window
         _commandHubView.TimerStartRequested += OnCommandHubTimerStartRequested;
         _commandHubView.TimerPauseResumeRequested += OnCommandHubTimerPauseResumeRequested;
         _commandHubView.TimerCancelRequested += OnCommandHubTimerCancelRequested;
+        _commandHubView.QrClipboardTextRequested += OnCommandHubQrClipboardTextRequested;
+        _commandHubView.QrImageActionRequested += OnCommandHubQrImageActionRequested;
+        _commandHubView.PreferredSizeChanged += OnCommandHubPreferredSizeChanged;
         _commandHubView.ApplyAppearance(_settings.Appearance);
         _commandHubView.SetClipboardContext(_lastMeaningfulClipboard.Current);
         _commandHubView.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
@@ -118,6 +121,9 @@ public partial class MainWindow : Window
         _commandHubView.TimerStartRequested -= OnCommandHubTimerStartRequested;
         _commandHubView.TimerPauseResumeRequested -= OnCommandHubTimerPauseResumeRequested;
         _commandHubView.TimerCancelRequested -= OnCommandHubTimerCancelRequested;
+        _commandHubView.QrClipboardTextRequested -= OnCommandHubQrClipboardTextRequested;
+        _commandHubView.QrImageActionRequested -= OnCommandHubQrImageActionRequested;
+        _commandHubView.PreferredSizeChanged -= OnCommandHubPreferredSizeChanged;
         SetCommandHubEditorActivation(false);
         CommandHubHost.Content = null;
         _commandHubView = null;
@@ -663,7 +669,11 @@ public partial class MainWindow : Window
 
     private void ApplyDimensions(NotchState state, bool force = false)
     {
-        var (w, h) = ResolveAppearanceDimensions(state);
+        var (w, h) = state == NotchState.CommandHub && _commandHubView != null
+            ? ResolveAppearanceContextDimensions(
+                Constants.NotchCommandHubWidth,
+                _commandHubView.PreferredHeight)
+            : ResolveAppearanceDimensions(state);
         if (!force && Math.Abs(w - _currentWidth) < 1 && Math.Abs(h - _currentHeight) < 1)
             return;
 

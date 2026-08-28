@@ -27,6 +27,23 @@ public sealed class TimerStartRequestedEventArgs : EventArgs
     public required TimeSpan Duration { get; init; }
 }
 
+public sealed class QrClipboardTextRequestedEventArgs : EventArgs
+{
+    public string? Text { get; set; }
+}
+
+public sealed class QrImageActionRequestedEventArgs : EventArgs
+{
+    public required byte[] PngBytes { get; init; }
+    public required bool SaveToFile { get; init; }
+    public bool Succeeded { get; set; }
+}
+
+public sealed class CommandHubSizeChangedEventArgs : EventArgs
+{
+    public required double Height { get; init; }
+}
+
 public partial class CommandHubView : UserControl
 {
     private AppearanceSettings _appearance = new();
@@ -34,6 +51,9 @@ public partial class CommandHubView : UserControl
     private string _smartClipboardSource = string.Empty;
     private bool _updatingTemporaryNote;
     private bool _editorModeActive;
+    private byte[]? _qrPngBytes;
+
+    public double PreferredHeight { get; private set; } = Constants.NotchCommandHubHeight;
 
     public event EventHandler? ClipboardRequested;
     public event EventHandler? ShelfRequested;
@@ -47,6 +67,9 @@ public partial class CommandHubView : UserControl
     public event EventHandler<TimerStartRequestedEventArgs>? TimerStartRequested;
     public event EventHandler? TimerPauseResumeRequested;
     public event EventHandler? TimerCancelRequested;
+    public event EventHandler<QrClipboardTextRequestedEventArgs>? QrClipboardTextRequested;
+    public event EventHandler<QrImageActionRequestedEventArgs>? QrImageActionRequested;
+    public event EventHandler<CommandHubSizeChangedEventArgs>? PreferredSizeChanged;
 
     public CommandHubView()
     {
@@ -224,6 +247,102 @@ public partial class CommandHubView : UserControl
             : "Pano meşgul, tekrar deneyin";
     }
 
+    private void QrButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        HubHomePanel.Visibility = Visibility.Collapsed;
+        QrPanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(300);
+        SetEditorMode(true);
+        Dispatcher.BeginInvoke(() => QrInputTextBox.Focus());
+    }
+
+    private void QrBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        ClearQrResult(clearInput: true);
+        QrPanel.Visibility = Visibility.Collapsed;
+        HubHomePanel.Visibility = Visibility.Visible;
+        SetPreferredHeight(Constants.NotchCommandHubHeight);
+        SetEditorMode(false);
+    }
+
+    private void QrPasteButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        var request = new QrClipboardTextRequestedEventArgs();
+        QrClipboardTextRequested?.Invoke(this, request);
+        if (string.IsNullOrWhiteSpace(request.Text))
+        {
+            QrStatusText.Text = "Panoda metin yok";
+            return;
+        }
+        QrInputTextBox.Text = request.Text.Length <= QrInputTextBox.MaxLength
+            ? request.Text
+            : request.Text[..QrInputTextBox.MaxLength];
+        QrInputTextBox.CaretIndex = QrInputTextBox.Text.Length;
+        QrStatusText.Text = "Panodan alındı";
+    }
+
+    private void QrGenerateButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        ClearQrResult(clearInput: false);
+        QrCodeRenderResult result = QrCodeGeneratorService.Generate(QrInputTextBox.Text);
+        if (!result.Success || result.PngBytes == null || result.Image == null)
+        {
+            QrStatusText.Text = result.Error ?? "QR oluşturulamadı";
+            return;
+        }
+
+        _qrPngBytes = result.PngBytes;
+        QrPreviewImage.Source = result.Image;
+        QrCopyButton.IsEnabled = true;
+        QrSaveButton.IsEnabled = true;
+        QrStatusText.Text = "QR hazır";
+    }
+
+    private void QrCopyButton_Click(object sender, RoutedEventArgs e)
+        => RequestQrImageAction(e, saveToFile: false);
+
+    private void QrSaveButton_Click(object sender, RoutedEventArgs e)
+        => RequestQrImageAction(e, saveToFile: true);
+
+    private void RequestQrImageAction(RoutedEventArgs e, bool saveToFile)
+    {
+        e.Handled = true;
+        if (_qrPngBytes == null)
+            return;
+
+        var request = new QrImageActionRequestedEventArgs
+        {
+            PngBytes = _qrPngBytes,
+            SaveToFile = saveToFile
+        };
+        QrImageActionRequested?.Invoke(this, request);
+        QrStatusText.Text = request.Succeeded
+            ? saveToFile ? "PNG kaydedildi" : "Görsel panoya kopyalandı"
+            : saveToFile ? "Dosya kaydedilmedi" : "Pano meşgul";
+    }
+
+    private void ClearQrResult(bool clearInput)
+    {
+        _qrPngBytes = null;
+        QrPreviewImage.Source = null;
+        QrCopyButton.IsEnabled = false;
+        QrSaveButton.IsEnabled = false;
+        if (clearInput)
+            QrInputTextBox.Clear();
+    }
+
+    private void SetPreferredHeight(double height)
+    {
+        if (Math.Abs(PreferredHeight - height) < 0.5)
+            return;
+        PreferredHeight = height;
+        PreferredSizeChanged?.Invoke(this, new CommandHubSizeChangedEventArgs { Height = height });
+    }
+
     private void TimerButton_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
@@ -373,6 +492,10 @@ public partial class CommandHubView : UserControl
         TimerStartRequested = null;
         TimerPauseResumeRequested = null;
         TimerCancelRequested = null;
+        QrClipboardTextRequested = null;
+        QrImageActionRequested = null;
+        PreferredSizeChanged = null;
+        ClearQrResult(clearInput: true);
         _clipboardContext = null;
         _smartClipboardSource = string.Empty;
     }

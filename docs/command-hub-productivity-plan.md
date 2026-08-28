@@ -34,12 +34,15 @@ without stealing focus, and cancellation releases the timer.
 
 ## 4. QR generation
 
-- Generate from typed text or current clipboard content only on demand.
-- Render a bounded QR bitmap and provide copy/save controls.
-- Load/retain no bitmap while the QR panel is closed.
+- Generate from typed text or privacy-safe current clipboard text only on demand.
+- Render PNG through the MIT-licensed QRCoder `PngByteQRCode` path (no System.Drawing).
+- Provide image-copy and PNG-save controls with a bounded 1,500 UTF-8 byte payload.
+- Expand Command Hub only while the preview is open and release PNG/bitmap references
+  when the panel or Command Hub closes.
 
-Acceptance: Unicode and URL values scan correctly, oversized input is rejected, and
-all bitmap resources are released when Command Hub closes.
+Acceptance: Unicode and URL values render correctly, excluded/password-manager
+clipboard content is never read, oversized input is rejected, save cancellation is
+safe, and all bitmap resources are released when Command Hub closes.
 
 ## Cross-cutting constraints
 

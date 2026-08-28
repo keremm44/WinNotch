@@ -25,6 +25,7 @@ public sealed class ClipboardService : IDisposable
     private volatile bool _monitorText = true;
     private volatile bool _monitorImages = true;
     private string? _suppressedText;
+    private bool _suppressNextImage;
     private bool _disposed;
 
     /// <summary>
@@ -77,6 +78,25 @@ public sealed class ClipboardService : IDisposable
         _suppressedText = text;
     }
 
+    public void SuppressNextImageNotification() => _suppressNextImage = true;
+
+    public static bool TryReadSafeText(out string? text)
+    {
+        text = null;
+        try
+        {
+            if (ClipboardListener.IsCurrentContentExcluded() ||
+                !System.Windows.Clipboard.ContainsText())
+                return false;
+            text = System.Windows.Clipboard.GetText();
+            return !string.IsNullOrEmpty(text);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Handles native clipboard change events.
     /// </summary>
@@ -86,6 +106,7 @@ public sealed class ClipboardService : IDisposable
         if (e.IsExcluded)
         {
             _suppressedText = null;
+            _suppressNextImage = false;
             System.Diagnostics.Debug.WriteLine(
                 "[ClipboardService] Clipboard change excluded by privacy flag.");
             return;
@@ -94,6 +115,11 @@ public sealed class ClipboardService : IDisposable
         if (e.HasImage)
         {
             _suppressedText = null;
+            if (_suppressNextImage)
+            {
+                _suppressNextImage = false;
+                return;
+            }
             if (_monitorImages)
             {
                 // Clipboard images can be tens of megabytes. Never materialize one
@@ -113,6 +139,7 @@ public sealed class ClipboardService : IDisposable
 
         if (e.HasText && _monitorText)
         {
+            _suppressNextImage = false;
             string? text = ReadClipboardText();
             string? suppressed = _suppressedText;
             _suppressedText = null;

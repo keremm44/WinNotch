@@ -204,6 +204,7 @@ public partial class MainWindow
         if ((_shellPresentationWindow != IntPtr.Zero ||
              _shellPresentationMessageWindow != IntPtr.Zero) &&
             foreground != IntPtr.Zero &&
+            foreground != _hWnd &&
             !matchesShellWindow)
         {
             ClearShellPresentationState();
