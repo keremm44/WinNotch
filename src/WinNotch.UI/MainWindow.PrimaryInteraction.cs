@@ -322,8 +322,8 @@ public partial class MainWindow
         {
             if (current is System.Windows.Controls.Primitives.ButtonBase or
                 System.Windows.Controls.Primitives.Thumb or
-                System.Windows.Controls.TextBox or
-                System.Windows.Controls.ComboBox)
+                System.Windows.Controls.Primitives.Selector or
+                System.Windows.Controls.TextBox)
                 return true;
 
             current = GetParent(current);
