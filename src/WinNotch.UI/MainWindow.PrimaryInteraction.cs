@@ -283,8 +283,7 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(() =>
         {
             if (!_commandHubEditorActive || _commandHubModalActionActive || IsActive ||
-                _currentState != NotchState.CommandHub ||
-                _commandHubView?.HasOpenPopup == true)
+                _currentState != NotchState.CommandHub)
                 return;
 
             SetCommandHubEditorActivation(false);

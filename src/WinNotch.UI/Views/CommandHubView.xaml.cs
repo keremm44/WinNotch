@@ -54,7 +54,6 @@ public partial class CommandHubView : UserControl
     private byte[]? _qrPngBytes;
 
     public double PreferredHeight { get; private set; } = Constants.NotchCommandHubHeight;
-    public bool HasOpenPopup => TransformKindCombo.IsDropDownOpen || TimerDurationCombo.IsDropDownOpen;
 
     public event EventHandler? ClipboardRequested;
     public event EventHandler? ShelfRequested;
@@ -186,7 +185,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         SmartClipboardPanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(200);
+        SetPreferredHeight(280);
         SetEditorMode(true);
         SmartClipboardStatusText.Text = "Panodan metin alınıyor";
         SmartClipboardRequested?.Invoke(this, EventArgs.Empty);
@@ -204,16 +203,10 @@ public partial class CommandHubView : UserControl
         SmartClipboardOutput.Clear();
     }
 
-    private void TransformKindCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void TransformKindList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (IsInitialized)
             ApplySelectedTransformation();
-    }
-
-    private void ToolComboBox_DropDownClosed(object sender, EventArgs e)
-    {
-        if (sender is System.Windows.Controls.ComboBox combo)
-            Dispatcher.BeginInvoke(() => combo.Focus());
     }
 
     private void ApplySelectedTransformation()
@@ -232,7 +225,7 @@ public partial class CommandHubView : UserControl
 
     private ClipboardTransformKind ResolveSelectedTransform()
     {
-        if (TransformKindCombo.SelectedItem is ComboBoxItem item &&
+        if (TransformKindList.SelectedItem is ListBoxItem item &&
             item.Tag is string value &&
             Enum.TryParse(value, ignoreCase: true, out ClipboardTransformKind kind))
         {
@@ -359,7 +352,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TimerPanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(180);
+        SetPreferredHeight(230);
         SetEditorMode(true);
         TimerRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -373,18 +366,21 @@ public partial class CommandHubView : UserControl
         SetEditorMode(false);
     }
 
+    private void TimerPresetList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized || TimerPresetList.SelectedItem is not ListBoxItem item ||
+            item.Tag is not string minutes)
+            return;
+
+        TimerCustomMinutesTextBox.Text = minutes;
+        TimerStatusText.Text = $"{minutes} dakika seçildi";
+    }
+
     private void TimerStartButton_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
-        int minutes;
-        if (TimerDurationCombo.SelectedItem is ComboBoxItem item &&
-            item.Tag is string preset &&
-            int.TryParse(preset, out int presetMinutes))
-        {
-            minutes = presetMinutes;
-        }
-        else if (!int.TryParse(TimerDurationCombo.Text.Trim(), out minutes) ||
-                 minutes is < 1 or > 1440)
+        if (!int.TryParse(TimerCustomMinutesTextBox.Text.Trim(), out int minutes) ||
+            minutes is < 1 or > 1440)
         {
             TimerStatusText.Text = "1–1440 dakika girin";
             return;
@@ -413,7 +409,7 @@ public partial class CommandHubView : UserControl
         e.Handled = true;
         HubHomePanel.Visibility = Visibility.Collapsed;
         TemporaryNotePanel.Visibility = Visibility.Visible;
-        SetPreferredHeight(210);
+        SetPreferredHeight(260);
         SetEditorMode(true);
         TemporaryNoteRequested?.Invoke(this, EventArgs.Empty);
     }

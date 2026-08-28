@@ -46,23 +46,32 @@
             <Setter Property="Padding" Value="4,2"/>
         </Style>
 
-        <Style x:Key="HubComboBoxItem" TargetType="ComboBoxItem">
+        <Style x:Key="HubChoiceItem" TargetType="ListBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
-            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
+                    <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="ItemSurface" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}" CornerRadius="5">
-                            <ContentPresenter/>
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
+                            <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                                <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Border}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+                                <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -70,13 +79,19 @@
             </Setter>
         </Style>
 
-        <Style x:Key="HubComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Soft}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.OnDark}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="7,4"/>
-            <Setter Property="ItemContainerStyle" Value="{StaticResource HubComboBoxItem}"/>
+        <Style x:Key="HubChoiceList" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource HubChoiceItem}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="4"/>
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="HubIconSurface" TargetType="Border">
@@ -190,8 +205,9 @@
 
         <Grid x:Name="SmartClipboardPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
-                <RowDefinition Height="22"/><RowDefinition Height="32"/>
-                <RowDefinition Height="34"/><RowDefinition Height="*"/>
+                <RowDefinition Height="22"/><RowDefinition Height="50"/>
+                <RowDefinition Height="66"/><RowDefinition Height="*"/>
+                <RowDefinition Height="34"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
@@ -202,33 +218,30 @@
                            VerticalAlignment="Center" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
             </Grid>
 
-            <TextBox x:Name="SmartClipboardInput" Grid.Row="1" IsReadOnly="True" TextWrapping="NoWrap"
-                     VerticalContentAlignment="Center" Padding="7,3" FontSize="9"
+            <TextBox x:Name="SmartClipboardInput" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto" Padding="7,4" FontSize="9"
                      Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
                      BorderBrush="{DynamicResource Brush.Border.OnDark}" BorderThickness="1"/>
 
-            <Grid Grid.Row="2" Margin="0,5,0,5">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="74"/></Grid.ColumnDefinitions>
-                <ComboBox x:Name="TransformKindCombo" Grid.Column="0" SelectedIndex="0" FontSize="9"
-                          Style="{StaticResource HubComboBox}"
-                          SelectionChanged="TransformKindCombo_SelectionChanged"
-                          DropDownClosed="ToolComboBox_DropDownClosed">
-                    <ComboBoxItem Content="Boşlukları temizle" Tag="CleanWhitespace"/>
-                    <ComboBoxItem Content="BÜYÜK HARF" Tag="Uppercase"/>
-                    <ComboBoxItem Content="küçük harf" Tag="Lowercase"/>
-                    <ComboBoxItem Content="Başlık Biçimi" Tag="TitleCase"/>
-                    <ComboBoxItem Content="JSON düzenle" Tag="PrettyJson"/>
-                    <ComboBoxItem Content="URL kodla" Tag="UrlEncode"/>
-                    <ComboBoxItem Content="URL çöz" Tag="UrlDecode"/>
-                </ComboBox>
-                <Button x:Name="CopyTransformButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
-                        Content="Kopyala" Click="CopyTransformButton_Click"/>
-            </Grid>
+            <ListBox x:Name="TransformKindList" Grid.Row="2" SelectedIndex="0" FontSize="8.5"
+                     Style="{StaticResource HubChoiceList}"
+                     SelectionChanged="TransformKindList_SelectionChanged">
+                <ListBoxItem Content="Boşluk temizle" Tag="CleanWhitespace"/>
+                <ListBoxItem Content="BÜYÜK HARF" Tag="Uppercase"/>
+                <ListBoxItem Content="küçük harf" Tag="Lowercase"/>
+                <ListBoxItem Content="Başlık Biçimi" Tag="TitleCase"/>
+                <ListBoxItem Content="JSON düzenle" Tag="PrettyJson"/>
+                <ListBoxItem Content="URL kodla" Tag="UrlEncode"/>
+                <ListBoxItem Content="URL çöz" Tag="UrlDecode"/>
+            </ListBox>
 
             <TextBox x:Name="SmartClipboardOutput" Grid.Row="3" IsReadOnly="True" TextWrapping="Wrap"
                      VerticalScrollBarVisibility="Auto" Padding="7,4" FontSize="9"
                      Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
                      BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"/>
+            <Button x:Name="CopyTransformButton" Grid.Row="4" Width="92" HorizontalAlignment="Right"
+                    Margin="0,5,0,0" Style="{StaticResource HubCompactButton}"
+                    Content="Sonucu kopyala" Click="CopyTransformButton_Click"/>
         </Grid>
 
         <Grid x:Name="TemporaryNotePanel" Visibility="Collapsed">
@@ -271,7 +284,8 @@
         <Grid x:Name="TimerPanel" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="22"/><RowDefinition Height="54"/>
-                <RowDefinition Height="38"/><RowDefinition Height="34"/>
+                <RowDefinition Height="38"/><RowDefinition Height="38"/>
+                <RowDefinition Height="34"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
@@ -284,20 +298,29 @@
             <TextBlock x:Name="TimerRemainingText" Grid.Row="1" Text="05:00" FontSize="28" FontWeight="SemiBold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-            <Grid Grid.Row="2" Margin="0,3">
+            <ListBox x:Name="TimerPresetList" Grid.Row="2" SelectedIndex="1" FontSize="9"
+                     Style="{StaticResource HubChoiceList}"
+                     SelectionChanged="TimerPresetList_SelectionChanged">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="5"/></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBoxItem Content="1 dk" Tag="1"/><ListBoxItem Content="5 dk" Tag="5"/>
+                <ListBoxItem Content="10 dk" Tag="10"/><ListBoxItem Content="25 dk" Tag="25"/>
+                <ListBoxItem Content="60 dk" Tag="60"/>
+            </ListBox>
+            <Grid Grid.Row="3" Margin="2,3">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
-                <ComboBox x:Name="TimerDurationCombo" Grid.Column="0" SelectedIndex="1" FontSize="9"
-                          Style="{StaticResource HubComboBox}"
-                          IsEditable="True" ToolTip="1–1440 dakika"
-                          DropDownClosed="ToolComboBox_DropDownClosed">
-                    <ComboBoxItem Content="1 dakika" Tag="1"/><ComboBoxItem Content="5 dakika" Tag="5"/>
-                    <ComboBoxItem Content="10 dakika" Tag="10"/><ComboBoxItem Content="25 dakika" Tag="25"/>
-                    <ComboBoxItem Content="60 dakika" Tag="60"/>
-                </ComboBox>
+                <TextBox x:Name="TimerCustomMinutesTextBox" Grid.Column="0" Text="5" MaxLength="4"
+                         VerticalContentAlignment="Center" Padding="8,4" FontSize="9"
+                         Background="{DynamicResource Brush.Surface.Soft}"
+                         Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                         CaretBrush="{DynamicResource Brush.Accent.Primary}"
+                         BorderBrush="{DynamicResource Brush.Border.OnDark}" BorderThickness="1"
+                         ToolTip="1–1440 dakika"/>
                 <Button x:Name="TimerStartButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
                         Content="Başlat" Click="TimerStartButton_Click"/>
             </Grid>
-            <Grid Grid.Row="3">
+            <Grid Grid.Row="4">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Button x:Name="TimerPauseButton" Grid.Column="0" Style="{StaticResource HubCompactButton}"
                         Content="Duraklat" IsEnabled="False" Click="TimerPauseButton_Click"/>
