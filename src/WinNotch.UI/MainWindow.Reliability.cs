@@ -23,6 +23,7 @@ public partial class MainWindow
     private uint _shellHookMessage;
     private bool _shellHookRegistered;
     private IntPtr _shellPresentationWindow;
+    private IntPtr _shellPresentationMessageWindow;
     private ShellPresentationState _shellPresentationState;
     private ContextMenu? _managedContextMenu;
     private bool _suppressPrimaryClickAfterMenuDismiss;
@@ -102,6 +103,22 @@ public partial class MainWindow
             _shellHookMessage = 0;
     }
 
+    private void RearmShellFullscreenTracking()
+    {
+        if (!_shellHookRegistered || _hWnd == IntPtr.Zero)
+            return;
+
+        // WPF implements Window.Visibility by hiding/showing the native HWND. Some
+        // Explorer versions stop delivering later SHELLHOOK presentation messages to
+        // a recipient after that cycle. Re-register whenever the notch is shown so
+        // every subsequent F11 entry/exit pair is observed; this is event re-arming,
+        // not a delayed or time-based recovery.
+        User32.DeregisterShellHookWindow(_hWnd);
+        _shellHookRegistered = User32.RegisterShellHookWindow(_hWnd);
+        if (!_shellHookRegistered)
+            _shellHookMessage = 0;
+    }
+
     private void StopShellFullscreenTracking()
     {
         if (_shellHookRegistered && _hWnd != IntPtr.Zero)
@@ -129,7 +146,10 @@ public partial class MainWindow
 
         if (code == User32.HSHELL_WINDOWFULLSCREEN)
         {
-            SetShellPresentationState(presentationRoot, ShellPresentationState.Fullscreen);
+            SetShellPresentationState(
+                presentationRoot,
+                messageRoot,
+                ShellPresentationState.Fullscreen);
             VerifyAutomaticFullscreenVisibility();
         }
         else if (code == User32.HSHELL_WINDOWNORMAL)
@@ -139,17 +159,24 @@ public partial class MainWindow
             IntPtr normalRoot = presentationRoot != IntPtr.Zero
                 ? presentationRoot
                 : _shellPresentationWindow;
-            SetShellPresentationState(normalRoot, ShellPresentationState.Normal);
+            SetShellPresentationState(
+                normalRoot,
+                messageRoot,
+                ShellPresentationState.Normal);
             ApplyAutomaticFullscreenVisibility(false);
         }
 
         return true;
     }
 
-    private void SetShellPresentationState(IntPtr window, ShellPresentationState state)
+    private void SetShellPresentationState(
+        IntPtr foregroundWindow,
+        IntPtr messageWindow,
+        ShellPresentationState state)
     {
-        _shellPresentationWindow = window;
-        _shellPresentationState = window == IntPtr.Zero
+        _shellPresentationWindow = foregroundWindow;
+        _shellPresentationMessageWindow = messageWindow;
+        _shellPresentationState = foregroundWindow == IntPtr.Zero && messageWindow == IntPtr.Zero
             ? ShellPresentationState.Unknown
             : state;
     }
@@ -157,6 +184,7 @@ public partial class MainWindow
     private void ClearShellPresentationState()
     {
         _shellPresentationWindow = IntPtr.Zero;
+        _shellPresentationMessageWindow = IntPtr.Zero;
         _shellPresentationState = ShellPresentationState.Unknown;
     }
 
@@ -170,9 +198,13 @@ public partial class MainWindow
             return;
 
         IntPtr foreground = NormalizeRootWindow(User32.GetForegroundWindow());
-        if (_shellPresentationWindow != IntPtr.Zero &&
+        bool matchesShellWindow = foreground != IntPtr.Zero &&
+            (foreground == _shellPresentationWindow ||
+             foreground == _shellPresentationMessageWindow);
+        if ((_shellPresentationWindow != IntPtr.Zero ||
+             _shellPresentationMessageWindow != IntPtr.Zero) &&
             foreground != IntPtr.Zero &&
-            foreground != _shellPresentationWindow)
+            !matchesShellWindow)
         {
             ClearShellPresentationState();
         }
@@ -184,8 +216,7 @@ public partial class MainWindow
             ? IntPtr.Zero
             : User32.MonitorFromWindow(_hWnd, User32.MONITOR_DEFAULTTONEAREST);
         bool sameMonitor = foregroundMonitor != IntPtr.Zero && foregroundMonitor == notchMonitor;
-        bool shellStateApplies = foreground != IntPtr.Zero &&
-            foreground == _shellPresentationWindow;
+        bool shellStateApplies = matchesShellWindow;
 
         bool fullscreenEvidence = shellStateApplies
             ? _shellPresentationState == ShellPresentationState.Fullscreen
@@ -342,6 +373,7 @@ public partial class MainWindow
         Visibility = Visibility.Visible;
         if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
             User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
+        RearmShellFullscreenTracking();
     }
 
     private void HideFullscreenImmediately()
@@ -360,6 +392,7 @@ public partial class MainWindow
         Visibility = Visibility.Visible;
         if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
             User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
+        RearmShellFullscreenTracking();
     }
 
     private void CancelFullscreenTransitionAnimation()
