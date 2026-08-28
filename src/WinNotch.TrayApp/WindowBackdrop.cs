@@ -9,7 +9,7 @@ namespace WinNotch.TrayApp;
 /// Applies Windows 11's compositor-backed Mica material to the long-lived settings
 /// window only. Unsupported systems retain the fully opaque XAML fallback.
 /// </summary>
-internal static partial class WindowBackdrop
+internal static class WindowBackdrop
 {
     private const uint DwmwaUseImmersiveDarkMode = 20;
     private const uint DwmwaWindowCornerPreference = 33;
@@ -17,8 +17,10 @@ internal static partial class WindowBackdrop
     private const int DwmwcpRound = 2;
     private const int DwmSbtMainWindow = 2;
 
-    [LibraryImport("dwmapi.dll")]
-    private static partial int DwmSetWindowAttribute(
+    // Classic DllImport is sufficient for this blittable signature and avoids
+    // requiring unsafe compilation solely for a source-generated P/Invoke stub.
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmSetWindowAttribute(
         IntPtr hwnd,
         uint attribute,
         ref int value,
