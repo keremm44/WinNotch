@@ -24,6 +24,7 @@ public sealed class ClipboardService : IDisposable
     private readonly ClipboardListener _listener;
     private volatile bool _monitorText = true;
     private volatile bool _monitorImages = true;
+    private string? _suppressedText;
     private bool _disposed;
 
     /// <summary>
@@ -68,6 +69,15 @@ public sealed class ClipboardService : IDisposable
     public void OnClipboardUpdate() => _listener.OnClipboardUpdate();
 
     /// <summary>
+    /// Prevents a Command Hub copy operation from replacing the active tool with a
+    /// notification for the exact same text. A different clipboard write is never hidden.
+    /// </summary>
+    public void SuppressNextTextNotification(string text)
+    {
+        _suppressedText = text;
+    }
+
+    /// <summary>
     /// Handles native clipboard change events.
     /// </summary>
     private void OnClipboardChanged(object? sender, ClipboardChangedEventArgs e)
@@ -75,6 +85,7 @@ public sealed class ClipboardService : IDisposable
         // PRIVACY: Skip notifications for excluded content (password managers)
         if (e.IsExcluded)
         {
+            _suppressedText = null;
             System.Diagnostics.Debug.WriteLine(
                 "[ClipboardService] Clipboard change excluded by privacy flag.");
             return;
@@ -82,6 +93,7 @@ public sealed class ClipboardService : IDisposable
 
         if (e.HasImage)
         {
+            _suppressedText = null;
             if (_monitorImages)
             {
                 // Clipboard images can be tens of megabytes. Never materialize one
@@ -102,6 +114,11 @@ public sealed class ClipboardService : IDisposable
         if (e.HasText && _monitorText)
         {
             string? text = ReadClipboardText();
+            string? suppressed = _suppressedText;
+            _suppressedText = null;
+            if (suppressed != null && string.Equals(text, suppressed, StringComparison.Ordinal))
+                return;
+
             NotificationRequested?.Invoke(this, new ClipboardNotification
             {
                 RawText = text,

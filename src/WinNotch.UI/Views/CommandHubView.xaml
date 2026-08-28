@@ -15,34 +15,34 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface"
-                                Background="{TemplateBinding Background}"
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
-                                Padding="8,6">
-                            <ContentPresenter HorizontalAlignment="Stretch"
-                                              VerticalAlignment="Center"/>
+                                CornerRadius="8" Padding="7,5">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background"
-                                        Value="{DynamicResource Brush.Surface.Hover}"/>
-                                <Setter TargetName="Surface" Property="BorderBrush"
-                                        Value="{DynamicResource Brush.Accent.Border}"/>
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Border}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background"
-                                        Value="{DynamicResource Brush.Surface.Pressed}"/>
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.Surface.Pressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Surface" Property="Opacity" Value="0.42"/>
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.38"/>
                                 <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="HubCompactButton" TargetType="Button" BasedOn="{StaticResource HubCommandButton}">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,2"/>
         </Style>
 
         <Style x:Key="HubIconSurface" TargetType="Border">
@@ -57,100 +57,142 @@
     </UserControl.Resources>
 
     <Grid Margin="10,6,10,8">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+        <Grid x:Name="HubHomePanel">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="52"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="42"/>
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                <Border Width="3" Height="11" CornerRadius="1.5"
-                        Background="{DynamicResource Brush.Accent.Primary}" Margin="0,0,6,0"/>
-                <TextBlock Text="Komut Merkezi" FontSize="10" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-            </StackPanel>
-            <TextBlock Text="Sol tık araçları" FontSize="9"
-                       Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
-                       HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            <Grid Grid.Row="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <Border Width="3" Height="11" CornerRadius="1.5"
+                            Background="{DynamicResource Brush.Accent.Primary}" Margin="0,0,6,0"/>
+                    <TextBlock Text="Komut Merkezi" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                </StackPanel>
+                <TextBlock Text="Hızlı araçlar" FontSize="9"
+                           Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
+                           HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="0,2,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="ClipboardButton" Grid.Column="0" Style="{StaticResource HubCommandButton}"
+                        Click="ClipboardButton_Click">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource HubIconSurface}">
+                            <Path Data="{DynamicResource Icon.Copy}" Width="12" Height="12" Stretch="Uniform"
+                                  Stroke="{DynamicResource Brush.Accent.Primary}" StrokeThickness="1.35"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock Text="Pano" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                            <TextBlock x:Name="ClipboardHintText" Text="Bağlam yok" FontSize="8.5"
+                                       Foreground="{DynamicResource Brush.Text.OnDarkMuted}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+
+                <Button x:Name="ShelfButton" Grid.Column="2" Style="{StaticResource HubCommandButton}" Click="ShelfButton_Click">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource HubIconSurface}">
+                            <Path Data="{DynamicResource Icon.Folder}" Width="12" Height="12" Stretch="Uniform"
+                                  Stroke="{DynamicResource Brush.Accent.Primary}" StrokeThickness="1.35"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock Text="Dosyalar" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                            <TextBlock x:Name="ShelfHintText" Text="Raf boş" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+
+                <Button Grid.Column="4" Style="{StaticResource HubCommandButton}" Click="SettingsButton_Click">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource HubIconSurface}">
+                            <Path Data="{DynamicResource Icon.Settings}" Width="12" Height="12" Stretch="Uniform"
+                                  Stroke="{DynamicResource Brush.Accent.Primary}" StrokeThickness="1.25"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock Text="Ayarlar" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                            <TextBlock Text="WinNotch" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Style="{StaticResource HubCompactButton}" Click="SmartClipboardButton_Click">
+                    <StackPanel><TextBlock Text="Akıllı Pano" FontWeight="SemiBold"/><TextBlock Text="Metni dönüştür" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
+                </Button>
+                <Button Grid.Column="2" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="2. adım: Geçici not">
+                    <StackPanel><TextBlock Text="Not" FontWeight="SemiBold"/><TextBlock Text="Sıradaki" FontSize="8"/></StackPanel>
+                </Button>
+                <Button Grid.Column="4" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="3. adım: Zamanlayıcı">
+                    <StackPanel><TextBlock Text="Zamanlayıcı" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
+                </Button>
+                <Button Grid.Column="6" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="4. adım: QR oluşturma">
+                    <StackPanel><TextBlock Text="QR" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
+                </Button>
+            </Grid>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="0,2,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <Grid x:Name="SmartClipboardPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="22"/><RowDefinition Height="32"/>
+                <RowDefinition Height="34"/><RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                        Content="← Geri" Click="SmartClipboardBackButton_Click"/>
+                <TextBlock Text="Akıllı Pano" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                <TextBlock x:Name="SmartClipboardStatusText" Text="Panodan metin alınıyor" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+            </Grid>
 
-            <Button x:Name="ClipboardButton" Grid.Column="0"
-                    Style="{StaticResource HubCommandButton}"
-                    Click="ClipboardButton_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="28"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Border Style="{StaticResource HubIconSurface}">
-                        <Path Data="{DynamicResource Icon.Copy}" Width="12" Height="12"
-                              Stretch="Uniform" Stroke="{DynamicResource Brush.Accent.Primary}"
-                              StrokeThickness="1.35" StrokeLineJoin="Round"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
-                        <TextBlock Text="Pano" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-                        <TextBlock x:Name="ClipboardHintText" Text="Bağlam yok" FontSize="8.5"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkMuted}"
-                                   TextTrimming="CharacterEllipsis"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
+            <TextBox x:Name="SmartClipboardInput" Grid.Row="1" IsReadOnly="True" TextWrapping="NoWrap"
+                     VerticalContentAlignment="Center" Padding="7,3" FontSize="9"
+                     Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                     BorderBrush="{DynamicResource Brush.Border.OnDark}" BorderThickness="1"/>
 
-            <Button x:Name="ShelfButton" Grid.Column="2"
-                    Style="{StaticResource HubCommandButton}"
-                    Click="ShelfButton_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="28"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Border Style="{StaticResource HubIconSurface}">
-                        <Path Data="{DynamicResource Icon.Folder}" Width="12" Height="12"
-                              Stretch="Uniform" Stroke="{DynamicResource Brush.Accent.Primary}"
-                              StrokeThickness="1.35" StrokeLineJoin="Round"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
-                        <TextBlock Text="Dosyalar" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-                        <TextBlock x:Name="ShelfHintText" Text="Raf boş" FontSize="8.5"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
+            <Grid Grid.Row="2" Margin="0,5,0,5">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="74"/></Grid.ColumnDefinitions>
+                <ComboBox x:Name="TransformKindCombo" Grid.Column="0" SelectedIndex="0" FontSize="9"
+                          SelectionChanged="TransformKindCombo_SelectionChanged">
+                    <ComboBoxItem Content="Boşlukları temizle" Tag="CleanWhitespace"/>
+                    <ComboBoxItem Content="BÜYÜK HARF" Tag="Uppercase"/>
+                    <ComboBoxItem Content="küçük harf" Tag="Lowercase"/>
+                    <ComboBoxItem Content="Başlık Biçimi" Tag="TitleCase"/>
+                    <ComboBoxItem Content="JSON düzenle" Tag="PrettyJson"/>
+                    <ComboBoxItem Content="URL kodla" Tag="UrlEncode"/>
+                    <ComboBoxItem Content="URL çöz" Tag="UrlDecode"/>
+                </ComboBox>
+                <Button x:Name="CopyTransformButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
+                        Content="Kopyala" Click="CopyTransformButton_Click"/>
+            </Grid>
 
-            <Button Grid.Column="4" Style="{StaticResource HubCommandButton}"
-                    Click="SettingsButton_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="28"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Border Style="{StaticResource HubIconSurface}">
-                        <Path Data="{DynamicResource Icon.Settings}" Width="12" Height="12"
-                              Stretch="Uniform" Stroke="{DynamicResource Brush.Accent.Primary}"
-                              StrokeThickness="1.25" StrokeLineJoin="Round"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
-                        <TextBlock Text="Ayarlar" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
-                        <TextBlock Text="WinNotch" FontSize="8.5"
-                                   Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
+            <TextBox x:Name="SmartClipboardOutput" Grid.Row="3" IsReadOnly="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto" Padding="7,4" FontSize="9"
+                     Background="{DynamicResource Brush.Surface.Soft}" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"
+                     BorderBrush="{DynamicResource Brush.Accent.Border}" BorderThickness="1"/>
         </Grid>
     </Grid>
 </UserControl>

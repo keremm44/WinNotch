@@ -85,6 +85,8 @@ public partial class MainWindow : Window
         _commandHubView.ClipboardRequested += OnCommandHubClipboardRequested;
         _commandHubView.ShelfRequested += OnCommandHubShelfRequested;
         _commandHubView.SettingsRequested += OnCommandHubSettingsRequested;
+        _commandHubView.SmartClipboardRequested += OnCommandHubSmartClipboardRequested;
+        _commandHubView.ClipboardTextCopyRequested += OnCommandHubClipboardTextCopyRequested;
         _commandHubView.ApplyAppearance(_settings.Appearance);
         _commandHubView.SetClipboardContext(_lastMeaningfulClipboard.Current);
         _commandHubView.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
@@ -98,6 +100,8 @@ public partial class MainWindow : Window
         _commandHubView.ClipboardRequested -= OnCommandHubClipboardRequested;
         _commandHubView.ShelfRequested -= OnCommandHubShelfRequested;
         _commandHubView.SettingsRequested -= OnCommandHubSettingsRequested;
+        _commandHubView.SmartClipboardRequested -= OnCommandHubSmartClipboardRequested;
+        _commandHubView.ClipboardTextCopyRequested -= OnCommandHubClipboardTextCopyRequested;
         CommandHubHost.Content = null;
         _commandHubView = null;
     }

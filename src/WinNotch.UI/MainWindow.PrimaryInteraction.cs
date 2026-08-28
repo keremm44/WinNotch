@@ -162,6 +162,46 @@ public partial class MainWindow
         SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void OnCommandHubSmartClipboardRequested(object? sender, EventArgs e)
+    {
+        if (_currentState != NotchState.CommandHub || sender is not Views.CommandHubView hub)
+            return;
+
+        string? text = null;
+        try
+        {
+            if (System.Windows.Clipboard.ContainsText())
+                text = System.Windows.Clipboard.GetText();
+        }
+        catch
+        {
+            // Another process can briefly lock the clipboard. The tool remains open
+            // and reports the empty/error state instead of blocking the UI thread.
+        }
+
+        hub.SetSmartClipboardText(text);
+    }
+
+    private void OnCommandHubClipboardTextCopyRequested(
+        object? sender,
+        Views.ClipboardTextCopyRequestedEventArgs e)
+    {
+        if (_currentState != NotchState.CommandHub || string.IsNullOrEmpty(e.Text))
+            return;
+
+        try
+        {
+            System.Windows.Clipboard.SetText(e.Text);
+            _clipboardService?.SuppressNextTextNotification(e.Text);
+            e.Succeeded = true;
+        }
+        catch
+        {
+            // Clipboard contention is transient; keep the transformed output visible
+            // so the user can retry without losing work.
+        }
+    }
+
     private NotchState GetStateAfterCommandHub()
     {
         NotchState persistent = GetPersistentState();
