@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using WinNotch.Common;
 using WinNotch.Core.Services;
 
@@ -30,7 +29,7 @@ public partial class MainWindow
         {
             if (e.SaveToFile)
             {
-                var dialog = new SaveFileDialog
+                var dialog = new Microsoft.Win32.SaveFileDialog
                 {
                     Title = "QR kodunu kaydet",
                     Filter = "PNG görseli (*.png)|*.png",

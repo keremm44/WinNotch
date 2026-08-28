@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using WinNotch.Common;
+using WinNotch.Core.Interop;
 using WinNotch.Core.Services;
 
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
