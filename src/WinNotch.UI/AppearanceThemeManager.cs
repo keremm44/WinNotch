@@ -5,6 +5,7 @@ using WinNotch.Common;
 using WpfApplication = System.Windows.Application;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
+using WpfSystemColors = System.Windows.SystemColors;
 
 namespace WinNotch.UI;
 
@@ -134,12 +135,12 @@ public static class AppearanceThemeManager
 
     private static void ApplyHighContrast(ResourceDictionary resources)
     {
-        string window = SystemColors.WindowColor.ToString();
-        string text = SystemColors.WindowTextColor.ToString();
-        string control = SystemColors.ControlColor.ToString();
-        string highlight = SystemColors.HighlightColor.ToString();
-        string highlightText = SystemColors.HighlightTextColor.ToString();
-        string gray = SystemColors.GrayTextColor.ToString();
+        string window = WpfSystemColors.WindowColor.ToString();
+        string text = WpfSystemColors.WindowTextColor.ToString();
+        string control = WpfSystemColors.ControlColor.ToString();
+        string highlight = WpfSystemColors.HighlightColor.ToString();
+        string highlightText = WpfSystemColors.HighlightTextColor.ToString();
+        string gray = WpfSystemColors.GrayTextColor.ToString();
 
         foreach (string key in new[] { "Brush.Notch.Base", "Brush.Window.Base", "Brush.Window.BackdropTint", "Brush.Window.Header" })
             SetBrush(resources, key, window);
