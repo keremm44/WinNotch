@@ -212,7 +212,7 @@ public partial class CommandHubView : UserControl
 
     private void ToolComboBox_DropDownClosed(object sender, EventArgs e)
     {
-        if (sender is ComboBox combo)
+        if (sender is System.Windows.Controls.ComboBox combo)
             Dispatcher.BeginInvoke(() => combo.Focus());
     }
 
