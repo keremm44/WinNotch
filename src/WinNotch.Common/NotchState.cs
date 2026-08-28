@@ -16,5 +16,6 @@ public enum NotchState
     MediaActive,
     MediaAmbient,
     ClipboardNotify,
-    ScreenshotNotify
+    ScreenshotNotify,
+    TimerNotify
 }

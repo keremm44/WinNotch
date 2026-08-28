@@ -276,9 +276,19 @@ public partial class MainWindow
     private void CommandHubLeaveTimer_Tick(object? sender, EventArgs e)
     {
         _commandHubLeaveTimer?.Stop();
-        if (_currentState != NotchState.CommandHub || RootGrid.IsMouseOver)
+        if (_currentState != NotchState.CommandHub || RootGrid.IsMouseOver ||
+            _commandHubEditorActive)
             return;
 
+        TransitionToState(GetPersistentState(), force: true);
+    }
+
+    private void MainWindow_CommandHubEditorDeactivated(object? sender, EventArgs e)
+    {
+        if (!_commandHubEditorActive || _currentState != NotchState.CommandHub)
+            return;
+
+        SetCommandHubEditorActivation(false);
         TransitionToState(GetPersistentState(), force: true);
     }
 

@@ -145,8 +145,8 @@
                 <Button Grid.Column="2" Style="{StaticResource HubCompactButton}" Click="TemporaryNoteButton_Click">
                     <StackPanel><TextBlock Text="Not" FontWeight="SemiBold"/><TextBlock Text="Geçici taslak" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
-                <Button Grid.Column="4" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="3. adım: Zamanlayıcı">
-                    <StackPanel><TextBlock Text="Zamanlayıcı" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
+                <Button Grid.Column="4" Style="{StaticResource HubCompactButton}" Click="TimerButton_Click">
+                    <StackPanel><TextBlock Text="Zamanlayıcı" FontWeight="SemiBold"/><TextBlock x:Name="TimerHomeHintText" Text="Hazır" FontSize="8" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/></StackPanel>
                 </Button>
                 <Button Grid.Column="6" Style="{StaticResource HubCompactButton}" IsEnabled="False" ToolTip="4. adım: QR oluşturma">
                     <StackPanel><TextBlock Text="QR" FontWeight="SemiBold"/><TextBlock Text="Planlandı" FontSize="8"/></StackPanel>
@@ -229,6 +229,42 @@
                         Content="Temizle" Click="ClearTemporaryNoteButton_Click"/>
                 <Button Grid.Column="4" Style="{StaticResource HubCompactButton}"
                         Content="Kopyala" Click="CopyTemporaryNoteButton_Click"/>
+            </Grid>
+        </Grid>
+
+        <Grid x:Name="TimerPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="22"/><RowDefinition Height="48"/>
+                <RowDefinition Height="34"/><RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Button Width="46" HorizontalAlignment="Left" Style="{StaticResource HubCompactButton}"
+                        Content="← Geri" Click="TimerBackButton_Click"/>
+                <TextBlock Text="Zamanlayıcı" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                <TextBlock x:Name="TimerStatusText" Text="Hazır" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" FontSize="8.5" Foreground="{DynamicResource Brush.Text.OnDarkMuted}"/>
+            </Grid>
+            <TextBlock x:Name="TimerRemainingText" Grid.Row="1" Text="05:00" FontSize="28" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+            <Grid Grid.Row="2" Margin="0,3">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                <ComboBox x:Name="TimerDurationCombo" Grid.Column="0" SelectedIndex="1" FontSize="9"
+                          IsEditable="True" ToolTip="1–1440 dakika">
+                    <ComboBoxItem Content="1 dakika" Tag="1"/><ComboBoxItem Content="5 dakika" Tag="5"/>
+                    <ComboBoxItem Content="10 dakika" Tag="10"/><ComboBoxItem Content="25 dakika" Tag="25"/>
+                    <ComboBoxItem Content="60 dakika" Tag="60"/>
+                </ComboBox>
+                <Button x:Name="TimerStartButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
+                        Content="Başlat" Click="TimerStartButton_Click"/>
+            </Grid>
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Button x:Name="TimerPauseButton" Grid.Column="0" Style="{StaticResource HubCompactButton}"
+                        Content="Duraklat" IsEnabled="False" Click="TimerPauseButton_Click"/>
+                <Button x:Name="TimerCancelButton" Grid.Column="2" Style="{StaticResource HubCompactButton}"
+                        Content="İptal" IsEnabled="False" Click="TimerCancelButton_Click"/>
             </Grid>
         </Grid>
     </Grid>

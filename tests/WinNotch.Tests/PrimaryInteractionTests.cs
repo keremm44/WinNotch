@@ -13,6 +13,7 @@ public class PrimaryInteractionTests
     [InlineData(NotchState.ShelfOccupied)]
     [InlineData(NotchState.ShelfExpanded)]
     [InlineData(NotchState.DropResult)]
+    [InlineData(NotchState.TimerNotify)]
     public void UnclaimedPrimaryClick_OpensCommandHub(NotchState state)
     {
         PrimaryInteractionDecision decision = PrimaryInteractionController.Resolve(state);

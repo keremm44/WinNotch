@@ -32,6 +32,16 @@ public class StateMachineTests
     }
 
     [Fact]
+    public void TimerCompletion_InterruptsCommandHubButNotScreenshot()
+    {
+        var sm = new NotchStateMachine();
+        sm.TryTransition(NotchState.CommandHub, StatePriority.CommandHub);
+        Assert.True(sm.TryTransition(NotchState.TimerNotify, StatePriority.Timer).ShouldApply);
+        Assert.Equal(StatePriority.Timer, sm.CurrentPriority);
+        Assert.True(sm.TryTransition(NotchState.ScreenshotNotify, StatePriority.Screenshot).ShouldApply);
+    }
+
+    [Fact]
     public void CommandHub_CanBeInterruptedByActionableNotification()
     {
         var sm = new NotchStateMachine();

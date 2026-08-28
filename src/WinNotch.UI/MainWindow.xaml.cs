@@ -52,6 +52,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _motionController = new NotchMotionController(this, SyncNativeGeometry);
         SourceInitialized += MainWindow_SourceInitialized;
+        Deactivated += MainWindow_CommandHubEditorDeactivated;
     }
 
     private Views.DropZoneView EnsureDropZoneView()
@@ -90,9 +91,14 @@ public partial class MainWindow : Window
         _commandHubView.TemporaryNoteRequested += OnCommandHubTemporaryNoteRequested;
         _commandHubView.TemporaryNoteChanged += OnCommandHubTemporaryNoteChanged;
         _commandHubView.EditorModeChanged += OnCommandHubEditorModeChanged;
+        _commandHubView.TimerRequested += OnCommandHubTimerRequested;
+        _commandHubView.TimerStartRequested += OnCommandHubTimerStartRequested;
+        _commandHubView.TimerPauseResumeRequested += OnCommandHubTimerPauseResumeRequested;
+        _commandHubView.TimerCancelRequested += OnCommandHubTimerCancelRequested;
         _commandHubView.ApplyAppearance(_settings.Appearance);
         _commandHubView.SetClipboardContext(_lastMeaningfulClipboard.Current);
         _commandHubView.SetShelfItemCount(_dropZoneView?.Items.Count ?? 0);
+        _commandHubView.SetTimerState(_countdownTimer.Status, _countdownTimer.Remaining);
         CommandHubHost.Content = _commandHubView;
         return _commandHubView;
     }
@@ -108,6 +114,10 @@ public partial class MainWindow : Window
         _commandHubView.TemporaryNoteRequested -= OnCommandHubTemporaryNoteRequested;
         _commandHubView.TemporaryNoteChanged -= OnCommandHubTemporaryNoteChanged;
         _commandHubView.EditorModeChanged -= OnCommandHubEditorModeChanged;
+        _commandHubView.TimerRequested -= OnCommandHubTimerRequested;
+        _commandHubView.TimerStartRequested -= OnCommandHubTimerStartRequested;
+        _commandHubView.TimerPauseResumeRequested -= OnCommandHubTimerPauseResumeRequested;
+        _commandHubView.TimerCancelRequested -= OnCommandHubTimerCancelRequested;
         SetCommandHubEditorActivation(false);
         CommandHubHost.Content = null;
         _commandHubView = null;
@@ -621,6 +631,8 @@ public partial class MainWindow : Window
             ? Visibility.Visible : Visibility.Collapsed;
         MediaAmbientContent.Visibility = state == NotchState.MediaAmbient
             ? Visibility.Visible : Visibility.Collapsed;
+        TimerNotificationContent.Visibility = state == NotchState.TimerNotify
+            ? Visibility.Visible : Visibility.Collapsed;
         DropZoneHost.Visibility = shelfVisible ? Visibility.Visible : Visibility.Collapsed;
         MediaWidgetHost.Visibility = state == NotchState.MediaActive ? Visibility.Visible : Visibility.Collapsed;
         bool commandHubVisible = state == NotchState.CommandHub;
@@ -883,6 +895,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        Deactivated -= MainWindow_CommandHubEditorDeactivated;
         if (_stateReturnTimer != null)
         {
             _stateReturnTimer.Stop();
@@ -891,6 +904,7 @@ public partial class MainWindow : Window
         }
         ReleaseCommandHubLeaveTimer();
         ReleaseCommandHubView();
+        ReleaseCountdownTimer();
         ReleaseTemporaryHideTimer();
         _motionController.Dispose();
         ReleaseDropZoneView();

@@ -11,7 +11,8 @@ public static class PrimaryInteractionController
     {
         NotchState.Idle or NotchState.Hover or
         NotchState.MediaAmbient or NotchState.MediaActive or
-        NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.DropResult
+        NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.DropResult or
+        NotchState.TimerNotify
             => new(PrimaryInteractionKind.OpenCommandHub, NotchState.CommandHub),
 
         // Notifications remain contextual: their background click reveals the

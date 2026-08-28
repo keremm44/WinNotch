@@ -22,6 +22,11 @@ public sealed class CommandHubEditorModeEventArgs : EventArgs
     public required bool IsActive { get; init; }
 }
 
+public sealed class TimerStartRequestedEventArgs : EventArgs
+{
+    public required TimeSpan Duration { get; init; }
+}
+
 public partial class CommandHubView : UserControl
 {
     private AppearanceSettings _appearance = new();
@@ -38,6 +43,10 @@ public partial class CommandHubView : UserControl
     public event EventHandler? TemporaryNoteRequested;
     public event EventHandler<TemporaryNoteChangedEventArgs>? TemporaryNoteChanged;
     public event EventHandler<CommandHubEditorModeEventArgs>? EditorModeChanged;
+    public event EventHandler? TimerRequested;
+    public event EventHandler<TimerStartRequestedEventArgs>? TimerStartRequested;
+    public event EventHandler? TimerPauseResumeRequested;
+    public event EventHandler? TimerCancelRequested;
 
     public CommandHubView()
     {
@@ -85,6 +94,33 @@ public partial class CommandHubView : UserControl
         _updatingTemporaryNote = false;
         UpdateTemporaryNoteStatus();
         Dispatcher.BeginInvoke(() => TemporaryNoteTextBox.Focus());
+    }
+
+    public void SetTimerState(CountdownTimerStatus status, TimeSpan remaining)
+    {
+        TimeSpan safe = remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+        int totalHours = (int)safe.TotalHours;
+        TimerRemainingText.Text = totalHours > 0
+            ? $"{totalHours:00}:{safe.Minutes:00}:{safe.Seconds:00}"
+            : $"{safe.Minutes:00}:{safe.Seconds:00}";
+        TimerHomeHintText.Text = status switch
+        {
+            CountdownTimerStatus.Running => TimerRemainingText.Text,
+            CountdownTimerStatus.Paused => "Duraklatıldı",
+            CountdownTimerStatus.Completed => "Tamamlandı",
+            _ => "Hazır"
+        };
+        TimerStatusText.Text = status switch
+        {
+            CountdownTimerStatus.Running => "Çalışıyor",
+            CountdownTimerStatus.Paused => "Duraklatıldı",
+            CountdownTimerStatus.Completed => "Süre doldu",
+            _ => "Hazır"
+        };
+        TimerStartButton.Content = status == CountdownTimerStatus.Idle ? "Başlat" : "Yeniden başlat";
+        TimerPauseButton.IsEnabled = status is CountdownTimerStatus.Running or CountdownTimerStatus.Paused;
+        TimerPauseButton.Content = status == CountdownTimerStatus.Paused ? "Devam et" : "Duraklat";
+        TimerCancelButton.IsEnabled = status != CountdownTimerStatus.Idle;
     }
 
     private void RenderClipboardContext()
@@ -188,6 +224,58 @@ public partial class CommandHubView : UserControl
             : "Pano meşgul, tekrar deneyin";
     }
 
+    private void TimerButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        HubHomePanel.Visibility = Visibility.Collapsed;
+        TimerPanel.Visibility = Visibility.Visible;
+        SetEditorMode(true);
+        TimerRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void TimerBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        TimerPanel.Visibility = Visibility.Collapsed;
+        HubHomePanel.Visibility = Visibility.Visible;
+        SetEditorMode(false);
+    }
+
+    private void TimerStartButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        int minutes;
+        if (TimerDurationCombo.SelectedItem is ComboBoxItem item &&
+            item.Tag is string preset &&
+            int.TryParse(preset, out int presetMinutes))
+        {
+            minutes = presetMinutes;
+        }
+        else if (!int.TryParse(TimerDurationCombo.Text.Trim(), out minutes) ||
+                 minutes is < 1 or > 1440)
+        {
+            TimerStatusText.Text = "1–1440 dakika girin";
+            return;
+        }
+
+        TimerStartRequested?.Invoke(this, new TimerStartRequestedEventArgs
+        {
+            Duration = TimeSpan.FromMinutes(minutes)
+        });
+    }
+
+    private void TimerPauseButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        TimerPauseResumeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void TimerCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        TimerCancelRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void TemporaryNoteButton_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
@@ -281,6 +369,10 @@ public partial class CommandHubView : UserControl
         TemporaryNoteRequested = null;
         TemporaryNoteChanged = null;
         EditorModeChanged = null;
+        TimerRequested = null;
+        TimerStartRequested = null;
+        TimerPauseResumeRequested = null;
+        TimerCancelRequested = null;
         _clipboardContext = null;
         _smartClipboardSource = string.Empty;
     }

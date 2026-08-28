@@ -11,6 +11,7 @@ public enum StatePriority
     Shelf = 15,
     CommandHub = 18,
     Clipboard = 20,
+    Timer = 22,
     Screenshot = 25,
     DropTarget = 40,
     DropResult = 50
@@ -127,6 +128,7 @@ public sealed class NotchStateMachine
         NotchState.CommandHub => StatePriority.CommandHub,
         NotchState.ClipboardNotify => StatePriority.Clipboard,
         NotchState.ScreenshotNotify => StatePriority.Screenshot,
+        NotchState.TimerNotify => StatePriority.Timer,
         NotchState.DragActive => StatePriority.DropTarget,
         NotchState.DropResult => StatePriority.DropResult,
         _ => StatePriority.None
@@ -148,6 +150,7 @@ public static class StateDimensions
         NotchState.MediaAmbient => (Constants.NotchMediaAmbientWidth, Constants.NotchMediaAmbientHeight),
         NotchState.ClipboardNotify => (Constants.NotchClipboardWidth, Constants.NotchClipboardHeight),
         NotchState.ScreenshotNotify => (Constants.NotchScreenshotWidth, Constants.NotchScreenshotHeight),
+        NotchState.TimerNotify => (Constants.NotchTimerNotifyWidth, Constants.NotchTimerNotifyHeight),
         _ => (Constants.NotchIdleWidth, Constants.NotchIdleHeight)
     };
 }
