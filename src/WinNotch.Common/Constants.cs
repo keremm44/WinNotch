@@ -57,6 +57,9 @@ public static class Constants
     public const int CommandHubLeaveGraceMs = 340;
     public const int DropResultDisplayDurationMs = 900;
     public const int MediaAmbientFlashDurationMs = 4000;
+    public const int FullscreenHideAnimationMs = 1200;
+    public const int FullscreenShowAnimationMs = 900;
+    public const double FullscreenSlideExtraDistance = 16.0;
     public const int MaxAttentionEventsPerMinute = 5;
     public const int MinNotificationIntervalMs = 3000;
 

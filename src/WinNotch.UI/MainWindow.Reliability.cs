@@ -237,14 +237,14 @@ public partial class MainWindow
 
         double startTop = ResolveWindowTop();
         double distance = ResolveFullscreenSlideDistance();
-        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
-        var duration = TimeSpan.FromMilliseconds(170);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        var duration = TimeSpan.FromMilliseconds(Constants.FullscreenHideAnimationMs);
         var slide = new DoubleAnimation(startTop, startTop - distance, duration)
         {
             EasingFunction = ease,
             FillBehavior = FillBehavior.Stop
         };
-        var fade = new DoubleAnimation(1.0, 0.12, duration)
+        var fade = new DoubleAnimation(1.0, 0.35, duration)
         {
             EasingFunction = ease,
             FillBehavior = FillBehavior.Stop
@@ -277,14 +277,14 @@ public partial class MainWindow
         double startTop = wasActuallyHidden
             ? targetTop - distance
             : Math.Min(animatedTop, targetTop);
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var duration = TimeSpan.FromMilliseconds(190);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        var duration = TimeSpan.FromMilliseconds(Constants.FullscreenShowAnimationMs);
         var slide = new DoubleAnimation(startTop, targetTop, duration)
         {
             EasingFunction = ease,
             FillBehavior = FillBehavior.Stop
         };
-        var fade = new DoubleAnimation(wasActuallyHidden ? 0.12 : animatedOpacity, 1.0, duration)
+        var fade = new DoubleAnimation(wasActuallyHidden ? 0.35 : animatedOpacity, 1.0, duration)
         {
             EasingFunction = ease,
             FillBehavior = FillBehavior.Stop
@@ -344,7 +344,9 @@ public partial class MainWindow
     private double ResolveFullscreenSlideDistance()
     {
         double height = ActualHeight > 1 ? ActualHeight : Height;
-        return Math.Max(24.0, height + 4.0);
+        return Math.Max(
+            42.0,
+            height + Constants.FullscreenSlideExtraDistance);
     }
 
     private void Reliability_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
