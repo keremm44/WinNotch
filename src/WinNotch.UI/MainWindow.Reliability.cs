@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
@@ -19,6 +20,8 @@ public partial class MainWindow
     private bool _suppressPrimaryClickAfterMenuDismiss;
     private bool _reliabilityLayerInitialized;
     private bool _hiddenForFullscreen;
+    private int _fullscreenAnimationGeneration;
+    private bool _fullscreenAnimationInProgress;
 
     protected override void OnContentRendered(EventArgs e)
     {
@@ -36,6 +39,7 @@ public partial class MainWindow
     {
         StopFullscreenFallbackChecks();
         StopShellFullscreenTracking();
+        CancelFullscreenTransitionAnimation();
         CloseManagedContextMenu();
 
         RootGrid.PreviewMouseRightButtonUp -= Reliability_PreviewMouseRightButtonUp;
@@ -51,6 +55,8 @@ public partial class MainWindow
         {
             StopFullscreenFallbackChecks();
             StopShellFullscreenTracking();
+            CancelFullscreenTransitionAnimation();
+            _hiddenForFullscreen = false;
             return;
         }
 
@@ -168,24 +174,35 @@ public partial class MainWindow
 
         if (fullscreen)
         {
+            // The fallback check runs every 650ms. Never restart an active/completed
+            // transition for the same fullscreen window.
+            if (_hiddenForFullscreen)
+            {
+                if (!_fullscreenAnimationInProgress && Visibility != Visibility.Hidden)
+                    HideFullscreenImmediately();
+                return;
+            }
+
             _hiddenForFullscreen = true;
             CloseManagedContextMenu();
 
             // Hiding a hovered window does not reliably produce MouseLeave. Normalize
-            // hover-only states now so fullscreen exit restores the compact persistent
-            // surface rather than a stranded expanded media/hover surface.
+            // the state and stop its size animation before moving the HWND upward.
             if (_currentState is NotchState.MediaActive or NotchState.Hover)
             {
-                TransitionToState(GetPersistentState(), force: true);
+                NotchState persistent = GetPersistentState();
+                TransitionToState(persistent, force: true);
+                ApplyDimensions(persistent, force: true);
             }
 
-            // Keep WPF and the native HWND synchronized. Geometry animation used to
-            // call SetWindowPos(SWP_SHOWWINDOW), making the HWND visible again while
-            // WPF still reported Visibility.Hidden; subsequent checks then skipped
-            // hiding it. Enforce the native state on every fullscreen verification.
-            Visibility = Visibility.Hidden;
-            if (_hWnd != IntPtr.Zero && User32.IsWindowVisible(_hWnd))
-                User32.ShowWindow(_hWnd, User32.SW_HIDE);
+            // A size transition recenters the native HWND every frame. Complete it
+            // before the vertical slide so the two motion systems cannot fight.
+            _motionController.Apply(_currentWidth, _currentHeight, immediate: true);
+
+            if (ShouldAnimateFullscreenTransition())
+                BeginFullscreenHideAnimation();
+            else
+                HideFullscreenImmediately();
             return;
         }
 
@@ -194,12 +211,140 @@ public partial class MainWindow
         // a fullscreen window closed or lost focus.
         bool wasHiddenForFullscreen = _hiddenForFullscreen;
         _hiddenForFullscreen = false;
-        if (!_manuallyHidden && (wasHiddenForFullscreen || Visibility != Visibility.Visible))
+        if (_manuallyHidden || (!wasHiddenForFullscreen && Visibility == Visibility.Visible))
+            return;
+
+        if (ShouldAnimateFullscreenTransition())
+            BeginFullscreenShowAnimation();
+        else
+            ShowFullscreenImmediately();
+    }
+
+    private bool ShouldAnimateFullscreenTransition()
+    {
+        if (!SystemParameters.ClientAreaAnimation)
+            return false;
+
+        MotionProfile motion = AppearanceResolver.ResolveMotion(_settings.Appearance);
+        return motion.ContentOffsetY > 0.01;
+    }
+
+    private void BeginFullscreenHideAnimation()
+    {
+        int generation = ++_fullscreenAnimationGeneration;
+        CancelFullscreenWindowPropertyAnimations();
+        _fullscreenAnimationInProgress = true;
+
+        double startTop = ResolveWindowTop();
+        double distance = ResolveFullscreenSlideDistance();
+        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var duration = TimeSpan.FromMilliseconds(170);
+        var slide = new DoubleAnimation(startTop, startTop - distance, duration)
         {
-            Visibility = Visibility.Visible;
-            if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
-                User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
-        }
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop
+        };
+        var fade = new DoubleAnimation(1.0, 0.12, duration)
+        {
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop
+        };
+
+        slide.Completed += (_, _) =>
+        {
+            if (generation != _fullscreenAnimationGeneration || !_hiddenForFullscreen)
+                return;
+
+            _fullscreenAnimationInProgress = false;
+            HideFullscreenImmediately();
+        };
+
+        BeginAnimation(TopProperty, slide, HandoffBehavior.SnapshotAndReplace);
+        BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void BeginFullscreenShowAnimation()
+    {
+        int generation = ++_fullscreenAnimationGeneration;
+        double animatedTop = ResolveWindowTop();
+        double animatedOpacity = Opacity;
+        bool wasActuallyHidden = Visibility != Visibility.Visible;
+        CancelFullscreenWindowPropertyAnimations();
+        _fullscreenAnimationInProgress = true;
+
+        double targetTop = ResolveWindowTop();
+        double distance = ResolveFullscreenSlideDistance();
+        double startTop = wasActuallyHidden
+            ? targetTop - distance
+            : Math.Min(animatedTop, targetTop);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(190);
+        var slide = new DoubleAnimation(startTop, targetTop, duration)
+        {
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop
+        };
+        var fade = new DoubleAnimation(wasActuallyHidden ? 0.12 : animatedOpacity, 1.0, duration)
+        {
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop
+        };
+
+        slide.Completed += (_, _) =>
+        {
+            if (generation != _fullscreenAnimationGeneration || _hiddenForFullscreen)
+                return;
+
+            _fullscreenAnimationInProgress = false;
+            CancelFullscreenWindowPropertyAnimations();
+        };
+
+        BeginAnimation(TopProperty, slide, HandoffBehavior.SnapshotAndReplace);
+        BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        Visibility = Visibility.Visible;
+        if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
+            User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
+    }
+
+    private void HideFullscreenImmediately()
+    {
+        CancelFullscreenWindowPropertyAnimations();
+        _fullscreenAnimationInProgress = false;
+        Visibility = Visibility.Hidden;
+        if (_hWnd != IntPtr.Zero && User32.IsWindowVisible(_hWnd))
+            User32.ShowWindow(_hWnd, User32.SW_HIDE);
+    }
+
+    private void ShowFullscreenImmediately()
+    {
+        CancelFullscreenWindowPropertyAnimations();
+        _fullscreenAnimationInProgress = false;
+        Visibility = Visibility.Visible;
+        if (_hWnd != IntPtr.Zero && !User32.IsWindowVisible(_hWnd))
+            User32.ShowWindow(_hWnd, User32.SW_SHOWNOACTIVATE);
+    }
+
+    private void CancelFullscreenTransitionAnimation()
+    {
+        _fullscreenAnimationGeneration++;
+        _fullscreenAnimationInProgress = false;
+        CancelFullscreenWindowPropertyAnimations();
+    }
+
+    private void CancelFullscreenWindowPropertyAnimations()
+    {
+        BeginAnimation(TopProperty, null);
+        BeginAnimation(OpacityProperty, null);
+        Opacity = 1.0;
+    }
+
+    private double ResolveWindowTop()
+        => double.IsNaN(Top) || double.IsInfinity(Top) ? 0.0 : Top;
+
+    private double ResolveFullscreenSlideDistance()
+    {
+        double height = ActualHeight > 1 ? ActualHeight : Height;
+        return Math.Max(24.0, height + 4.0);
     }
 
     private void Reliability_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
