@@ -52,6 +52,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _motionController = new NotchMotionController(this, SyncNativeGeometry);
         SourceInitialized += MainWindow_SourceInitialized;
+        Deactivated += MainWindow_CommandHubEditorDeactivated;
     }
 
     private Views.DropZoneView EnsureDropZoneView()
@@ -904,6 +905,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        Deactivated -= MainWindow_CommandHubEditorDeactivated;
         if (_stateReturnTimer != null)
         {
             _stateReturnTimer.Stop();

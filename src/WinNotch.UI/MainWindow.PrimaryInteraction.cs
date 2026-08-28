@@ -17,6 +17,7 @@ public partial class MainWindow
     private System.Windows.Threading.DispatcherTimer? _commandHubLeaveTimer;
     private readonly TemporaryNoteSession _temporaryNote = new();
     private bool _commandHubEditorActive;
+    private bool _commandHubModalActionActive;
     private IntPtr _commandHubPreviousForeground;
 
     private void RootGrid_PrimaryMouseEnter(object sender, MouseEventArgs e)
@@ -271,6 +272,24 @@ public partial class MainWindow
             return;
 
         TransitionToState(GetPersistentState(), force: true);
+    }
+
+    private void MainWindow_CommandHubEditorDeactivated(object? sender, EventArgs e)
+    {
+        if (!_commandHubEditorActive || _commandHubModalActionActive ||
+            _currentState != NotchState.CommandHub)
+            return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!_commandHubEditorActive || _commandHubModalActionActive || IsActive ||
+                _currentState != NotchState.CommandHub ||
+                _commandHubView?.HasOpenPopup == true)
+                return;
+
+            SetCommandHubEditorActivation(false);
+            TransitionToState(GetPersistentState(), force: true);
+        }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     private void CancelCommandHubLeave() => _commandHubLeaveTimer?.Stop();

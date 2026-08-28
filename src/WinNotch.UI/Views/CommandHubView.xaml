@@ -211,7 +211,8 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="74"/></Grid.ColumnDefinitions>
                 <ComboBox x:Name="TransformKindCombo" Grid.Column="0" SelectedIndex="0" FontSize="9"
                           Style="{StaticResource HubComboBox}"
-                          SelectionChanged="TransformKindCombo_SelectionChanged">
+                          SelectionChanged="TransformKindCombo_SelectionChanged"
+                          DropDownClosed="ToolComboBox_DropDownClosed">
                     <ComboBoxItem Content="Boşlukları temizle" Tag="CleanWhitespace"/>
                     <ComboBoxItem Content="BÜYÜK HARF" Tag="Uppercase"/>
                     <ComboBoxItem Content="küçük harf" Tag="Lowercase"/>
@@ -287,7 +288,8 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
                 <ComboBox x:Name="TimerDurationCombo" Grid.Column="0" SelectedIndex="1" FontSize="9"
                           Style="{StaticResource HubComboBox}"
-                          IsEditable="True" ToolTip="1–1440 dakika">
+                          IsEditable="True" ToolTip="1–1440 dakika"
+                          DropDownClosed="ToolComboBox_DropDownClosed">
                     <ComboBoxItem Content="1 dakika" Tag="1"/><ComboBoxItem Content="5 dakika" Tag="5"/>
                     <ComboBoxItem Content="10 dakika" Tag="10"/><ComboBoxItem Content="25 dakika" Tag="25"/>
                     <ComboBoxItem Content="60 dakika" Tag="60"/>

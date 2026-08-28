@@ -54,6 +54,7 @@ public partial class CommandHubView : UserControl
     private byte[]? _qrPngBytes;
 
     public double PreferredHeight { get; private set; } = Constants.NotchCommandHubHeight;
+    public bool HasOpenPopup => TransformKindCombo.IsDropDownOpen || TimerDurationCombo.IsDropDownOpen;
 
     public event EventHandler? ClipboardRequested;
     public event EventHandler? ShelfRequested;
@@ -207,6 +208,12 @@ public partial class CommandHubView : UserControl
     {
         if (IsInitialized)
             ApplySelectedTransformation();
+    }
+
+    private void ToolComboBox_DropDownClosed(object sender, EventArgs e)
+    {
+        if (sender is ComboBox combo)
+            Dispatcher.BeginInvoke(() => combo.Focus());
     }
 
     private void ApplySelectedTransformation()

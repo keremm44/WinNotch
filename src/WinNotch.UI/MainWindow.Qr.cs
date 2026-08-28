@@ -37,7 +37,17 @@ public partial class MainWindow
                     AddExtension = true,
                     FileName = $"WinNotch-QR-{DateTime.Now:yyyyMMdd-HHmmss}.png"
                 };
-                if (dialog.ShowDialog(this) != true)
+                bool accepted;
+                _commandHubModalActionActive = true;
+                try
+                {
+                    accepted = dialog.ShowDialog(this) == true;
+                }
+                finally
+                {
+                    _commandHubModalActionActive = false;
+                }
+                if (!accepted)
                     return;
                 File.WriteAllBytes(dialog.FileName, e.PngBytes);
             }
