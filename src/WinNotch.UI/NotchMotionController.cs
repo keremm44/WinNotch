@@ -8,11 +8,12 @@ namespace WinNotch.UI;
 /// <summary>
 /// Finite, retargetable size motion for the notch.
 /// The timer is stopped while idle, so there is no continuous animation loop.
+/// Native HWND geometry is synchronized by MainWindow.OnRenderSizeChanged, which
+/// keeps one DPI-aware region writer instead of a second legacy animation callback.
 /// </summary>
 internal sealed class NotchMotionController : IDisposable
 {
     private readonly Window _window;
-    private readonly Action _syncNativeGeometry;
     private DispatcherTimer? _timer;
 
     private double _startWidth;
@@ -27,7 +28,9 @@ internal sealed class NotchMotionController : IDisposable
     public NotchMotionController(Window window, Action syncNativeGeometry)
     {
         _window = window;
-        _syncNativeGeometry = syncNativeGeometry;
+        // Kept in the signature for MainWindow binary/source compatibility while the
+        // legacy callback path is retired. SizeChanged is now the sole runtime sync.
+        _ = syncNativeGeometry;
     }
 
     public void Configure(AppearanceSettings settings)
@@ -43,7 +46,6 @@ internal sealed class NotchMotionController : IDisposable
             _timer?.Stop();
             _window.Width = targetWidth;
             _window.Height = targetHeight;
-            _syncNativeGeometry();
             return;
         }
 
@@ -89,14 +91,12 @@ internal sealed class NotchMotionController : IDisposable
 
         _window.Width = Lerp(_startWidth, _targetWidth, eased);
         _window.Height = Lerp(_startHeight, _targetHeight, eased);
-        _syncNativeGeometry();
 
         if (progress >= 1.0)
         {
             _timer?.Stop();
             _window.Width = _targetWidth;
             _window.Height = _targetHeight;
-            _syncNativeGeometry();
         }
     }
 
