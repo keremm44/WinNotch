@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Windows;
 using WinNotch.Common;
 
+using WpfDataFormats = System.Windows.DataFormats;
+using WpfDragDropEffects = System.Windows.DragDropEffects;
 using WpfDragEventArgs = System.Windows.DragEventArgs;
 using WpfIDataObject = System.Windows.IDataObject;
 
@@ -35,7 +37,7 @@ public partial class MainWindow
             return;
 
         bool hasFileDrop = HasFileDropFormat(e.Data);
-        bool copyAllowed = (e.AllowedEffects & DragDropEffects.Copy) != 0;
+        bool copyAllowed = (e.AllowedEffects & WpfDragDropEffects.Copy) != 0;
         FileDropDecision decision = FileDropPolicy.Evaluate(
             window._settings.ModuleA_DragDrop,
             window._isDraggingOut,
@@ -43,8 +45,8 @@ public partial class MainWindow
             copyAllowed);
 
         e.Effects = decision.Accepted
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+            ? WpfDragDropEffects.Copy
+            : WpfDragDropEffects.None;
 
         window.TraceFileDrag(e, decision, hasFileDrop, copyAllowed);
         // Do not mark handled. Existing RootGrid handlers still own visual state,
@@ -55,8 +57,8 @@ public partial class MainWindow
     {
         try
         {
-            return data.GetDataPresent(DataFormats.FileDrop, autoConvert: false) ||
-                   data.GetDataPresent(DataFormats.FileDrop);
+            return data.GetDataPresent(WpfDataFormats.FileDrop, autoConvert: false) ||
+                   data.GetDataPresent(WpfDataFormats.FileDrop);
         }
         catch
         {
