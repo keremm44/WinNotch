@@ -32,6 +32,10 @@ jobs:
       - name: Test Release
         run: dotnet test tests/WinNotch.Tests/WinNotch.Tests.csproj -c Release --no-build --verbosity normal
 
+      - name: Runtime resource soak
+        shell: pwsh
+        run: ./scripts/runtime-soak.ps1
+
       - name: Release idle footprint smoke
         shell: pwsh
         run: |
@@ -179,3 +183,15 @@ jobs:
 
           Set-WinNotchSettings $true $true $true $true
           Measure-WinNotch "Default_AllOn"
+
+      - name: Publish RC package
+        shell: pwsh
+        run: ./scripts/publish-rc.ps1
+
+      - name: Upload RC artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinNotch-0.2.0-rc1-win-x64
+          path: artifacts/WinNotch-0.2.0-rc1-win-x64.zip
+          if-no-files-found: error
+          retention-days: 14
