@@ -305,8 +305,8 @@ public partial class MainWindow
 
     private void SetIdleHoverAffordance(bool hovered)
     {
-        IdleLine.Width = hovered ? 27 : 18;
-        IdleAmbientGlow.Width = hovered ? 42 : 34;
+        IdleLine.Width = hovered ? 28 : 20;
+        IdleAmbientGlow.Width = hovered ? 44 : 36;
         IdleDots.Opacity = hovered ? 1.0 : 0.82;
     }
 
