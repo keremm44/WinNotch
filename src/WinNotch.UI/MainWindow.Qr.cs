@@ -54,8 +54,17 @@ public partial class MainWindow
             else
             {
                 BitmapSource image = DecodePng(e.PngBytes);
-                System.Windows.Clipboard.SetImage(image);
-                _clipboardService?.SuppressNextImageNotification();
+                ClipboardService? clipboardService = _clipboardService;
+                clipboardService?.SuppressNextImageNotification();
+                try
+                {
+                    System.Windows.Clipboard.SetImage(image);
+                }
+                catch
+                {
+                    clipboardService?.CancelImageNotificationSuppression();
+                    throw;
+                }
             }
 
             e.Succeeded = true;

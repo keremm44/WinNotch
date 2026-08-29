@@ -22,10 +22,9 @@ namespace WinNotch.Core.Services;
 public sealed class ClipboardService : IDisposable
 {
     private readonly ClipboardListener _listener;
+    private readonly ClipboardWriteSuppression _writeSuppression = new();
     private volatile bool _monitorText = true;
     private volatile bool _monitorImages = true;
-    private string? _suppressedText;
-    private bool _suppressNextImage;
     private bool _disposed;
 
     /// <summary>
@@ -70,15 +69,26 @@ public sealed class ClipboardService : IDisposable
     public void OnClipboardUpdate() => _listener.OnClipboardUpdate();
 
     /// <summary>
-    /// Prevents a Command Hub copy operation from replacing the active tool with a
-    /// notification for the exact same text. A different clipboard write is never hidden.
+    /// Arms suppression for a WinNotch-originated text write. Call this BEFORE
+    /// mutating the Windows clipboard so the clipboard update cannot win the race.
     /// </summary>
     public void SuppressNextTextNotification(string text)
-    {
-        _suppressedText = text;
-    }
+        => _writeSuppression.ArmText(text);
 
-    public void SuppressNextImageNotification() => _suppressNextImage = true;
+    /// <summary>
+    /// Rolls back an armed text suppression when the clipboard write itself fails.
+    /// It only clears the matching pending write and cannot cancel a newer write.
+    /// </summary>
+    public void CancelTextNotificationSuppression(string text)
+        => _writeSuppression.CancelText(text);
+
+    /// <summary>Arms suppression for a WinNotch-originated image write.</summary>
+    public void SuppressNextImageNotification()
+        => _writeSuppression.ArmImage();
+
+    /// <summary>Rolls back image suppression when the clipboard write fails.</summary>
+    public void CancelImageNotificationSuppression()
+        => _writeSuppression.CancelImage();
 
     public static bool TryReadSafeText(out string? text)
     {
@@ -102,11 +112,12 @@ public sealed class ClipboardService : IDisposable
     /// </summary>
     private void OnClipboardChanged(object? sender, ClipboardChangedEventArgs e)
     {
-        // PRIVACY: Skip notifications for excluded content (password managers)
+        // PRIVACY: Skip notifications for excluded content (password managers).
+        // Also invalidate any one-shot self-write guard because this clipboard event
+        // belongs to protected external content, not the pending WinNotch payload.
         if (e.IsExcluded)
         {
-            _suppressedText = null;
-            _suppressNextImage = false;
+            _writeSuppression.Clear();
             System.Diagnostics.Debug.WriteLine(
                 "[ClipboardService] Clipboard change excluded by privacy flag.");
             return;
@@ -114,12 +125,10 @@ public sealed class ClipboardService : IDisposable
 
         if (e.HasImage)
         {
-            _suppressedText = null;
-            if (_suppressNextImage)
-            {
-                _suppressNextImage = false;
+            _writeSuppression.ClearText();
+            if (_writeSuppression.ConsumeImage())
                 return;
-            }
+
             if (_monitorImages)
             {
                 // Clipboard images can be tens of megabytes. Never materialize one
@@ -137,13 +146,19 @@ public sealed class ClipboardService : IDisposable
             return;
         }
 
-        if (e.HasText && _monitorText)
+        if (e.HasText)
         {
-            _suppressNextImage = false;
-            string? text = ReadClipboardText();
-            string? suppressed = _suppressedText;
-            _suppressedText = null;
-            if (suppressed != null && string.Equals(text, suppressed, StringComparison.Ordinal))
+            _writeSuppression.CancelImage();
+
+            // A pending self-write must be consumed even when text monitoring is
+            // currently disabled; otherwise stale suppression could survive until a
+            // later user copy. Only materialize text in that disabled case when the
+            // one-shot guard actually needs comparison.
+            bool needsText = _monitorText || _writeSuppression.HasPendingText;
+            string? text = needsText ? ReadClipboardText() : null;
+            if (_writeSuppression.ConsumeText(text))
+                return;
+            if (!_monitorText)
                 return;
 
             NotificationRequested?.Invoke(this, new ClipboardNotification
@@ -198,6 +213,7 @@ public sealed class ClipboardService : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _writeSuppression.Clear();
         _listener.ClipboardChanged -= OnClipboardChanged;
         _listener.Dispose();
         NotificationRequested = null;

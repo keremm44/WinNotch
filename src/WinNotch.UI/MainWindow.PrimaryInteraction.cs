@@ -183,14 +183,16 @@ public partial class MainWindow
         if (_currentState != NotchState.CommandHub || string.IsNullOrEmpty(e.Text))
             return;
 
+        ClipboardService? clipboardService = _clipboardService;
+        clipboardService?.SuppressNextTextNotification(e.Text);
         try
         {
             System.Windows.Clipboard.SetText(e.Text);
-            _clipboardService?.SuppressNextTextNotification(e.Text);
             e.Succeeded = true;
         }
         catch
         {
+            clipboardService?.CancelTextNotificationSuppression(e.Text);
             // Clipboard contention is transient; keep the transformed output visible
             // so the user can retry without losing work.
         }
