@@ -11,8 +11,10 @@ Automated checks are necessary but do not replace live Windows interaction check
 - [x] Preview drag entry resolves a valid Explorer file drag to `Copy` immediately.
 - [x] Internal shelf drag-out is rejected by incoming-drop preview handling.
 - [x] Existing file metadata and source-removal behavior are regression tested.
-- [ ] Release build passes after hardening changes.
-- [ ] Full unit suite passes after hardening changes.
+- [x] Drag-out uses a canonical Windows/WPF `FileDropList` payload and keeps the source effect Copy-only.
+- [x] Missing source paths and case-insensitive duplicates are filtered before transfer.
+- [x] Release build passes after hardening changes with 0 warnings / 0 errors.
+- [x] Full unit suite passes after hardening changes: 171 / 171.
 
 ### Manual Windows runtime gate
 
@@ -45,6 +47,8 @@ Use a Debug build and capture `[DragDrop]` lines. Each line records:
 If Explorer still shows `NoDrop`, do not guess at the next fix. Use this trace to separate format, effect, state, hit-test and privilege-boundary failures.
 
 ## VOL-2 — Settings + focus
+
+Code audit: the branch already keeps one `SettingsWindow`, restores it from minimized state and routes Command Hub settings requests through the same application-level open path. No speculative rewrite is required before live verification.
 
 - [ ] Tray -> Settings opens one window.
 - [ ] Command Hub -> Settings opens the same settings surface.
@@ -81,9 +85,11 @@ If Explorer still shows `NoDrop`, do not guess at the next fix. Use this trace t
 
 ## VOL-6 — resource + release gate
 
+Current smoke remains informational; the latest successful run still measures one short post-start sample per configuration. Do not treat those values as release-grade performance evidence yet.
+
 - [ ] Performance smoke uses a warm-up period and repeated samples.
 - [ ] Startup/process-exit failures fail CI rather than being hidden by `continue-on-error`.
 - [ ] Repeated Command Hub/QR/Settings cycles do not show unbounded handle/thread/private-memory growth.
-- [ ] Release build has zero warnings and errors.
-- [ ] Full test suite passes.
+- [x] Release build has zero warnings and errors.
+- [x] Full test suite passes: 171 / 171.
 - [ ] Manual runtime gates above are complete before tagging an RC.
