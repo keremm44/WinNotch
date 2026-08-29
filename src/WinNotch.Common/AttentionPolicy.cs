@@ -30,9 +30,19 @@ public sealed class AttentionDecision
 /// </summary>
 public sealed class AttentionPolicy
 {
-    private readonly Queue<DateTime> _recentNotifications = new();
+    private static readonly TimeSpan AttentionWindow = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan MinimumNotificationInterval =
+        TimeSpan.FromMilliseconds(Constants.MinNotificationIntervalMs);
+
+    private readonly Queue<long> _recentNotifications = new();
     private readonly object _lock = new();
-    private DateTime _lastNotificationAt = DateTime.MinValue;
+    private readonly TimeProvider _timeProvider;
+    private long? _lastNotificationTimestamp;
+
+    public AttentionPolicy(TimeProvider? timeProvider = null)
+    {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
 
     public AttentionDecision ClassifyClipboard(
         ClipboardContentType contentType,
@@ -123,21 +133,25 @@ public sealed class AttentionPolicy
     {
         lock (_lock)
         {
-            DateTime now = DateTime.Now;
-            DateTime cutoff = now.AddMinutes(-1);
+            long now = _timeProvider.GetTimestamp();
 
-            while (_recentNotifications.Count > 0 && _recentNotifications.Peek() < cutoff)
+            while (_recentNotifications.Count > 0 &&
+                   _timeProvider.GetElapsedTime(_recentNotifications.Peek(), now) >= AttentionWindow)
+            {
                 _recentNotifications.Dequeue();
+            }
 
             if (_recentNotifications.Count >= Constants.MaxAttentionEventsPerMinute)
                 return false;
 
-            if (_lastNotificationAt != DateTime.MinValue &&
-                (now - _lastNotificationAt).TotalMilliseconds < Constants.MinNotificationIntervalMs)
+            if (_lastNotificationTimestamp is long last &&
+                _timeProvider.GetElapsedTime(last, now) < MinimumNotificationInterval)
+            {
                 return false;
+            }
 
             _recentNotifications.Enqueue(now);
-            _lastNotificationAt = now;
+            _lastNotificationTimestamp = now;
             return true;
         }
     }
