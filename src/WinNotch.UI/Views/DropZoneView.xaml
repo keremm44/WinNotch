@@ -105,7 +105,10 @@
 
     <Grid Margin="{DynamicResource Thickness.CompactPadding}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <!-- The primary row consumes the exact remaining state height. This keeps
+                 compact/drop states vertically centered while expanded shelf rows retain
+                 their explicit desired heights instead of leaving bottom-only slack. -->
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
