@@ -42,6 +42,7 @@ public partial class AppearancePreviewView : UserControl
     private void ApplyStructure()
     {
         DensityProfile density = AppearanceResolver.ResolveDensity(_appearance);
+        AppearancePalette palette = AppearanceResolver.ResolvePalette(_appearance);
         string mode = PreviewIdleRadio.IsChecked == true
             ? "Idle"
             : PreviewMediaRadio.IsChecked == true
@@ -51,6 +52,7 @@ public partial class AppearancePreviewView : UserControl
         IdlePreview.Visibility = mode == "Idle" ? Visibility.Visible : Visibility.Collapsed;
         ActionPreview.Visibility = mode == "Action" ? Visibility.Visible : Visibility.Collapsed;
         MediaPreview.Visibility = mode == "Media" ? Visibility.Visible : Visibility.Collapsed;
+        PreviewThemeBorder.Visibility = palette.IsLightTheme ? Visibility.Visible : Visibility.Collapsed;
 
         // Keep preview geometry aligned with the corresponding runtime states.
         PreviewNotch.Width = Math.Round((mode == "Idle" ? 100 : mode == "Media" ? 336 : 300) * density.SurfaceScale);
