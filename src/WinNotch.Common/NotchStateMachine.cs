@@ -1,185 +1,106 @@
 // WinNotch.Common/NotchStateMachine.cs
-// WHY: Independent event handlers fighting over width/visibility is a bug factory.
-// This state machine provides:
-// - Priority ordering (user interaction > drop > screenshot > clipboard > media)
-// - Event coalescing (10 clipboard changes in 1 second → 1 notification)
-// - Timeout management (auto-return to idle after configurable duration)
-// - Return state logic (after drop, return to media if active, else idle)
-//
-// DESIGN: Lightweight. No timers running when idle. Timers created on-demand
-// for specific state transitions and stopped when state changes.
+// Lightweight priority/state logic for contextual notch interactions.
 
 namespace WinNotch.Common;
 
-/// <summary>
-/// Priority levels for state transitions.
-/// Higher number = higher priority = can interrupt lower priority states.
-/// </summary>
 public enum StatePriority
 {
-    /// <summary>No state — idle.</summary>
     None = 0,
-
-    /// <summary>Background media playing. Lowest priority — can be interrupted by anything.</summary>
+    Hover = 5,
     Media = 10,
-
-    /// <summary>Clipboard notification. Brief flash, auto-dismiss.</summary>
+    Shelf = 15,
+    CommandHub = 18,
     Clipboard = 20,
-
-    /// <summary>Screenshot captured. Slightly higher than clipboard (user-initiated).</summary>
+    Timer = 22,
     Screenshot = 25,
-
-    /// <summary>Window pin operation. User-initiated, higher priority.</summary>
-    WindowPin = 30,
-
-    /// <summary>File being dragged over notch. Active user interaction.</summary>
     DropTarget = 40,
-
-    /// <summary>File dropped, showing actions. Highest interactive priority.</summary>
-    DropResult = 50,
-
-    /// <summary>Mouse hovering. Very low priority — any event replaces it.</summary>
-    Hover = 5
+    DropResult = 50
 }
 
-/// <summary>
-/// Result of a state transition attempt.
-/// </summary>
 public sealed class StateTransition
 {
-    /// <summary>The state to transition to.</summary>
     public required NotchState State { get; init; }
-
-    /// <summary>Whether this transition should actually happen.</summary>
     public bool ShouldApply { get; init; } = true;
-
-    /// <summary>How long to stay in this state before auto-returning (null = no timeout).</summary>
     public TimeSpan? Timeout { get; init; }
-
-    /// <summary>State to return to after timeout (null = return to Idle or best available).</summary>
     public NotchState? ReturnState { get; init; }
-
-    /// <summary>Whether to force this transition even if priority is lower.</summary>
     public bool Force { get; init; }
 }
 
-/// <summary>
-/// Lightweight state machine for the notch widget.
-/// Manages priorities, coalescing, and timeout-driven state returns.
-/// </summary>
 public sealed class NotchStateMachine
 {
     private NotchState _currentState = NotchState.Idle;
     private StatePriority _currentPriority = StatePriority.None;
-    private DateTime _lastTransition = DateTime.MinValue;
     private DateTime _lastClipboardEvent = DateTime.MinValue;
     private int _clipboardEventCount;
 
-    // Coalescing: if more than N events arrive within M ms, coalesce
     private const int CoalesceThreshold = 3;
     private static readonly TimeSpan CoalesceWindow = TimeSpan.FromMilliseconds(1000);
 
-    /// <summary>Current state of the notch.</summary>
     public NotchState CurrentState => _currentState;
-
-    /// <summary>Priority of the current state.</summary>
     public StatePriority CurrentPriority => _currentPriority;
 
-    /// <summary>
-    /// Attempts a state transition.
-    /// Returns a TransitionResult that the UI should apply.
-    /// </summary>
-    public StateTransition TryTransition(NotchState newState, StatePriority priority, TimeSpan? timeout = null, NotchState? returnState = null, bool force = false)
+    public StateTransition TryTransition(
+        NotchState newState,
+        StatePriority priority,
+        TimeSpan? timeout = null,
+        NotchState? returnState = null,
+        bool force = false)
     {
-        // Same state — no transition needed
         if (newState == _currentState)
             return new StateTransition { State = _currentState, ShouldApply = false };
 
-        // Coalescing: clipboard events within rapid succession
-        if (newState == NotchState.ClipboardNotify || newState == NotchState.ScreenshotNotify)
+        // Coalescing protects unsolicited event bursts. An explicit user-driven force
+        // transition must remain reliable even when a recent clipboard burst occurred.
+        if (!force && (newState == NotchState.ClipboardNotify || newState == NotchState.ScreenshotNotify))
         {
             if (!TryCoalesceEvent())
-            {
-                // Too many events too fast — skip this transition
                 return new StateTransition { State = _currentState, ShouldApply = false };
-            }
         }
 
-        // Priority check: can this state interrupt the current one?
-        if (!force && priority < _currentPriority)
-        {
-            // Lower priority cannot interrupt higher priority
-            // Exception: Hover is always replaceable
-            if (_currentState != NotchState.Hover)
-            {
-                return new StateTransition { State = _currentState, ShouldApply = false };
-            }
-        }
+        if (!force && priority < _currentPriority && _currentState != NotchState.Hover)
+            return new StateTransition { State = _currentState, ShouldApply = false };
 
-        // Apply transition
-        var previousState = _currentState;
         _currentState = newState;
         _currentPriority = priority;
-        _lastTransition = DateTime.Now;
-
-        // Determine return state if not specified
-        NotchState effectiveReturn = returnState ?? DetermineReturnState(newState);
 
         return new StateTransition
         {
             State = newState,
             ShouldApply = true,
             Timeout = timeout,
-            ReturnState = effectiveReturn
+            ReturnState = returnState ?? DetermineReturnState(newState),
+            Force = force
         };
     }
 
-    /// <summary>
-    /// Forces a transition regardless of priority.
-    /// Used for user-initiated actions (right-click menu, tray toggle).
-    /// </summary>
-    public StateTransition ForceTransition(NotchState newState, TimeSpan? timeout = null, NotchState? returnState = null)
+    public StateTransition ForceTransition(
+        NotchState newState,
+        TimeSpan? timeout = null,
+        NotchState? returnState = null)
+        => TryTransition(
+            newState,
+            PriorityFor(newState),
+            timeout,
+            returnState,
+            force: true);
+
+    public StateTransition ReturnTo(NotchState state)
     {
-        return TryTransition(newState, StatePriority.DropResult, timeout, returnState, force: true);
+        _currentState = state;
+        _currentPriority = PriorityFor(state);
+        return new StateTransition { State = state, ShouldApply = true };
     }
 
-    /// <summary>
-    /// Returns to idle state. Called when timeout expires or user dismisses.
-    /// </summary>
-    public StateTransition ReturnToIdle()
-    {
-        _currentState = NotchState.Idle;
-        _currentPriority = StatePriority.None;
-        return new StateTransition { State = NotchState.Idle, ShouldApply = true };
-    }
+    public StateTransition ReturnToIdle() => ReturnTo(NotchState.Idle);
 
-    /// <summary>
-    /// Returns to the best available state (media if active, else idle).
-    /// Called after drop result timeout.
-    /// </summary>
     public StateTransition ReturnToBest(bool mediaActive)
-    {
-        if (mediaActive)
-        {
-            _currentState = NotchState.MediaActive;
-            _currentPriority = StatePriority.Media;
-            return new StateTransition { State = NotchState.MediaActive, ShouldApply = true };
-        }
+        => mediaActive ? ReturnTo(NotchState.MediaAmbient) : ReturnToIdle();
 
-        return ReturnToIdle();
-    }
-
-    /// <summary>
-    /// Checks if a clipboard event should be coalesced (too many too fast).
-    /// Returns true if the event should proceed, false if it should be skipped.
-    /// </summary>
     private bool TryCoalesceEvent()
     {
         var now = DateTime.Now;
-
         if ((now - _lastClipboardEvent) > CoalesceWindow)
         {
-            // Outside coalesce window — reset counter
             _clipboardEventCount = 1;
             _lastClipboardEvent = now;
             return true;
@@ -187,61 +108,55 @@ public sealed class NotchStateMachine
 
         _clipboardEventCount++;
         _lastClipboardEvent = now;
-
-        // Allow first N events, then coalesce
         return _clipboardEventCount <= CoalesceThreshold;
     }
 
-    /// <summary>
-    /// Determines the best state to return to after a temporary state ends.
-    /// </summary>
-    private static NotchState DetermineReturnState(NotchState from)
+    private static NotchState DetermineReturnState(NotchState from) => from switch
     {
-        // After drop operations, return to idle
-        // (user was interacting, not passively watching media)
-        return from switch
-        {
-            NotchState.DragActive => NotchState.Idle,
-            NotchState.DropResult => NotchState.Idle,
-            NotchState.ClipboardNotify => NotchState.Idle,
-            NotchState.ScreenshotNotify => NotchState.Idle,
-            NotchState.WindowPinned => NotchState.Idle,
-            _ => NotchState.Idle
-        };
-    }
+        NotchState.DropResult => NotchState.ShelfOccupied,
+        NotchState.ShelfExpanded => NotchState.ShelfOccupied,
+        NotchState.ShelfDraggingOut => NotchState.ShelfOccupied,
+        NotchState.CommandHub => NotchState.Idle,
+        _ => NotchState.Idle
+    };
+
+    public static StatePriority PriorityFor(NotchState state) => state switch
+    {
+        NotchState.Hover => StatePriority.Hover,
+        NotchState.MediaActive or NotchState.MediaAmbient => StatePriority.Media,
+        NotchState.ShelfOccupied or NotchState.ShelfExpanded or NotchState.ShelfDraggingOut => StatePriority.Shelf,
+        NotchState.CommandHub => StatePriority.CommandHub,
+        NotchState.ClipboardNotify => StatePriority.Clipboard,
+        NotchState.ScreenshotNotify => StatePriority.Screenshot,
+        NotchState.TimerNotify => StatePriority.Timer,
+        NotchState.DragActive => StatePriority.DropTarget,
+        NotchState.DropResult => StatePriority.DropResult,
+        _ => StatePriority.None
+    };
 }
 
-/// <summary>
-/// Maps NotchState to visual dimensions.
-/// Content-driven: each state gets the MINIMUM practical size.
-/// Idle must be nearly invisible. Expanded only when useful.
-/// </summary>
 public static class StateDimensions
 {
     public static (double Width, double Height) GetDimensions(NotchState state) => state switch
     {
         NotchState.Idle => (Constants.NotchIdleWidth, Constants.NotchIdleHeight),
         NotchState.Hover => (Constants.NotchHoverWidth, Constants.NotchHoverHeight),
+        NotchState.CommandHub => (Constants.NotchCommandHubWidth, Constants.NotchCommandHubHeight),
         NotchState.DragActive => (Constants.NotchDropTargetWidth, Constants.NotchDropTargetHeight),
         NotchState.DropResult => (Constants.NotchDropResultWidth, Constants.NotchDropResultHeight),
+        NotchState.ShelfOccupied => (Constants.NotchShelfWidth, Constants.NotchShelfHeight),
+        NotchState.ShelfExpanded or NotchState.ShelfDraggingOut => (Constants.NotchShelfExpandedWidth, Constants.NotchShelfExpandedHeight),
         NotchState.MediaActive => (Constants.NotchMediaExpandedWidth, Constants.NotchMediaExpandedHeight),
         NotchState.MediaAmbient => (Constants.NotchMediaAmbientWidth, Constants.NotchMediaAmbientHeight),
         NotchState.ClipboardNotify => (Constants.NotchClipboardWidth, Constants.NotchClipboardHeight),
         NotchState.ScreenshotNotify => (Constants.NotchScreenshotWidth, Constants.NotchScreenshotHeight),
-        NotchState.WindowPinned => (Constants.NotchPinnedWidth, Constants.NotchPinnedHeight),
+        NotchState.TimerNotify => (Constants.NotchTimerNotifyWidth, Constants.NotchTimerNotifyHeight),
         _ => (Constants.NotchIdleWidth, Constants.NotchIdleHeight)
     };
 }
 
-/// <summary>
-/// Classifies clipboard content for contextual display.
-/// Deterministic, cheap, event-triggered. No regex, no AI.
-/// </summary>
 public static class ClipboardClassifier
 {
-    /// <summary>
-    /// Classifies clipboard text into a content type.
-    /// </summary>
     public static ClipboardContentType Classify(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -249,21 +164,14 @@ public static class ClipboardClassifier
 
         text = text.Trim();
 
-        // URL detection (simple prefix check — cheap, no regex)
+        if (LooksLikeFilePath(text))
+            return ClipboardContentType.FilePath;
+
         if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             text.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
             text.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
             return ClipboardContentType.Url;
 
-        // File path detection
-        if (text.Length >= 3 && text[1] == ':' && (text[2] == '\\' || text[2] == '/'))
-            return ClipboardContentType.FilePath;
-        if (text.StartsWith("\\\\", StringComparison.Ordinal))
-            return ClipboardContentType.FilePath;
-        if (text.StartsWith("~/", StringComparison.Ordinal) || text.StartsWith("./", StringComparison.Ordinal))
-            return ClipboardContentType.FilePath;
-
-        // Color hex detection (#RRGGBB or #RGB)
         if (text.Length is 4 or 7 or 9 && text[0] == '#')
         {
             bool isHex = true;
@@ -279,11 +187,9 @@ public static class ClipboardClassifier
             if (isHex) return ClipboardContentType.Color;
         }
 
-        // Email detection (simple @ check)
         if (text.Contains('@') && !text.Contains(' ') && text.Length < 254)
             return ClipboardContentType.Email;
 
-        // Phone number (digits, spaces, dashes, plus)
         bool allPhoneChars = true;
         foreach (char c in text)
         {
@@ -296,14 +202,35 @@ public static class ClipboardClassifier
         if (allPhoneChars && text.Length >= 7 && text.Length <= 20)
             return ClipboardContentType.Phone;
 
-        // Default: plain text
         return ClipboardContentType.Text;
+    }
+
+    private static bool LooksLikeFilePath(string text)
+    {
+        if (text.Contains('\r') || text.Contains('\n'))
+            return false;
+
+        string candidate = text;
+        if (candidate.StartsWith('"'))
+        {
+            candidate = candidate[1..];
+            if (candidate.EndsWith('"'))
+                candidate = candidate[..^1];
+            candidate = candidate.Trim();
+        }
+
+        if (candidate.Length >= 3 && candidate[1] == ':' &&
+            (candidate[2] == '\\' || candidate[2] == '/'))
+            return true;
+
+        return candidate.StartsWith("\\\\", StringComparison.Ordinal) ||
+               candidate.StartsWith("~/", StringComparison.Ordinal) ||
+               candidate.StartsWith("~\\", StringComparison.Ordinal) ||
+               candidate.StartsWith("./", StringComparison.Ordinal) ||
+               candidate.StartsWith(".\\", StringComparison.Ordinal);
     }
 }
 
-/// <summary>
-/// Types of clipboard content for contextual display.
-/// </summary>
 public enum ClipboardContentType
 {
     Unknown,

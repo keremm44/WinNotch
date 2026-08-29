@@ -1,83 +1,41 @@
 // WinNotch.Core/Interop/User32.cs
-// WHY: User32.dll provides ALL window management APIs we need:
-// - Window styles (WS_EX_TOOLWINDOW, WS_EX_NOACTIVATE, WS_EX_LAYERED)
-// - Window positioning (SetWindowPos, HWND_TOPMOST)
-// - Hit testing (WM_NCHITTEST, HTTRANSPARENT)
-// - Event hooks (SetWinEventHook for focus tracking)
-// - Region management (SetWindowRgn for rounded-rect clipping)
-//
-// PERFORMANCE NOTE: These are static P/Invoke declarations.
-// Zero runtime overhead until actually called. No managed heap allocation.
+// Native User32/GDI declarations used by the lightweight WinNotch surface.
 
 using System.Runtime.InteropServices;
 
 namespace WinNotch.Core.Interop;
 
-/// <summary>
-/// P/Invoke declarations for user32.dll.
-/// Handles window styles, positioning, event hooks, and hit-testing.
-/// </summary>
 internal static partial class User32
 {
     private const string DllName = "user32.dll";
 
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW STYLES
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>Extended window style: Tool window (hidden from Alt+Tab).</summary>
     public const int WS_EX_TOOLWINDOW = 0x00000080;
-
-    /// <summary>Extended window style: No activate (doesn't steal focus).</summary>
     public const int WS_EX_NOACTIVATE = 0x08000000;
-
-    /// <summary>Extended window style: Layered window (per-pixel alpha).</summary>
     public const int WS_EX_LAYERED = 0x00080000;
-
-    /// <summary>Extended window style: Topmost window.</summary>
     public const int WS_EX_TOPMOST = 0x00000008;
 
-    /// <summary>Window message: Non-client hit test.</summary>
     public const int WM_NCHITTEST = 0x0084;
-
-    /// <summary>Hit test result: Transparent (click passes through).</summary>
     public const int HTTRANSPARENT = -1;
-
-    /// <summary>Hit test result: Client area (click is handled).</summary>
     public const int HTCLIENT = 1;
-
-    /// <summary>Window message: Mouse activate — determines focus behavior on click.</summary>
     public const int WM_MOUSEACTIVATE = 0x0021;
-
-    /// <summary>Window message: Display change (resolution, monitor connect/disconnect, DPI change).</summary>
     public const int WM_DISPLAYCHANGE = 0x007E;
-
-    /// <summary>Mouse activate result: Do not activate the window.</summary>
+    public const int MA_ACTIVATE = 1;
     public const int MA_NOACTIVATE = 3;
 
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW POSITIONING
-    // ═══════════════════════════════════════════════════════════════
+    // Undocumented but stable shell-hook notifications emitted by Explorer when a
+    // top-level window enters/leaves its fullscreen presentation state.
+    public const int HSHELL_WINDOWFULLSCREEN = 53;
+    public const int HSHELL_WINDOWNORMAL = 54;
+    public const int SW_HIDE = 0;
+    public const int SW_SHOWNOACTIVATE = 4;
 
-    /// <summary>HWND value representing the top of the Z-order.</summary>
     public static readonly IntPtr HWND_TOPMOST = new(-1);
 
-    /// <summary>SetWindowPos flags: Ignore Z-order position.</summary>
     public const uint SWP_NOMOVE = 0x0002;
-
-    /// <summary>SetWindowPos flags: Ignore size.</summary>
     public const uint SWP_NOSIZE = 0x0001;
-
-    /// <summary>SetWindowPos flags: Ignore Z-order.</summary>
     public const uint SWP_NOZORDER = 0x0004;
-
-    /// <summary>SetWindowPos flags: Show window.</summary>
     public const uint SWP_SHOWWINDOW = 0x0040;
-
-    /// <summary>SetWindowPos flags: No activate.</summary>
     public const uint SWP_NOACTIVATE = 0x0010;
-
-    /// <summary>SetWindowPos flags: Force frame change (applies new styles).</summary>
     public const uint SWP_FRAMECHANGED = 0x0020;
 
     [LibraryImport(DllName, SetLastError = true)]
@@ -108,13 +66,12 @@ internal static partial class User32
         SWP_FRAMECHANGED = 0x0020
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW REGION (for rounded-rect clipping)
-    // ═══════════════════════════════════════════════════════════════
-
     [LibraryImport(DllName, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool SetWindowRgn(IntPtr hWnd, IntPtr hRgn, [MarshalAs(UnmanagedType.Bool)] bool bRedraw);
+    public static partial bool SetWindowRgn(
+        IntPtr hWnd,
+        IntPtr hRgn,
+        [MarshalAs(UnmanagedType.Bool)] bool bRedraw);
 
     [LibraryImport("gdi32.dll")]
     public static partial IntPtr CreateRoundRectRgn(
@@ -122,23 +79,57 @@ internal static partial class User32
         int widthEllipse, int heightEllipse);
 
     [LibraryImport("gdi32.dll")]
+    public static partial IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int CombineRgn(
+        IntPtr destination,
+        IntPtr source1,
+        IntPtr source2,
+        int combineMode);
+
+    public const int RGN_OR = 2;
+
+    [LibraryImport("gdi32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool DeleteObject(IntPtr hObject);
-
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW PROPERTIES
-    // ═══════════════════════════════════════════════════════════════
 
     [LibraryImport(DllName, SetLastError = true)]
     public static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
 
-    /// <summary>GetWindow: return next window in Z-order.</summary>
-    public const uint GW_HWNDNEXT = 2;
+    [LibraryImport(DllName)]
+    public static partial IntPtr GetForegroundWindow();
 
-    // WHY GetWindowLongW/SetWindowLongW: On 64-bit Windows, GetWindowLong is a
-    // macro that maps to GetWindowLongW (ANSI) or GetWindowLongPtrW (pointer-sized).
-    // LibraryImport resolves by exact name, so we must use the 'W' suffix.
-    // GetWindowLongW returns int (32-bit) which is sufficient for style flags.
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool RegisterShellHookWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeregisterShellHookWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName, EntryPoint = "RegisterWindowMessageW", SetLastError = true,
+        StringMarshalling = StringMarshalling.Utf16)]
+    public static partial uint RegisterWindowMessage(string messageName);
+
+    [LibraryImport(DllName)]
+    public static partial uint GetDpiForWindow(IntPtr hWnd);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    public const uint GW_HWNDNEXT = 2;
+    public const uint GA_ROOT = 2;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    [LibraryImport(DllName)]
+    public static partial IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
+
     [LibraryImport(DllName, EntryPoint = "GetWindowLongW", SetLastError = true)]
     public static partial int GetWindowLong(IntPtr hWnd, int nIndex);
 
@@ -146,27 +137,15 @@ internal static partial class User32
     public static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     public const int GWL_EXSTYLE = -20;
-
-    /// <summary>GetWindowLong index: Window style flags (WS_).</summary>
     public const int GWL_STYLE = -16;
 
-    /// <summary>
-    /// Sets extended window style and forces frame update.
-    /// </summary>
     public static void SetExtendedStyle(IntPtr hWnd, int exStyle)
     {
         SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
-
-        // Force window to redraw with new styles
         SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // EVENT HOOKS
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>WinEventHook callback delegate.</summary>
     public delegate void WinEventDelegate(
         IntPtr hWinEventHook, uint eventType,
         IntPtr hwnd, int idObject, int idChild,
@@ -184,15 +163,8 @@ internal static partial class User32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool UnhookWinEvent(IntPtr hWinEventHook);
 
-    /// <summary>Event: Foreground window changed.</summary>
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
-
-    /// <summary>Hook flag: out-of-context (no DLL injection needed).</summary>
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
-
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW TEXT / CLASS
-    // ═══════════════════════════════════════════════════════════════
 
     [LibraryImport(DllName, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
@@ -204,10 +176,6 @@ internal static partial class User32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetClassName(IntPtr hWnd, [Out] char[] lpClassName, int nMaxCount);
 
-    // ═══════════════════════════════════════════════════════════════
-    // WINDOW RECT
-    // ═══════════════════════════════════════════════════════════════
-
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -218,7 +186,19 @@ internal static partial class User32
 
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsWindowVisible(IntPtr hWnd);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsIconic(IntPtr hWnd);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
@@ -231,10 +211,6 @@ internal static partial class User32
     {
         public int X, Y;
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // MONITOR APIs (replace System.Windows.Forms.Screen dependency)
-    // ═══════════════════════════════════════════════════════════════
 
     [LibraryImport(DllName)]
     public static partial IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);

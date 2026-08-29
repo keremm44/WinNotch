@@ -4,21 +4,168 @@
              ShutdownMode="OnExplicitShutdown"
              Startup="OnStartup"
              DispatcherUnhandledException="OnDispatcherUnhandledException">
-    <!--
-        WHY ShutdownMode="OnExplicitShutdown":
-        We control when the app exits. Closing the main window
-        should NOT exit the app — only the tray menu "Exit" option
-        or Application.Current.Shutdown() should exit.
-    -->
-
     <Application.Resources>
-        <!-- Global resource dictionary for common styles -->
         <ResourceDictionary>
-            <!-- Dark theme colors -->
-            <SolidColorBrush x:Key="BackgroundDark" Color="#FF1E1E1E"/>
-            <SolidColorBrush x:Key="ForegroundLight" Color="#FFFFFFFF"/>
-            <SolidColorBrush x:Key="AccentBlue" Color="#FF0078D4"/>
-            <SolidColorBrush x:Key="TextSecondary" Color="#99FFFFFF"/>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/WinNotch.UI;component/Themes/WinNotchTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Backward-compatible aliases while remaining views migrate to tokens. -->
+            <SolidColorBrush x:Key="BackgroundDark" Color="#FF101012"/>
+            <SolidColorBrush x:Key="ForegroundLight" Color="#FFF4F4F6"/>
+            <SolidColorBrush x:Key="AccentBlue" Color="#FF2D7DFF"/>
+            <SolidColorBrush x:Key="TextSecondary" Color="#FF92929B"/>
+
+            <Style TargetType="{x:Type ToolTip}">
+                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Popup}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Premium}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="10,7"/>
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="MaxWidth" Value="320"/>
+                <Setter Property="HasDropShadow" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToolTip">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type ContextMenu}">
+                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Popup}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="HasDropShadow" Value="True"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="11.5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ContextMenu}">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="9"
+                                    Padding="{TemplateBinding Padding}">
+                                <StackPanel IsItemsHost="True"
+                                            KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type MenuItem}">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Padding" Value="8,7"/>
+                <Setter Property="MinWidth" Value="205"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Visual}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type MenuItem}">
+                            <Grid Background="Transparent">
+                                <Border x:Name="ItemSurface"
+                                        Background="{TemplateBinding Background}"
+                                        CornerRadius="6"
+                                        Padding="{TemplateBinding Padding}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="14"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Path x:Name="CheckMark"
+                                              Data="{DynamicResource Icon.Check}"
+                                              Width="11" Height="11"
+                                              Stretch="Uniform"
+                                              Stroke="{DynamicResource Brush.Accent.Hover}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"
+                                              Visibility="Collapsed"/>
+                                        <ContentPresenter Grid.Column="1"
+                                                          ContentSource="Header"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center"/>
+                                        <Path x:Name="SubmenuArrow"
+                                              Grid.Column="2"
+                                              Data="M 0 0 L 4 4 L 0 8"
+                                              Stroke="{DynamicResource Brush.Text.Muted}"
+                                              StrokeThickness="1.4"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+
+                                <Popup x:Name="PART_Popup"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       Placement="Right"
+                                       HorizontalOffset="-3"
+                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                       PopupAnimation="Fade">
+                                    <Border Background="{DynamicResource Brush.Surface.Popup}"
+                                            BorderBrush="{DynamicResource Brush.Border.Premium}"
+                                            BorderThickness="1"
+                                            CornerRadius="9"
+                                            Padding="5">
+                                        <StackPanel IsItemsHost="True"
+                                                    KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.42"/>
+                                    <Setter Property="Cursor" Value="Arrow"/>
+                                </Trigger>
+                                <Trigger Property="Role" Value="TopLevelHeader">
+                                    <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="Role" Value="SubmenuHeader">
+                                    <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type Separator}">
+                <Setter Property="Margin" Value="7,5"/>
+                <Setter Property="Height" Value="1"/>
+                <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Separator}">
+                            <Border Height="1" Background="{TemplateBinding Background}"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

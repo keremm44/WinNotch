@@ -1,0 +1,197 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/file-shelf-transfer
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore WinNotch.sln
+
+      - name: Build Release
+        run: dotnet build WinNotch.sln -c Release --no-restore
+
+      - name: Test Release
+        run: dotnet test tests/WinNotch.Tests/WinNotch.Tests.csproj -c Release --no-build --verbosity normal
+
+      - name: Runtime resource soak
+        shell: pwsh
+        run: ./scripts/runtime-soak.ps1
+
+      - name: Release idle footprint smoke
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "src/WinNotch.TrayApp/bin/Release/net8.0-windows10.0.19041.0/WinNotch.exe" -ErrorAction SilentlyContinue
+          if (-not $exe) {
+            throw "PERF_SMOKE: WinNotch.exe not found after successful Release build."
+          }
+
+          $settingsDir = Join-Path $env:LOCALAPPDATA "WinNotch"
+          $settingsPath = Join-Path $settingsDir "settings.json"
+          New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+
+          # A stale process would invalidate both the single-instance startup check
+          # and the resource sample. Hosted runners should be clean, but make the
+          # precondition explicit instead of silently measuring the wrong process.
+          Get-Process -Name "WinNotch" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 700
+
+          function Set-WinNotchSettings(
+            [bool]$dragDrop,
+            [bool]$clipboard,
+            [bool]$media,
+            [bool]$screenshot
+          ) {
+            $settings = @{
+              ModuleA_DragDrop = $dragDrop
+              ModuleB_Clipboard = $clipboard
+              ModuleC_Media = $media
+              ModuleE_Screenshot = $screenshot
+              TargetMonitorIndex = 0
+              AutoStart = $false
+              DiagnosticsEnabled = $false
+              VisibilityMode = "Auto"
+              ReactionLevel = "Balanced"
+            } | ConvertTo-Json -Compress
+            Set-Content -Path $settingsPath -Value $settings -Encoding UTF8
+          }
+
+          function Get-Median([double[]]$values) {
+            if ($null -eq $values -or $values.Count -eq 0) {
+              throw "PERF_SMOKE: Cannot calculate median for an empty sample."
+            }
+
+            [double[]]$sorted = @($values | Sort-Object)
+            $middle = [int][Math]::Floor($sorted.Count / 2)
+            if (($sorted.Count % 2) -eq 1) {
+              return $sorted[$middle]
+            }
+            return ($sorted[$middle - 1] + $sorted[$middle]) / 2.0
+          }
+
+          function Assert-WinNotchAlive($process, [string]$label, [string]$phase) {
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "PERF_SMOKE $label ProcessExitedDuring=$phase ExitCode=$($process.ExitCode)"
+            }
+          }
+
+          function Measure-WinNotch([string]$label) {
+            $process = $null
+            try {
+              $process = Start-Process -FilePath $exe.Path -PassThru
+
+              # Do not sample JIT/WPF startup. The smoke is intended to describe
+              # settled idle behavior, not cold-launch work.
+              Start-Sleep -Seconds 10
+              Assert-WinNotchAlive $process $label "Warmup"
+
+              $logicalCpus = [Math]::Max(1, [Environment]::ProcessorCount)
+              $sampleSeconds = 2
+              $workingSetSamples = @()
+              $privateSamples = @()
+              $cpuSamples = @()
+              $threadSamples = @()
+              $handleSamples = @()
+
+              for ($sample = 1; $sample -le 3; $sample++) {
+                Assert-WinNotchAlive $process $label "Sample${sample}Start"
+                $cpuStart = $process.TotalProcessorTime.TotalMilliseconds
+
+                Start-Sleep -Seconds $sampleSeconds
+                Assert-WinNotchAlive $process $label "Sample${sample}End"
+                $cpuEnd = $process.TotalProcessorTime.TotalMilliseconds
+
+                $workingSetMb = $process.WorkingSet64 / 1MB
+                $privateMb = $process.PrivateMemorySize64 / 1MB
+                $cpuPercent = (($cpuEnd - $cpuStart) / ($sampleSeconds * 1000 * $logicalCpus)) * 100.0
+                $threadCount = $process.Threads.Count
+                $handleCount = $process.HandleCount
+
+                $workingSetSamples += $workingSetMb
+                $privateSamples += $privateMb
+                $cpuSamples += $cpuPercent
+                $threadSamples += $threadCount
+                $handleSamples += $handleCount
+
+                Write-Host (
+                  "PERF_SAMPLE {0} N={1} WorkingSetMB={2} PrivateMemoryMB={3} IdleCpuPercent={4} Threads={5} Handles={6}" -f
+                  $label,
+                  $sample,
+                  [Math]::Round($workingSetMb, 2),
+                  [Math]::Round($privateMb, 2),
+                  [Math]::Round($cpuPercent, 3),
+                  $threadCount,
+                  $handleCount)
+              }
+
+              Write-Host (
+                "PERF_SMOKE {0} Samples=3 WarmupSeconds=10 MedianWorkingSetMB={1} MedianPrivateMemoryMB={2} MedianIdleCpuPercent={3} MedianThreads={4} MedianHandles={5}" -f
+                $label,
+                [Math]::Round((Get-Median $workingSetSamples), 2),
+                [Math]::Round((Get-Median $privateSamples), 2),
+                [Math]::Round((Get-Median $cpuSamples), 3),
+                [Math]::Round((Get-Median $threadSamples), 0),
+                [Math]::Round((Get-Median $handleSamples), 0))
+            }
+            finally {
+              if ($null -ne $process) {
+                try {
+                  $process.Refresh()
+                  if (-not $process.HasExited) {
+                    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                  }
+                }
+                finally {
+                  $process.Dispose()
+                }
+              }
+              Start-Sleep -Milliseconds 700
+            }
+          }
+
+          Set-WinNotchSettings $false $false $false $false
+          Measure-WinNotch "Base_AllOff"
+
+          Set-WinNotchSettings $true $false $false $false
+          Measure-WinNotch "DragDropOnly"
+
+          Set-WinNotchSettings $false $true $false $true
+          Measure-WinNotch "ClipboardScreenshotOnly"
+
+          Set-WinNotchSettings $false $false $true $false
+          Measure-WinNotch "MediaOnly"
+
+          Set-WinNotchSettings $true $true $true $true
+          Measure-WinNotch "Default_AllOn"
+
+      - name: Publish RC package
+        shell: pwsh
+        run: ./scripts/publish-rc.ps1
+
+      - name: Upload RC artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinNotch-0.2.0-rc1-win-x64
+          path: artifacts/WinNotch-0.2.0-rc1-win-x64.zip
+          if-no-files-found: error
+          retention-days: 14

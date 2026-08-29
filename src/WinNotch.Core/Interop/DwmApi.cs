@@ -40,21 +40,19 @@ internal static partial class DwmApi
     /// <summary>Disable DWM live/thumbnail transitions.</summary>
     public const int DWMWA_TRANSITIONS_DISABLED = 1;
 
+    // DWM APIs return HRESULT (S_OK is zero), not Win32 BOOL.
     [LibraryImport(DllName)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMargins);
+    public static partial int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMargins);
 
     [LibraryImport(DllName)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool DwmSetWindowAttribute(
+    public static partial int DwmSetWindowAttribute(
         IntPtr hWnd,
         uint dwAttribute,
         ref int pvAttribute,
         uint cbAttribute);
 
     [LibraryImport(DllName)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool DwmGetWindowAttribute(
+    public static partial int DwmGetWindowAttribute(
         IntPtr hWnd,
         uint dwAttribute,
         out RECT pvAttribute,

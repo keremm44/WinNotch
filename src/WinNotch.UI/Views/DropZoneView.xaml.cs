@@ -1,228 +1,551 @@
-// WinNotch.UI/Views/DropZoneView.xaml.cs
-// WHY: Makes file drop actually useful.
-// Instead of just showing a path, provides actionable buttons:
-// - Copy path: copies full path to clipboard
-// - Open folder: opens Explorer at the file/folder location
-// - Open terminal: opens cmd/pwsh at the file's parent directory
-//
-// For multi-file drops, shows count + total size.
-// Actions operate on the FIRST dropped file (most intuitive).
-//
-// PERFORMANCE: Only visible during active drag/drop.
-// Zero cost when hidden (Collapsed = no layout/render passes).
-
+using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using WinNotch.Common;
 using WinNotch.Core.Interop;
 
 using UserControl = System.Windows.Controls.UserControl;
+using Button = System.Windows.Controls.Button;
+using Orientation = System.Windows.Controls.Orientation;
+using Point = System.Windows.Point;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using WpfClipboard = System.Windows.Clipboard;
+using WpfDataObject = System.Windows.DataObject;
+using WpfDataFormats = System.Windows.DataFormats;
+using WpfDragDrop = System.Windows.DragDrop;
+using WpfDragDropEffects = System.Windows.DragDropEffects;
 
 namespace WinNotch.UI.Views;
 
-/// <summary>
-/// Interaction logic for DropZoneView.xaml.
-/// Displays dropped files with contextual actions.
-/// </summary>
 public partial class DropZoneView : UserControl
 {
-    private string[] _currentPaths = Array.Empty<string>();
+    private HeldItem[] _items = Array.Empty<HeldItem>();
+    private Point _dragStart;
+    private int _selectedIndex = -1;
+    private bool _isExpanded;
+
+    public event EventHandler? ShelfCleared;
+    public event EventHandler? DragOutStarted;
+    public event EventHandler? DragOutCompleted;
+
+    public bool HasItems => _items.Length > 0;
+    public IReadOnlyList<HeldItem> Items => _items;
+
+    private HeldItem? SelectedItem
+        => _selectedIndex >= 0 && _selectedIndex < _items.Length
+            ? _items[_selectedIndex]
+            : _items.FirstOrDefault();
 
     public DropZoneView()
     {
         InitializeComponent();
+        IsVisibleChanged += DropZoneView_IsVisibleChanged;
     }
 
-    /// <summary>
-    /// Sets the dropped paths for display and shows action buttons.
-    /// </summary>
+    private void DropZoneView_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+            SurfaceMotion.Reveal(this);
+    }
+
     public void SetDroppedPaths(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0) return;
 
-        _currentPaths = paths.ToArray();
+        var seen = new HashSet<string>(
+            _items.Select(i => i.SourcePath),
+            StringComparer.OrdinalIgnoreCase);
 
-        // Show file info
-        if (paths.Count == 1)
+        var merged = new List<HeldItem>(_items.Length + paths.Count);
+        merged.AddRange(_items);
+
+        foreach (string path in paths)
         {
-            string name = System.IO.Path.GetFileName(paths[0]) ?? paths[0];
-            bool isDir = System.IO.Directory.Exists(paths[0]);
-            FileIcon.Text = isDir ? "📁" : "📄";
-            DropTargetText.Text = name;
+            if (merged.Count >= Constants.MaxShelfItems)
+                break;
+            if (string.IsNullOrWhiteSpace(path) || !seen.Add(path))
+                continue;
 
-            // Show file size for single files
-            if (!isDir)
-            {
-                try
-                {
-                    var fi = new System.IO.FileInfo(paths[0]);
-                    FileSummaryText.Text = FormatSize(fi.Length);
-                }
-                catch
-                {
-                    FileSummaryText.Text = paths[0];
-                }
-            }
-            else
-            {
-                FileSummaryText.Text = paths[0];
-            }
+            merged.Add(HeldItem.FromPath(path));
+        }
+
+        _items = merged.ToArray();
+        _selectedIndex = _items.Length > 0 ? _items.Length - 1 : -1;
+        RenderShelf();
+    }
+
+    public void ResetShelf(bool notify = false)
+    {
+        _items = Array.Empty<HeldItem>();
+        _selectedIndex = -1;
+        _isExpanded = false;
+        ShelfChipsPanel.Children.Clear();
+        ShelfChipsPanel.Visibility = Visibility.Collapsed;
+        ActionButtons.Visibility = Visibility.Collapsed;
+        RenderShelf();
+
+        if (notify)
+            ShelfCleared?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SetExpanded(bool expanded)
+    {
+        _isExpanded = expanded;
+
+        if (HasItems)
+            RenderShelf();
+
+        ActionButtons.Visibility = expanded && HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ShelfChipsPanel.Visibility = expanded && HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        RemoveButton.Visibility = HasItems
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        RenderChips();
+
+        if (expanded && HasItems)
+        {
+            SurfaceMotion.Reveal(ShelfChipsPanel, 1.5, 95);
+            SurfaceMotion.Reveal(ActionButtons, 1.5, 105);
+        }
+    }
+
+    public void ShowDropTarget()
+    {
+        _isExpanded = false;
+        ShowAddIcon();
+        DropTargetText.Text = "Dosyayı buraya bırak";
+        FileSummaryText.Text = HasItems
+            ? $"Mevcut {_items.Length} öğeye eklenecek"
+            : "Geçici rafta tutulacak";
+        ShelfChipsPanel.Visibility = Visibility.Collapsed;
+        ActionButtons.Visibility = Visibility.Collapsed;
+        RemoveButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowAddIcon()
+    {
+        FileAddIcon.Visibility = Visibility.Visible;
+        FileIcon.Visibility = Visibility.Collapsed;
+    }
+
+    private void RenderShelf()
+    {
+        EnsureSelection();
+
+        if (_items.Length == 0)
+        {
+            ShowAddIcon();
+            DropTargetText.Text = "Dosyayı buraya bırak";
+            FileSummaryText.Text = "Geçici rafta tutulacak";
+            RemoveButton.Visibility = Visibility.Collapsed;
+            ShelfChipsPanel.Visibility = Visibility.Collapsed;
+            ActionButtons.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        RemoveButton.Visibility = Visibility.Visible;
+        HeldItem item = SelectedItem ?? _items[0];
+        FileAddIcon.Visibility = Visibility.Collapsed;
+        FileIcon.Visibility = Visibility.Visible;
+        FileIcon.Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath);
+        DropTargetText.Text = item.DisplayName;
+
+        if (!item.Exists)
+        {
+            FileSummaryText.Text = _items.Length > 1
+                ? $"{_items.Length} öğe · seçili kaynak bulunamıyor"
+                : "Kaynak artık bulunamıyor";
+        }
+        else if (_items.Length == 1)
+        {
+            FileSummaryText.Text = FormatSummary(item);
         }
         else
         {
-            // Multiple files
-            FileIcon.Text = "📦";
-            DropTargetText.Text = $"{paths.Count} dosya";
-
-            // Calculate total size
-            long totalSize = 0;
-            int fileCount = 0;
-            foreach (var path in paths)
-            {
-                try
-                {
-                    if (System.IO.File.Exists(path))
-                    {
-                        totalSize += new System.IO.FileInfo(path).Length;
-                        fileCount++;
-                    }
-                }
-                catch { }
-            }
-
-            FileSummaryText.Text = fileCount > 0
-                ? $"{FormatSize(totalSize)} • {paths.Count} öğe"
-                : $"{paths.Count} öğe";
+            long knownBytes = _items.Where(i => i.SizeBytes.HasValue).Sum(i => i.SizeBytes!.Value);
+            string sizeText = knownBytes > 0 ? $" · {FormatSize(knownBytes)}" : string.Empty;
+            FileSummaryText.Text = $"{_items.Length} öğe{sizeText} · seçili";
         }
 
-        // Show action buttons
-        ActionButtons.Visibility = Visibility.Visible;
+        if (_isExpanded)
+            RenderChips();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ACTIONS
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Copy the full path(s) to clipboard.
-    /// For single file: copies full path.
-    /// For multiple files: copies all paths, one per line.
-    /// </summary>
-    private void CopyPathButton_Click(object sender, RoutedEventArgs e)
+    private void RenderChips()
     {
-        if (_currentPaths.Length == 0) return;
+        ShelfChipsPanel.Children.Clear();
+
+        if (!_isExpanded || _items.Length == 0)
+        {
+            ShelfChipsPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        ShelfChipsPanel.Visibility = Visibility.Visible;
+
+        int firstVisible = Math.Max(0, _items.Length - 2);
+        for (int index = firstVisible; index < _items.Length; index++)
+            ShelfChipsPanel.Children.Add(CreateChip(index));
+
+        int hiddenCount = firstVisible;
+        if (hiddenCount > 0)
+        {
+            var overflow = new Border
+            {
+                Height = 24,
+                CornerRadius = new CornerRadius(7),
+                Background = FindBrush("Brush.Surface.Soft"),
+                BorderBrush = FindBrush("Brush.Border.OnDark"),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 0, 8, 0),
+                Child = new TextBlock
+                {
+                    Text = $"+{hiddenCount}",
+                    FontSize = 9.0,
+                    Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            ShelfChipsPanel.Children.Add(overflow);
+        }
+    }
+
+    private FrameworkElement CreateChip(int index)
+    {
+        HeldItem item = _items[index];
+        var container = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 5, 0)
+        };
+
+        var content = new StackPanel { Orientation = Orientation.Horizontal };
+        if (index == _selectedIndex)
+        {
+            var selectedIcon = new System.Windows.Shapes.Path
+            {
+                Width = 9,
+                Height = 9,
+                Stretch = System.Windows.Media.Stretch.Uniform,
+                Stroke = FindBrush("Brush.Accent.Primary"),
+                StrokeThickness = 1.7,
+                StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+                StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
+                Margin = new Thickness(0, 0, 5, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            selectedIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty, "Icon.Check");
+            content.Children.Add(selectedIcon);
+        }
+        content.Children.Add(new TextBlock
+        {
+            Text = item.IsDirectory ? "KL" : GetExtensionLabel(item.SourcePath),
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = FindBrush("Brush.Text.OnDarkSecondary"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 5, 0)
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = item.DisplayName,
+            FontSize = 9.5,
+            MaxWidth = 88,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Foreground = FindBrush("Brush.Text.OnDarkPrimary"),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var selectButton = new Button
+        {
+            Tag = index,
+            Content = content,
+            Style = (Style)FindResource("ShelfChipButton")
+        };
+        if (index == _selectedIndex)
+        {
+            selectButton.Background = FindBrush("Brush.Accent.Subtle");
+            selectButton.BorderBrush = FindBrush("Brush.Accent.Border");
+        }
+        selectButton.Click += ShelfChip_Select;
+
+        var removeIcon = new System.Windows.Shapes.Path
+        {
+            Width = 9,
+            Height = 9,
+            Stretch = System.Windows.Media.Stretch.Uniform,
+            Stroke = FindBrush("Brush.Text.OnDarkMuted"),
+            StrokeThickness = 1.5,
+            StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+            StrokeEndLineCap = System.Windows.Media.PenLineCap.Round
+        };
+        removeIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty, "Icon.Close");
+        var removeButton = new Button
+        {
+            Tag = index,
+            Content = removeIcon,
+            ToolTip = "Bu öğeyi raftan çıkar",
+            Style = (Style)FindResource("ShelfChipRemoveButton")
+        };
+        System.Windows.Automation.AutomationProperties.SetName(removeButton, $"{item.DisplayName} öğesini raftan çıkar");
+        removeButton.Click += ShelfChip_Remove;
+
+        container.Children.Add(selectButton);
+        container.Children.Add(removeButton);
+        return container;
+    }
+
+    private void ShelfChip_Select(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int index } || index < 0 || index >= _items.Length)
+            return;
+
+        _selectedIndex = index;
+        RenderShelf();
+        RenderChips();
+    }
+
+    private void ShelfChip_Remove(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int index } || index < 0 || index >= _items.Length)
+            return;
+
+        var list = _items.ToList();
+        list.RemoveAt(index);
+        _items = list.ToArray();
+        _selectedIndex = _items.Length == 0 ? -1 : Math.Min(index, _items.Length - 1);
+
+        if (_items.Length == 0)
+        {
+            ResetShelf(notify: true);
+            return;
+        }
+
+        RenderShelf();
+        RenderChips();
+    }
+
+    private Brush FindBrush(string key)
+        => TryFindResource(key) as Brush ?? Brushes.Transparent;
+
+    private void EnsureSelection()
+    {
+        if (_items.Length == 0)
+        {
+            _selectedIndex = -1;
+            return;
+        }
+
+        if (_selectedIndex < 0 || _selectedIndex >= _items.Length)
+            _selectedIndex = _items.Length - 1;
+    }
+
+    private static string FormatSummary(HeldItem item)
+    {
+        if (item.IsDirectory) return "Klasör · sürükle veya kopyala";
+        if (item.SizeBytes is long size) return $"{FormatSize(size)} · sürükle veya kopyala";
+        return "Sürükle veya kopyala";
+    }
+
+    private static string GetExtensionLabel(string path)
+    {
+        string ext = Path.GetExtension(path).TrimStart('.');
+        if (string.IsNullOrWhiteSpace(ext)) return "DOS";
+        return ext.Length <= 3 ? ext.ToUpperInvariant() : ext[..3].ToUpperInvariant();
+    }
+
+    private void CopyFilesButton_Click(object sender, RoutedEventArgs e)
+    {
+        string[] validPaths = GetValidPaths();
+        if (validPaths.Length == 0)
+        {
+            ShowActionFeedback("Kaynak bulunamıyor");
+            return;
+        }
 
         try
         {
-            string text = _currentPaths.Length == 1
-                ? _currentPaths[0]
-                : string.Join(Environment.NewLine, _currentPaths);
-
-            System.Windows.Clipboard.SetText(text);
-            ShowActionFeedback("✓ Kopyalandı");
+            var files = new StringCollection();
+            files.AddRange(validPaths);
+            WpfClipboard.SetFileDropList(files);
+            ShowActionFeedback("Kopyalandı · Ctrl+V ile yapıştır");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Copy failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] File clipboard copy failed: {ex.Message}");
+            ShowActionFeedback("Kopyalama başarısız");
         }
     }
 
-    /// <summary>
-    /// Open the folder containing the first dropped file in Explorer.
-    /// For folders: opens the folder itself.
-    /// </summary>
     private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentPaths.Length == 0) return;
+        HeldItem? item = SelectedItem;
+        if (item == null) return;
 
         try
         {
-            string path = _currentPaths[0];
-            if (System.IO.Directory.Exists(path))
-            {
-                Shell32.OpenFolder(path);
-            }
+            if (Directory.Exists(item.SourcePath))
+                Shell32.OpenFolder(item.SourcePath);
+            else if (File.Exists(item.SourcePath))
+                Shell32.OpenFileInExplorer(item.SourcePath);
             else
-            {
-                Shell32.OpenFileInExplorer(path);
-            }
+                ShowActionFeedback("Kaynak bulunamıyor");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Open folder failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] Open failed: {ex.Message}");
+            ShowActionFeedback("Açılamadı");
         }
     }
 
-    /// <summary>
-    /// Open a terminal (cmd) at the parent directory of the first dropped file.
-    /// For folders: opens terminal inside the folder.
-    /// </summary>
-    private void TerminalButton_Click(object sender, RoutedEventArgs e)
+    private void MoreButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentPaths.Length == 0) return;
+        if (_items.Length == 0) return;
+
+        var menu = new ContextMenu();
+
+        var copyPath = new MenuItem { Header = "Yolları metin olarak kopyala" };
+        copyPath.Click += (_, _) => CopyPathsAsText();
+        menu.Items.Add(copyPath);
+
+        var terminal = new MenuItem { Header = "Terminali seçili öğede aç" };
+        terminal.Click += (_, _) => OpenTerminalAtSelectedItem();
+        menu.Items.Add(terminal);
+
+        var clear = new MenuItem { Header = "Rafı temizle" };
+        clear.Click += (_, _) => ResetShelf(notify: true);
+        menu.Items.Add(clear);
+
+        menu.PlacementTarget = MoreButton;
+        menu.IsOpen = true;
+    }
+
+    private void RemoveButton_Click(object sender, RoutedEventArgs e)
+        => ResetShelf(notify: true);
+
+    private void CopyPathsAsText()
+    {
+        if (_items.Length == 0) return;
+        try
+        {
+            WpfClipboard.SetText(string.Join(Environment.NewLine, _items.Select(i => i.SourcePath)));
+            ShowActionFeedback("Yollar kopyalandı");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[FileShelf] Path copy failed: {ex.Message}");
+        }
+    }
+
+    private void OpenTerminalAtSelectedItem()
+    {
+        HeldItem? item = SelectedItem;
+        if (item == null) return;
+
+        string dir = item.IsDirectory
+            ? item.SourcePath
+            : Path.GetDirectoryName(item.SourcePath) ?? item.SourcePath;
+
+        if (!Directory.Exists(dir))
+        {
+            ShowActionFeedback("Kaynak bulunamıyor");
+            return;
+        }
 
         try
         {
-            string path = _currentPaths[0];
-            string dir = System.IO.Directory.Exists(path)
-                ? path
-                : System.IO.Path.GetDirectoryName(path) ?? path;
-
-            // Open cmd.exe at the directory
-            var psi = new ProcessStartInfo
+            Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 WorkingDirectory = dir,
                 UseShellExecute = false
-            };
-            Process.Start(psi);
+            });
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[DropZoneView] Open terminal failed: {ex.Message}");
+            Debug.WriteLine($"[FileShelf] Terminal failed: {ex.Message}");
         }
     }
 
+    private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(this);
+    }
 
+    private void DragHandle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _items.Length == 0)
+            return;
 
-    // ═══════════════════════════════════════════════════════════════
-    // HELPERS
-    // ═══════════════════════════════════════════════════════════════
+        Point now = e.GetPosition(this);
+        if (Math.Abs(now.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(now.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
 
-    /// <summary>
-    /// Shows brief feedback text on the summary line.
-    /// </summary>
+        string[] validPaths = GetValidPaths();
+        if (validPaths.Length == 0)
+        {
+            ShowActionFeedback("Kaynak bulunamıyor");
+            return;
+        }
+
+        DragOutStarted?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            var data = new WpfDataObject(WpfDataFormats.FileDrop, validPaths);
+            WpfDragDrop.DoDragDrop(DragHandle, data, WpfDragDropEffects.Copy);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[FileShelf] Drag-out failed: {ex.Message}");
+        }
+        finally
+        {
+            DragOutCompleted?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private string[] GetValidPaths() => _items
+        .Where(i => i.Exists)
+        .Select(i => i.SourcePath)
+        .ToArray();
+
     private void ShowActionFeedback(string text)
     {
-        string original = FileSummaryText.Text;
         FileSummaryText.Text = text;
 
-        // Restore after 1.5 seconds
         var timer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(1500)
+            Interval = TimeSpan.FromMilliseconds(1200)
         };
-        timer.Tick += (_, _) =>
+
+        EventHandler? handler = null;
+        handler = (_, _) =>
         {
             timer.Stop();
-            FileSummaryText.Text = original;
+            if (handler != null) timer.Tick -= handler;
+            if (HasItems) RenderShelf();
         };
+
+        timer.Tick += handler;
         timer.Start();
     }
 
-    /// <summary>
-    /// Formats byte count to human-readable string.
-    /// </summary>
-    private static string FormatSize(long bytes)
+    private static string FormatSize(long bytes) => bytes switch
     {
-        return bytes switch
-        {
-            < 1024 => $"{bytes} B",
-            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-            < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
-            _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
-        };
-    }
-
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+    };
 }

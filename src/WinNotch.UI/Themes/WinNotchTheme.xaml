@@ -1,0 +1,146 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <!-- Core surfaces. Runtime personalization overrides these keys at application scope. -->
+    <SolidColorBrush x:Key="Brush.Notch.Base" Color="#FF0B0B0D"/>
+    <SolidColorBrush x:Key="Brush.Notch.Handle" Color="#C82D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Edge" Color="#3E2D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientSurface" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientGlow" Color="#182D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientIcon" Color="#D8FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.AmbientText" Color="#C8FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Highlight" Color="#20FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.InnerEdge" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.BottomShade" Color="#52000000"/>
+    <SolidColorBrush x:Key="Brush.Window.Base" Color="#FF101012"/>
+    <SolidColorBrush x:Key="Brush.Window.BackdropTint" Color="#E8101012"/>
+    <SolidColorBrush x:Key="Brush.Window.Header" Color="#FF141416"/>
+    <SolidColorBrush x:Key="Brush.Surface.Raised" Color="#FF18181B"/>
+    <SolidColorBrush x:Key="Brush.Surface.Popup" Color="#FF1C1C20"/>
+    <SolidColorBrush x:Key="Brush.Surface.Control" Color="#FF222226"/>
+    <SolidColorBrush x:Key="Brush.Surface.Soft" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Softer" Color="#0CFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Hover" Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="#34FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Surface.Highlight" Color="#16FFFFFF"/>
+
+    <!-- Borders -->
+    <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#FF29292E"/>
+    <SolidColorBrush x:Key="Brush.Border.Strong" Color="#FF3A3A42"/>
+    <SolidColorBrush x:Key="Brush.Border.OnDark" Color="#20FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Border.OnDarkStrong" Color="#38FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Border.LightTheme" Color="#364A4A50"/>
+    <SolidColorBrush x:Key="Brush.Border.Premium" Color="#28FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Focus" Color="#FF6EA1FF"/>
+    <SolidColorBrush x:Key="Brush.Focus.Inner" Color="#CC0B0B0D"/>
+    <SolidColorBrush x:Key="Brush.Shadow" Color="#70000000"/>
+
+    <!-- Typography -->
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="#FFF5F5F7"/>
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="#FFBDBDC5"/>
+    <SolidColorBrush x:Key="Brush.Text.Muted" Color="#FF8D8D96"/>
+    <SolidColorBrush x:Key="Brush.Text.Faint" Color="#FF85858E"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkPrimary" Color="#F4FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkSecondary" Color="#9AFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Text.OnDarkMuted" Color="#6CFFFFFF"/>
+
+    <!-- Accent and semantic feedback -->
+    <SolidColorBrush x:Key="Brush.Accent.Primary" Color="#FF2D7DFF"/>
+    <!-- Independent selector token; unlike Primary this never follows the chosen preset. -->
+    <SolidColorBrush x:Key="Brush.Accent.System" Color="#FF0078D4"/>
+    <SolidColorBrush x:Key="Brush.Accent.SystemForeground" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Foreground" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#FF438CFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Pressed" Color="#FF216FE8"/>
+    <SolidColorBrush x:Key="Brush.Accent.Selection" Color="#342D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Subtle" Color="#182D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Border" Color="#522D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Accent.Glow" Color="#282D7DFF"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Success" Color="#FF35C98A"/>
+    <SolidColorBrush x:Key="Brush.Semantic.SuccessSubtle" Color="#1835C98A"/>
+    <SolidColorBrush x:Key="Brush.Semantic.SuccessBorder" Color="#4435C98A"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Warning" Color="#FFFFB547"/>
+    <SolidColorBrush x:Key="Brush.Semantic.Danger" Color="#FFFF5D6C"/>
+    <SolidColorBrush x:Key="Brush.Semantic.DangerSubtle" Color="#18FF5D6C"/>
+    <SolidColorBrush x:Key="Brush.Semantic.DangerBorder" Color="#44FF5D6C"/>
+
+    <!-- State accents. Unified mode aliases these to Accent at runtime; Semantic mode sets distinct colors. -->
+    <SolidColorBrush x:Key="Brush.State.File" Color="#FF2FAFC7"/>
+    <SolidColorBrush x:Key="Brush.State.File.Subtle" Color="#182FAFC7"/>
+    <SolidColorBrush x:Key="Brush.State.File.Border" Color="#482FAFC7"/>
+    <SolidColorBrush x:Key="Brush.State.Clipboard" Color="#FF8C6CFF"/>
+    <SolidColorBrush x:Key="Brush.State.Clipboard.Subtle" Color="#188C6CFF"/>
+    <SolidColorBrush x:Key="Brush.State.Clipboard.Border" Color="#488C6CFF"/>
+    <SolidColorBrush x:Key="Brush.State.Screenshot" Color="#FFE5A13A"/>
+    <SolidColorBrush x:Key="Brush.State.Screenshot.Subtle" Color="#18E5A13A"/>
+    <SolidColorBrush x:Key="Brush.State.Screenshot.Border" Color="#48E5A13A"/>
+    <SolidColorBrush x:Key="Brush.State.Media" Color="#FF35B982"/>
+    <SolidColorBrush x:Key="Brush.State.Media.Subtle" Color="#1835B982"/>
+    <SolidColorBrush x:Key="Brush.State.Media.Border" Color="#4835B982"/>
+
+    <!-- Geometry and density tokens -->
+    <CornerRadius x:Key="Radius.Small">6</CornerRadius>
+    <CornerRadius x:Key="Radius.Medium">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Large">12</CornerRadius>
+    <CornerRadius x:Key="Radius.Notch">0,0,11,11</CornerRadius>
+    <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
+
+    <Thickness x:Key="Thickness.CardPadding">16</Thickness>
+    <Thickness x:Key="Thickness.CompactPadding">9,4</Thickness>
+    <Thickness x:Key="Thickness.ViewPadding">10,6</Thickness>
+    <sys:Double x:Key="Metric.ControlHeight">30</sys:Double>
+    <sys:Double x:Key="Metric.PrimaryFontSize">11.5</sys:Double>
+    <sys:Double x:Key="Metric.SecondaryFontSize">9.5</sys:Double>
+    <sys:Double x:Key="Metric.Settings.TitleFontSize">18</sys:Double>
+    <sys:Double x:Key="Metric.Settings.SectionFontSize">14</sys:Double>
+    <sys:Double x:Key="Metric.Settings.BodyFontSize">12</sys:Double>
+    <sys:Double x:Key="Metric.Settings.RowFontSize">13</sys:Double>
+    <sys:Double x:Key="Metric.Settings.CaptionFontSize">11</sys:Double>
+    <sys:Double x:Key="Metric.Settings.ControlHeight">36</sys:Double>
+    <Thickness x:Key="Space.XXSmall">2</Thickness>
+    <Thickness x:Key="Space.XSmall">4</Thickness>
+    <Thickness x:Key="Space.Small">8</Thickness>
+    <Thickness x:Key="Space.Medium">12</Thickness>
+    <Thickness x:Key="Space.Large">16</Thickness>
+    <Thickness x:Key="Space.XLarge">24</Thickness>
+
+    <!-- Keyboard-only focus adorner shared by every re-templated control. -->
+    <Style x:Key="Focus.Visual" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3"
+                            CornerRadius="6"
+                            BorderBrush="{DynamicResource Brush.Focus}"
+                            BorderThickness="2"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Small vector icon vocabulary. All paths use the same 16x16 optical box. -->
+    <Geometry x:Key="Icon.Link">M5,5 L4,5 C2.34,5 1,6.34 1,8 C1,9.66 2.34,11 4,11 L6.5,11 M10,5 L12,5 C13.66,5 15,6.34 15,8 C15,9.66 13.66,11 12,11 L9.5,11 M5.5,8 L10.5,8</Geometry>
+    <Geometry x:Key="Icon.File">M3,1 L10,1 L14,5 L14,15 L3,15 Z M10,1 L10,5 L14,5</Geometry>
+    <Geometry x:Key="Icon.Mail">M1,3 L15,3 L15,13 L1,13 Z M1.5,4 L8,9 L14.5,4</Geometry>
+    <Geometry x:Key="Icon.Screenshot">M2,5 L2,2 L5,2 M11,2 L14,2 L14,5 M14,11 L14,14 L11,14 M5,14 L2,14 L2,11 M5,6 L11,6 L11,11 L5,11 Z</Geometry>
+    <Geometry x:Key="Icon.Save">M2,1 L12,1 L15,4 L15,15 L1,15 L1,1 Z M4,1 L4,6 L11,6 L11,1 M4,10 L12,10 L12,14 L4,14 Z</Geometry>
+    <Geometry x:Key="Icon.Copy">M5,1 L14,1 L14,11 L5,11 Z M2,5 L4,5 L4,12 L11,12 L11,15 L2,15 Z</Geometry>
+    <Geometry x:Key="Icon.Folder">M1,4 L6,4 L7.5,6 L15,6 L15,14 L1,14 Z</Geometry>
+    <Geometry x:Key="Icon.Media">M3,3 L7,3 L12,1 L12,15 L7,13 L3,13 Z M13,5 C14,6 14.5,7 14.5,8 C14.5,9 14,10 13,11</Geometry>
+    <Geometry x:Key="Icon.Check">M2,8 L6,12 L14,3</Geometry>
+    <Geometry x:Key="Icon.Error">M3,3 L13,13 M13,3 L3,13</Geometry>
+    <Geometry x:Key="Icon.Close">M4,4 L12,12 M12,4 L4,12</Geometry>
+    <Geometry x:Key="Icon.Play">M5,3 L13,8 L5,13 Z</Geometry>
+    <Geometry x:Key="Icon.Pause">M4,3 L7,3 L7,13 L4,13 Z M9,3 L12,3 L12,13 L9,13 Z</Geometry>
+    <Geometry x:Key="Icon.Previous">M3,3 L5,3 L5,13 L3,13 Z M13,3 L13,13 L6,8 Z</Geometry>
+    <Geometry x:Key="Icon.Next">M11,3 L13,3 L13,13 L11,13 Z M3,3 L3,13 L10,8 Z</Geometry>
+    <Geometry x:Key="Icon.More">M3,8 A1,1 0 1 0 5,8 A1,1 0 1 0 3,8 M7,8 A1,1 0 1 0 9,8 A1,1 0 1 0 7,8 M11,8 A1,1 0 1 0 13,8 A1,1 0 1 0 11,8</Geometry>
+    <Geometry x:Key="Icon.Add">M8,3 L8,13 M3,8 L13,8</Geometry>
+    <Geometry x:Key="Icon.Monitor">M1.5,2.5 L14.5,2.5 L14.5,11 L1.5,11 Z M5,14 L11,14 M8,11 L8,14</Geometry>
+    <Geometry x:Key="Icon.Power">M8,1.5 L8,8 M4,3.5 C1,6 2,12 8,13 C14,12 15,6 12,3.5</Geometry>
+    <Geometry x:Key="Icon.Settings">M8,2 L9,4.1 L11.3,3.7 L12.3,5.7 L10.7,7.4 L11.7,9.5 L14,10 L13.4,12.2 L11,12.1 L9.7,14 L7.5,13.2 L5.8,14.7 L4.2,13 L2,13.3 L1.2,11.1 L3.1,9.7 L2.6,7.4 L1,5.8 L2.4,3.9 L4.7,4.4 L6,2.4 Z M8,6 A2,2 0 1 0 8,10 A2,2 0 1 0 8,6</Geometry>
+    <Geometry x:Key="Icon.Diagnostics">M2,13 L5,9 L8,11 L12,5 L14,7 M2,3 L2,14 L15,14</Geometry>
+    <Geometry x:Key="Icon.ChevronDown">M3,6 L8,11 L13,6</Geometry>
+    <Geometry x:Key="Icon.NotchMark">M2,4 L14,4 L14,9 C14,11.2 12.2,13 10,13 L6,13 C3.8,13 2,11.2 2,9 Z</Geometry>
+</ResourceDictionary>

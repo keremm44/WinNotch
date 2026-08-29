@@ -8,91 +8,145 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        Background="#FF000000"
+        Background="{DynamicResource Brush.Notch.Base}"
         AllowsTransparency="False"
         Cursor="Arrow"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
         Closing="MainWindow_Closing"
-        Loaded="MainWindow_Loaded">
+        Loaded="MainWindow_Loaded"
+        SizeChanged="MainWindow_PrimarySizeChanged">
 
-    <!--
-        IMPORTANT DESIGN DECISIONS:
-        1. AllowsTransparency="False" — We use WS_EX_LAYERED + DWM for native transparency.
-           Setting AllowsTransparency="True" would use software blending and waste CPU/GPU.
-
-        2. Background="#FF000000" — 100% opaque black. DWM handles the transparency
-           through DwmExtendFrameIntoClientArea + SetWindowRgn for the pill shape.
-
-        3. Topmost="True" — Always on top. Combined with WS_EX_TOOLWINDOW (set in code-behind),
-           this creates a persistent widget that doesn't appear in Alt+Tab.
-
-        4. ShowInTaskbar="False" — Hidden from taskbar.
-
-        5. ResizeMode="NoResize" — Fixed size, no user resize.
-    -->
-
-    <Grid x:Name="RootGrid" Background="Transparent"
-          MouseEnter="RootGrid_MouseEnter"
-          MouseLeave="RootGrid_MouseLeave"
+    <Grid x:Name="RootGrid"
+          Background="{DynamicResource Brush.Notch.Base}"
+          ClipToBounds="True"
+          MouseEnter="RootGrid_PrimaryMouseEnter"
+          MouseLeave="RootGrid_PrimaryMouseLeave"
+          PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp"
           AllowDrop="True"
           Drop="RootGrid_Drop"
           DragEnter="RootGrid_DragEnter"
           DragLeave="RootGrid_DragLeave"
-          DragOver="RootGrid_DragOver"
-          MouseRightButtonUp="RootGrid_MouseRightButtonUp">
+          DragOver="RootGrid_DragOver">
 
-        <!-- Main Notch Container with animation support -->
         <Border x:Name="NotchBorder"
-                Background="#FF000000"
-                CornerRadius="11"
+                Background="{DynamicResource Brush.Notch.Base}"
+                BorderBrush="{DynamicResource Brush.Notch.Edge}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="{DynamicResource Radius.Notch}"
                 ClipToBounds="True"
-                Width="100" Height="22"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top">
-
-            <Border.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform x:Name="NotchScale" ScaleX="1" ScaleY="1" CenterX="65" CenterY="14"/>
-                    <TranslateTransform x:Name="NotchTranslate" X="0" Y="0"/>
-                </TransformGroup>
-            </Border.RenderTransform>
-
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
             <Grid>
-                <!-- Default Idle Content -->
-                <StackPanel x:Name="IdleContent"
+                <Grid x:Name="IdleContent"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+                    <Border x:Name="IdleAmbientGlow"
+                            Width="36" Height="10"
+                            CornerRadius="5"
+                            Background="{DynamicResource Brush.Notch.AmbientGlow}"
+                            Opacity="0.48"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"/>
+                    <Border x:Name="IdleLine"
+                            Width="20" Height="2"
+                            CornerRadius="1"
+                            Background="{DynamicResource Brush.Notch.Handle}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    <StackPanel x:Name="IdleDots"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}" Margin="0,0,3,0"/>
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Brush.Notch.Handle}"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel x:Name="MediaAmbientContent"
                             Orientation="Horizontal"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Opacity="1">
-
-                    <!-- Minimal notch indicator — just a subtle mark, no text branding -->
-                    <TextBlock Text="•"
-                               Foreground="#66FFFFFF"
-                               FontSize="10"
+                            Visibility="Collapsed">
+                    <Border Width="16" Height="16"
+                            CornerRadius="8"
+                            Background="{DynamicResource Brush.Notch.AmbientSurface}"
+                            Margin="0,0,5,0">
+                        <Path Data="{DynamicResource Icon.Play}"
+                              Width="7" Height="7"
+                              Stretch="Uniform"
+                              Fill="{DynamicResource Brush.Notch.AmbientIcon}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Margin="1,0,0,0"/>
+                    </Border>
+                    <TextBlock x:Name="MediaAmbientTitle"
+                               Text="Medya"
+                               FontSize="9"
+                               Foreground="{DynamicResource Brush.Notch.AmbientText}"
+                               MaxWidth="82"
+                               TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Drop Zone Content (Module A) -->
-                <views:DropZoneView x:Name="DropZoneView"
-                                    Visibility="Collapsed"/>
+                <Grid x:Name="TimerNotificationContent" Visibility="Collapsed" Margin="12,5">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" Fill="{DynamicResource Brush.Accent.Primary}" Margin="0,0,8,0"/>
+                        <TextBlock Text="Zamanlayıcı tamamlandı" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.Text.OnDarkPrimary}"/>
+                    </StackPanel>
+                </Grid>
 
-                <!-- Media Widget Content (Module C) -->
-                <views:MediaWidgetView x:Name="MediaWidgetView"
-                                       Visibility="Collapsed"/>
+                <ContentControl x:Name="CommandHubHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Visibility="Collapsed"/>
 
-                <!-- Clipboard Toast Content (Module B/E) -->
-                <views:ClipboardToastView x:Name="ClipboardToastView"
-                                          Visibility="Collapsed"/>
+                <!-- Feature visual trees are materialized only when their module is
+                     actually used; disabled modules retain no templates or timers. -->
+                <ContentControl x:Name="DropZoneHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Visibility="Collapsed"/>
+
+                <ContentControl x:Name="MediaWidgetHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Visibility="Collapsed"/>
+
+                <ContentControl x:Name="ClipboardToastHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Visibility="Collapsed"/>
+
+                <!-- Lightweight shell depth: one neutral inner rim, a narrow specular
+                     highlight and a bottom shadow. No blur/effect loop is involved. -->
+                <Border BorderBrush="{DynamicResource Brush.Notch.InnerEdge}"
+                        BorderThickness="1,0,1,1"
+                        CornerRadius="0,0,10,10"
+                        Margin="1,0,1,1"
+                        IsHitTestVisible="False"/>
+                <Border Height="1"
+                        Margin="10,0"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource Brush.Notch.Highlight}"
+                        IsHitTestVisible="False"/>
+                <Border Height="1"
+                        Margin="8,0,8,1"
+                        VerticalAlignment="Bottom"
+                        Background="{DynamicResource Brush.Notch.BottomShade}"
+                        IsHitTestVisible="False"/>
             </Grid>
         </Border>
 
-        <!-- Theme Border (shown when Windows uses light theme) -->
         <Border x:Name="ThemeBorder"
-                BorderBrush="#FF404040"
-                BorderThickness="1"
-                CornerRadius="11"
-                Width="100" Height="22"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
+                BorderBrush="{DynamicResource Brush.Border.LightTheme}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="{DynamicResource Radius.Notch}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 IsHitTestVisible="False"
                 Visibility="Collapsed"/>
     </Grid>

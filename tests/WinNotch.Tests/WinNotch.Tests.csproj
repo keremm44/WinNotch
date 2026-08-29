@@ -20,5 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinNotch.Common\WinNotch.Common.csproj" />
     <ProjectReference Include="..\..\src\WinNotch.Core\WinNotch.Core.csproj" />
+    <ProjectReference Include="..\..\src\WinNotch.UI\WinNotch.UI.csproj" />
+    <ProjectReference Include="..\..\src\WinNotch.TrayApp\WinNotch.TrayApp.csproj" />
   </ItemGroup>
 </Project>
