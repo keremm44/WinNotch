@@ -18,7 +18,8 @@
         SizeChanged="MainWindow_PrimarySizeChanged">
 
     <Grid x:Name="RootGrid"
-          Background="Transparent"
+          Background="{DynamicResource Brush.Notch.Base}"
+          ClipToBounds="True"
           MouseEnter="RootGrid_PrimaryMouseEnter"
           MouseLeave="RootGrid_PrimaryMouseLeave"
           PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp"
