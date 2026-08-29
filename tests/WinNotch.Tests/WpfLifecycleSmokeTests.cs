@@ -7,6 +7,8 @@ using WinNotch.UI;
 using WinNotch.UI.Views;
 using Xunit;
 
+using WpfApplication = System.Windows.Application;
+
 namespace WinNotch.Tests;
 
 public class WpfLifecycleSmokeTests
@@ -19,10 +21,10 @@ public class WpfLifecycleSmokeTests
 
         var thread = new Thread(() =>
         {
-            Application? app = null;
+            WpfApplication? app = null;
             try
             {
-                app = new Application
+                app = new WpfApplication
                 {
                     ShutdownMode = ShutdownMode.OnExplicitShutdown
                 };
