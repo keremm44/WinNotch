@@ -6,7 +6,7 @@ namespace WinNotch.Common;
 /// </summary>
 public sealed class AppearanceSettings
 {
-    /// <summary>Obsidian, Aurora, Monochrome or Paper.</summary>
+    /// <summary>Obsidian, Aurora, Graphite, Monochrome, Paper or Frost.</summary>
     public string ThemePreset { get; set; } = "Obsidian";
 
     /// <summary>Blue, Violet, Cyan, Amber, Green or System.</summary>
