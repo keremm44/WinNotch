@@ -5,6 +5,7 @@ using WinNotch.Common;
 using WinNotch.TrayApp;
 using WinNotch.UI;
 using WinNotch.UI.Views;
+using Xunit;
 
 namespace WinNotch.Tests;
 
