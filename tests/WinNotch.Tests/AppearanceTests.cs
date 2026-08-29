@@ -66,6 +66,22 @@ public class AppearanceTests
         Assert.Equal("#FF8C6CFF", palette.AccentPrimary);
     }
 
+    [Theory]
+    [InlineData("Graphite", "#FF101215", false)]
+    [InlineData("Frost", "#FFF2F6FB", true)]
+    public void NewThemes_ResolveToDistinctControlledPalettes(
+        string theme,
+        string expectedNotchBase,
+        bool expectedLight)
+    {
+        var appearance = new AppearanceSettings { ThemePreset = theme, AccentPreset = "Cyan" };
+        AppearancePalette palette = AppearanceResolver.ResolvePalette(appearance);
+
+        Assert.Equal(expectedNotchBase, palette.NotchBase);
+        Assert.Equal(expectedLight, palette.IsLightTheme);
+        Assert.Equal("#FF23B7C9", palette.AccentPrimary);
+    }
+
     [Fact]
     public void DarkThemeNotchBases_AreVisiblyDistinctByContract()
     {
@@ -73,15 +89,18 @@ public class AppearanceTests
             new AppearanceSettings { ThemePreset = "Obsidian" });
         AppearancePalette aurora = AppearanceResolver.ResolvePalette(
             new AppearanceSettings { ThemePreset = "Aurora" });
+        AppearancePalette graphite = AppearanceResolver.ResolvePalette(
+            new AppearanceSettings { ThemePreset = "Graphite" });
         AppearancePalette monochrome = AppearanceResolver.ResolvePalette(
             new AppearanceSettings { ThemePreset = "Monochrome" });
 
         Assert.Equal("#FF0B0B0D", obsidian.NotchBase);
         Assert.Equal("#FF0A1020", aurora.NotchBase);
+        Assert.Equal("#FF101215", graphite.NotchBase);
         Assert.Equal("#FF050505", monochrome.NotchBase);
-        Assert.NotEqual(obsidian.NotchBase, aurora.NotchBase);
-        Assert.NotEqual(obsidian.NotchBase, monochrome.NotchBase);
-        Assert.NotEqual(aurora.NotchBase, monochrome.NotchBase);
+
+        string[] bases = [obsidian.NotchBase, aurora.NotchBase, graphite.NotchBase, monochrome.NotchBase];
+        Assert.Equal(bases.Length, bases.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]
@@ -101,6 +120,25 @@ public class AppearanceTests
         Assert.NotEqual(blueEdge, violetEdge);
         Assert.Contains("2D7DFF", blueHandle);
         Assert.Contains("8C6CFF", violetHandle);
+    }
+
+    [Fact]
+    public void ShellDepthTokens_RemainThemeAware()
+    {
+        var darkSettings = new AppearanceSettings { ThemePreset = "Graphite" };
+        var lightSettings = new AppearanceSettings { ThemePreset = "Frost" };
+        AppearancePalette dark = AppearanceResolver.ResolvePalette(darkSettings);
+        AppearancePalette light = AppearanceResolver.ResolvePalette(lightSettings);
+
+        string darkHighlight = AppearanceResolver.ResolveNotchHighlightColor(darkSettings, dark);
+        string lightHighlight = AppearanceResolver.ResolveNotchHighlightColor(lightSettings, light);
+        string darkInner = AppearanceResolver.ResolveNotchInnerEdgeColor(darkSettings, dark);
+        string lightInner = AppearanceResolver.ResolveNotchInnerEdgeColor(lightSettings, light);
+
+        Assert.NotEqual(darkHighlight, lightHighlight);
+        Assert.NotEqual(darkInner, lightInner);
+        Assert.StartsWith("#", darkHighlight);
+        Assert.StartsWith("#", lightHighlight);
     }
 
     [Fact]
