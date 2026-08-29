@@ -46,7 +46,10 @@
 
     <Grid Margin="{DynamicResource Thickness.CompactPadding}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <!-- Main notification content owns the remaining state height. Text,
+                 thumbnail and timestamp already center themselves inside this row, so
+                 compact and screenshot states no longer leave bottom-only pixel slack. -->
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
