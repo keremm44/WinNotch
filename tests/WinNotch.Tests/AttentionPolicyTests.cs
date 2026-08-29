@@ -28,6 +28,23 @@ public class AttentionPolicyTests
         Assert.Equal(NotchState.ClipboardNotify, result.TargetState);
     }
 
+    [Theory]
+    [InlineData(ClipboardContentType.Url, AttentionLevel.Subtle)]
+    [InlineData(ClipboardContentType.FilePath, AttentionLevel.Actionable)]
+    [InlineData(ClipboardContentType.Email, AttentionLevel.Subtle)]
+    [InlineData(ClipboardContentType.Phone, AttentionLevel.Subtle)]
+    [InlineData(ClipboardContentType.Color, AttentionLevel.Subtle)]
+    public void Balanced_ActionableClipboardMatrix_UsesExpectedAttention(
+        ClipboardContentType contentType,
+        AttentionLevel expectedLevel)
+    {
+        var result = _policy.ClassifyClipboard(contentType, "sample", "Balanced");
+
+        Assert.Equal(expectedLevel, result.Level);
+        Assert.False(result.Suppressed);
+        Assert.Equal(NotchState.ClipboardNotify, result.TargetState);
+    }
+
     [Fact]
     public void UrlClipboard_IsSilent_InQuietMode()
     {
