@@ -60,7 +60,7 @@
                         VerticalAlignment="Top"
                         HorizontalAlignment="Center"
                         Background="{DynamicResource Brush.Notch.Base}"
-                        BorderBrush="{DynamicResource Brush.Border.LightTheme}"
+                        BorderBrush="{DynamicResource Brush.Notch.Edge}"
                         BorderThickness="1,0,1,1"
                         CornerRadius="0,0,11,11"
                         ClipToBounds="True">
@@ -69,14 +69,14 @@
                         <Grid x:Name="IdlePreview" Visibility="Collapsed"
                               HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Border x:Name="PreviewIdleGlow"
-                                    Width="38" Height="13"
-                                    CornerRadius="7"
+                                    Width="36" Height="10"
+                                    CornerRadius="5"
                                     Background="{DynamicResource Brush.Notch.AmbientGlow}"
-                                    Opacity="0.58"
+                                    Opacity="0.48"
                                     Visibility="Collapsed"/>
                             <Border x:Name="PreviewIdleLine"
-                                    Width="20" Height="3"
-                                    CornerRadius="1.5"
+                                    Width="20" Height="2"
+                                    CornerRadius="1"
                                     Background="{DynamicResource Brush.Notch.Handle}"/>
                             <StackPanel x:Name="PreviewIdleDots"
                                         Orientation="Horizontal"
@@ -197,16 +197,28 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Same lightweight shell treatment used by the runtime notch. -->
+                        <!-- Mirror the runtime shell treatment exactly enough for theme review. -->
                         <Border BorderBrush="{DynamicResource Brush.Notch.InnerEdge}"
                                 BorderThickness="1,0,1,1"
                                 CornerRadius="0,0,10,10"
                                 Margin="1,0,1,1"
                                 IsHitTestVisible="False"/>
-                        <Border Height="3"
+                        <Border Height="1"
+                                Margin="10,0"
                                 VerticalAlignment="Top"
                                 Background="{DynamicResource Brush.Notch.Highlight}"
                                 IsHitTestVisible="False"/>
+                        <Border Height="1"
+                                Margin="8,0,8,1"
+                                VerticalAlignment="Bottom"
+                                Background="{DynamicResource Brush.Notch.BottomShade}"
+                                IsHitTestVisible="False"/>
+                        <Border x:Name="PreviewThemeBorder"
+                                BorderBrush="{DynamicResource Brush.Border.LightTheme}"
+                                BorderThickness="1,0,1,1"
+                                CornerRadius="0,0,10,10"
+                                IsHitTestVisible="False"
+                                Visibility="Collapsed"/>
                     </Grid>
                 </Border>
             </Grid>
