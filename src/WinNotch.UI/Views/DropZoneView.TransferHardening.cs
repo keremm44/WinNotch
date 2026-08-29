@@ -6,6 +6,7 @@ using WpfDragDropEffects = System.Windows.DragDropEffects;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfMouseButtonState = System.Windows.Input.MouseButtonState;
 using WpfPoint = System.Windows.Point;
+using WpfSystemParameters = System.Windows.SystemParameters;
 
 namespace WinNotch.UI.Views;
 
@@ -17,8 +18,8 @@ public partial class DropZoneView
             return;
 
         WpfPoint now = e.GetPosition(this);
-        if (Math.Abs(now.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
-            Math.Abs(now.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+        if (Math.Abs(now.X - _dragStart.X) < WpfSystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(now.Y - _dragStart.Y) < WpfSystemParameters.MinimumVerticalDragDistance)
             return;
 
         string[] validPaths = FileShelfTransferService.GetExistingPaths(_items);
