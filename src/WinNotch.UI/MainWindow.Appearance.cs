@@ -66,8 +66,9 @@ public partial class MainWindow
 
     private void MainWindow_AppearanceLoaded(object sender, RoutedEventArgs e)
     {
-        // Runs after the legacy Windows-theme border detection in MainWindow_Loaded,
-        // so an explicit Paper preset always wins over the OS dark/light preference.
+        // Runs after the legacy startup theme probe. Controlled WinNotch presets now
+        // own the shell treatment completely; the OS theme cannot reintroduce a light
+        // border over an explicitly selected dark preset.
         AppearancePalette palette = AppearanceResolver.ResolvePalette(_settings.Appearance);
         RefreshAppearanceThemeBorder(palette.IsLightTheme);
         UpdateRuntimeReliabilityChecks();
@@ -89,22 +90,5 @@ public partial class MainWindow
     }
 
     private void RefreshAppearanceThemeBorder(bool explicitLightTheme)
-    {
-        bool showBorder = explicitLightTheme || IsWindowsLightTheme();
-        ThemeBorder.Visibility = showBorder ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private static bool IsWindowsLightTheme()
-    {
-        try
-        {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-            return key?.GetValue("AppsUseLightTheme") is int value && value == 1;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        => ThemeBorder.Visibility = explicitLightTheme ? Visibility.Visible : Visibility.Collapsed;
 }
