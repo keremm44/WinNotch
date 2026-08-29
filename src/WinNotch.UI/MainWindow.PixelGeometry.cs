@@ -11,9 +11,9 @@ public partial class MainWindow
         base.OnSourceInitialized(e);
 
         // MainWindow_SourceInitialized runs from the SourceInitialized event raised
-        // by base.OnSourceInitialized. Correct the legacy DIP-based native region
-        // immediately afterwards, then repeat once after the first rendered frame.
-        ApplyPixelAlignedWindowRegion();
+        // by base.OnSourceInitialized. Correct the legacy startup region immediately
+        // afterwards, then repeat once after the first rendered frame.
+        SyncPixelAlignedNativeGeometry(recenter: false);
         ContentRendered += MainWindow_PixelGeometryContentRendered;
     }
 
@@ -21,32 +21,42 @@ public partial class MainWindow
     {
         base.OnRenderSizeChanged(sizeInfo);
 
-        // NotchMotionController updates the HWND region while animating. Its legacy
-        // radius is DIP-based; re-apply the physical-pixel silhouette after layout so
-        // the compositor never settles on a mismatched corner mask.
-        ApplyPixelAlignedWindowRegion();
+        // This is the sole runtime geometry synchronization path. WPF owns Width /
+        // Height in DIPs; once layout resolves the real HWND client pixels we update
+        // hit testing, the DPI-aware native silhouette and top-center placement from
+        // that same physical rectangle.
+        SyncPixelAlignedNativeGeometry(recenter: true);
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        ApplyPixelAlignedWindowRegion();
-        RecenterOnMonitor();
+        SyncPixelAlignedNativeGeometry(recenter: true);
     }
 
     private void MainWindow_PixelGeometryContentRendered(object? sender, EventArgs e)
     {
         ContentRendered -= MainWindow_PixelGeometryContentRendered;
-        ApplyPixelAlignedWindowRegion();
+        SyncPixelAlignedNativeGeometry(recenter: true);
     }
 
-    private void ApplyPixelAlignedWindowRegion()
+    private void SyncPixelAlignedNativeGeometry(bool recenter)
     {
         if (_hWnd == IntPtr.Zero || !User32.GetClientRect(_hWnd, out var clientRect))
             return;
 
         int width = Math.Max(1, clientRect.Right - clientRect.Left);
         int height = Math.Max(1, clientRect.Bottom - clientRect.Top);
+        _hitWidthPx = width;
+        _hitHeightPx = height;
+
+        ApplyPixelAlignedWindowRegion(width, height);
+        if (recenter)
+            RecenterOnMonitor();
+    }
+
+    private void ApplyPixelAlignedWindowRegion(int width, int height)
+    {
         uint dpi = User32.GetDpiForWindow(_hWnd);
         NotchRegionGeometry geometry = NotchRegionGeometryResolver.Resolve(width, height, dpi);
 
