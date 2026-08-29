@@ -18,6 +18,7 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private SettingsWindow? _settingsWindow;
     private ModuleSettings _settings = null!;
+    private int _fatalShutdownRequested;
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
@@ -71,17 +72,8 @@ public partial class App : Application
         catch (Exception ex)
         {
             Debug.WriteLine($"[WinNotch] FATAL STARTUP ERROR: {ex}");
-            try
-            {
-                string logPath = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    Constants.AppName, "crash.log");
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
-                System.IO.File.AppendAllText(logPath,
-                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] STARTUP ERROR: {ex}\n\n");
-            }
-            catch { }
-            Shutdown();
+            TryWriteCrashLog("STARTUP ERROR", ex);
+            Shutdown(-1);
         }
     }
 
@@ -192,7 +184,19 @@ public partial class App : Application
         System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
         Debug.WriteLine($"[WinNotch] Unhandled exception: {e.Exception}");
+        TryWriteCrashLog("UNHANDLED UI ERROR", e.Exception);
 
+        // Once the WPF dispatcher has thrown unexpectedly we cannot prove that the
+        // state machine, visual tree or native HWND integrations are still coherent.
+        // Treat it as fatal instead of marking it handled and continuing in a
+        // potentially corrupted state. The guard prevents recursive shutdown paths.
+        e.Handled = true;
+        if (Interlocked.Exchange(ref _fatalShutdownRequested, 1) == 0)
+            Shutdown(-1);
+    }
+
+    private static void TryWriteCrashLog(string category, Exception exception)
+    {
         try
         {
             string logPath = System.IO.Path.Combine(
@@ -202,11 +206,12 @@ public partial class App : Application
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
             System.IO.File.AppendAllText(logPath,
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Exception}\n\n");
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {category}: {exception}\n\n");
         }
-        catch { }
-
-        e.Handled = true;
+        catch
+        {
+            // Crash reporting must never obscure the original failure.
+        }
     }
 
     private void RestartApplication()
