@@ -1,6 +1,7 @@
 // WinNotch.TrayApp/TrayIconManager.cs
 
 using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using WinNotch.Common;
@@ -19,24 +20,25 @@ public sealed class TrayIconManager : IDisposable
     public TrayIconManager(ModuleSettings settings)
     {
         _settings = settings;
+        string version = ResolveProductVersion();
 
         _trayIcon = new Hardcodet.Wpf.TaskbarNotification.TaskbarIcon
         {
-            ToolTipText = $"{Constants.AppName} — sağ tıkla ayarları aç",
+            ToolTipText = $"{Constants.AppName} {version} — sağ tıkla ayarları aç",
             Visibility = Visibility.Visible
         };
 
-        _trayIcon.ContextMenu = CreateContextMenu();
+        _trayIcon.ContextMenu = CreateContextMenu(version);
         _trayIcon.DoubleClickCommand = new RelayCommand(OnSettingsClicked);
     }
 
-    private ContextMenu CreateContextMenu()
+    private ContextMenu CreateContextMenu(string version)
     {
         var menu = new ContextMenu();
 
         menu.Items.Add(new MenuItem
         {
-            Header = Constants.AppName,
+            Header = $"{Constants.AppName} {version}",
             IsEnabled = false
         });
         menu.Items.Add(new Separator());
@@ -184,6 +186,21 @@ public sealed class TrayIconManager : IDisposable
         {
             Debug.WriteLine($"[TrayIconManager] Auto-start update failed: {ex.Message}");
         }
+    }
+
+    private static string ResolveProductVersion()
+    {
+        Assembly assembly = typeof(TrayIconManager).Assembly;
+        string? informational = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informational))
+        {
+            int metadata = informational.IndexOf('+');
+            return metadata > 0 ? informational[..metadata] : informational;
+        }
+
+        return assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
     public void UpdateTooltip(string text) => _trayIcon.ToolTipText = text;
