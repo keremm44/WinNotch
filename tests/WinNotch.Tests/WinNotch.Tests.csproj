@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -20,5 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinNotch.Common\WinNotch.Common.csproj" />
     <ProjectReference Include="..\..\src\WinNotch.Core\WinNotch.Core.csproj" />
+    <ProjectReference Include="..\..\src\WinNotch.UI\WinNotch.UI.csproj" />
+    <ProjectReference Include="..\..\src\WinNotch.TrayApp\WinNotch.TrayApp.csproj" />
   </ItemGroup>
 </Project>
