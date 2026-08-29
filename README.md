@@ -27,11 +27,25 @@ Window pinning / arbitrary external-window `TOPMOST` management is intentionally
 - **Disabled capabilities:** their optional services are not kept alive.
 - **Privacy-aware clipboard:** respects `CF_EXCLUDECLIPBOARDCONTENTFROMMONITOR`.
 
+## Appearance
+
+Appearance remains preset-driven so personalization cannot destabilize notch geometry.
+
+- **Themes:** Obsidian, Aurora, Graphite, Monochrome, Paper, Frost.
+- **Accent:** Blue, Violet, Cyan, Amber, Green, or the Windows system accent.
+- **Density:** Compact or Comfortable.
+- **Motion:** Normal or Reduced; Windows animation accessibility settings always win.
+- **Idle signature:** Line, Dot, or Ambient.
+- **State color:** Unified or semantic per capability.
+- **Privacy preview:** Full, Masked, or Type Only.
+
+The runtime shell uses a restrained accent rim, neutral inner edge, one-pixel specular highlight and bottom shade. It deliberately avoids blur/effect loops so the top-level window remains pixel-stable across DPI changes.
+
 ## Performance
 
-WinNotch is designed to do minimal continuous work while idle: a small fullscreen reliability check runs in Auto visibility mode, and the opt-in media module uses a low-frequency SMTC recovery check only while no session is selected. Actual memory depends on the enabled integrations and the WPF/.NET runtime, so the project does not claim a fixed 15 MB process limit.
+WinNotch is designed to do minimal continuous work while idle: a small fullscreen reliability check runs in Auto visibility mode, and the opt-in media module uses a low-frequency SMTC recovery check only while no session is selected. Actual memory depends on the enabled integrations and the WPF/.NET runtime, so the project does not claim a fixed process-memory limit.
 
-Use a direct Release build when measuring memory or CPU. The Settings diagnostics panel and Windows CI smoke test can be used for comparison.
+Use a direct Release build when measuring memory or CPU. Windows CI runs a warm idle smoke with repeated median samples and a bounded all-modules resource soak.
 
 ## Tech stack
 
@@ -55,6 +69,14 @@ For local development/retesting, the helper script gracefully closes a running W
 .\scripts\rebuild-release.ps1
 ```
 
+For the current release candidate, build the same self-contained `win-x64` package validated by CI:
+
+```powershell
+.\scripts\publish-rc.ps1
+```
+
+The script validates the executable version metadata and writes `artifacts/WinNotch-0.2.0-rc1-win-x64.zip`.
+
 ## Architecture
 
 ```text
@@ -63,7 +85,7 @@ WinNotch/
 ├── src/WinNotch.Core/     Win32 interop and optional services
 ├── src/WinNotch.UI/       notch surface, views and motion
 ├── src/WinNotch.TrayApp/  application lifecycle, tray and settings
-└── tests/WinNotch.Tests/  regression tests
+└── tests/WinNotch.Tests/  regression + Windows/WPF lifecycle smoke tests
 ```
 
 ## Design principles
@@ -74,6 +96,7 @@ WinNotch/
 - Native hit-testing outside the actual notch surface.
 - Optional integrations should have explicit lifecycle cleanup.
 - Runtime claims should be measured rather than inferred from UI size.
+- Personalization must remain bounded by controlled presets and never fork core interaction behavior.
 
 ## License
 
