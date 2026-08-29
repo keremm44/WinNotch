@@ -56,7 +56,8 @@ public sealed record MotionProfile(
 /// </summary>
 public static class AppearanceResolver
 {
-    private static readonly string[] Themes = ["Obsidian", "Aurora", "Monochrome", "Paper"];
+    private static readonly string[] Themes =
+        ["Obsidian", "Aurora", "Graphite", "Monochrome", "Paper", "Frost"];
     private static readonly string[] Accents = ["Blue", "Violet", "Cyan", "Amber", "Green", "System"];
     private static readonly string[] Densities = ["Compact", "Comfortable"];
     private static readonly string[] Motions = ["Reduced", "Normal"];
@@ -111,8 +112,7 @@ public static class AppearanceResolver
 
         return settings.ThemePreset switch
         {
-            // Aurora must read as a deliberate blue-black surface on the real notch,
-            // not as an almost-identical neutral black next to Obsidian.
+            // Deliberate blue-black depth with cooler raised surfaces.
             "Aurora" => new AppearancePalette(
                 "#FF0A1020", "#FF0E111A", "#FF121622", "#FF151A26", "#FF19202E", "#FF202735",
                 "#16FFFFFF", "#0CFFFFFF", "#26FFFFFF", "#36FFFFFF",
@@ -122,6 +122,18 @@ public static class AppearanceResolver
                 accent, hover, pressed, selection, subtle, accentBorder,
                 "#FF43CF93", "#FFFFB956", "#FFFF6575",
                 "#FF35B8D4", "#FF9A7AFF", "#FFF0AA46", "#FF46C98D", false),
+
+            // Softer charcoal than Obsidian. Intended for users who want a visible
+            // material hierarchy without a blue cast or pure-black shell.
+            "Graphite" => new AppearancePalette(
+                "#FF101215", "#FF15171A", "#FF191C20", "#FF1D2126", "#FF22272D", "#FF292E35",
+                "#16FFFFFF", "#0DFFFFFF", "#24FFFFFF", "#34FFFFFF",
+                "#FF30353D", "#FF424953", "#22FFFFFF", "#3CFFFFFF",
+                "#FFF3F5F7", "#FFC2C7CF", "#FF9299A3", "#FF808791",
+                "#F4FFFFFF", "#A6FFFFFF", "#72FFFFFF",
+                accent, hover, pressed, selection, subtle, accentBorder,
+                "#FF41C98E", "#FFF2B24B", "#FFFF6573",
+                "#FF34AEC4", "#FF9174F4", "#FFE2A13F", "#FF3DB786", false),
 
             "Paper" => new AppearancePalette(
                 "#FFF8F8FA", "#FFF4F5F7", "#FFFFFFFF", "#FFFFFFFF", "#FFFFFFFF", "#FFF0F1F4",
@@ -133,8 +145,18 @@ public static class AppearanceResolver
                 "#FF228A5C", "#FFB56B13", "#FFC93D4F",
                 "#FF168AA5", "#FF7559D9", "#FFC27816", "#FF23845C", true),
 
-            // Monochrome is intentionally truly neutral. Its user accent is suppressed,
-            // but the notch base is now visibly darker than Obsidian.
+            // Cooler light treatment than Paper with a slightly blue-gray shell.
+            "Frost" => new AppearancePalette(
+                "#FFF2F6FB", "#FFF5F7FA", "#FFFFFFFF", "#FFFFFFFF", "#FFFFFFFF", "#FFECEFF4",
+                "#100F172A", "#080F172A", "#120F172A", "#1C0F172A",
+                "#FFD7DDE6", "#FFBFC8D5", "#180F172A", "#2A0F172A",
+                "#FF111827", "#FF475569", "#FF64748B", "#FF6B7280",
+                "#FF111827", "#FF475569", "#FF64748B",
+                accent, hover, pressed, selection, subtle, accentBorder,
+                "#FF16845B", "#FFA76512", "#FFC83D50",
+                "#FF0F819B", "#FF7054D1", "#FFB66E14", "#FF197A55", true),
+
+            // Monochrome is intentionally truly neutral. Its user accent is suppressed.
             "Monochrome" => new AppearancePalette(
                 "#FF050505", "#FF101010", "#FF141414", "#FF181818", "#FF1D1D1D", "#FF232323",
                 "#14FFFFFF", "#0BFFFFFF", "#22FFFFFF", "#32FFFFFF",
@@ -181,6 +203,22 @@ public static class AppearanceResolver
             return "#30FFFFFF";
 
         return WithAlpha(palette.AccentPrimary, palette.IsLightTheme ? (byte)0x34 : (byte)0x3E);
+    }
+
+    public static string ResolveNotchHighlightColor(AppearanceSettings settings, AppearancePalette palette)
+    {
+        NormalizeInPlace(settings);
+        return palette.IsLightTheme
+            ? "#90FFFFFF"
+            : WithAlpha(palette.TextOnDarkPrimary, 0x20);
+    }
+
+    public static string ResolveNotchInnerEdgeColor(AppearanceSettings settings, AppearancePalette palette)
+    {
+        NormalizeInPlace(settings);
+        return palette.IsLightTheme
+            ? WithAlpha(palette.TextPrimary, 0x18)
+            : WithAlpha(palette.TextOnDarkPrimary, 0x18);
     }
 
     public static string ResolveStateColor(
