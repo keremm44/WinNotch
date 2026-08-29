@@ -2,6 +2,9 @@ using System.Diagnostics;
 using System.Windows;
 using WinNotch.Common;
 
+using WpfDragEventArgs = System.Windows.DragEventArgs;
+using WpfIDataObject = System.Windows.IDataObject;
+
 namespace WinNotch.UI;
 
 public partial class MainWindow
@@ -16,17 +19,17 @@ public partial class MainWindow
         EventManager.RegisterClassHandler(
             typeof(MainWindow),
             DragDrop.PreviewDragEnterEvent,
-            new DragEventHandler(MainWindow_PreviewFileDrag),
+            new System.Windows.DragEventHandler(MainWindow_PreviewFileDrag),
             handledEventsToo: true);
 
         EventManager.RegisterClassHandler(
             typeof(MainWindow),
             DragDrop.PreviewDragOverEvent,
-            new DragEventHandler(MainWindow_PreviewFileDrag),
+            new System.Windows.DragEventHandler(MainWindow_PreviewFileDrag),
             handledEventsToo: true);
     }
 
-    private static void MainWindow_PreviewFileDrag(object sender, DragEventArgs e)
+    private static void MainWindow_PreviewFileDrag(object sender, WpfDragEventArgs e)
     {
         if (sender is not MainWindow window)
             return;
@@ -48,7 +51,7 @@ public partial class MainWindow
         // Drop execution and the shelf transition.
     }
 
-    private static bool HasFileDropFormat(IDataObject data)
+    private static bool HasFileDropFormat(WpfIDataObject data)
     {
         try
         {
@@ -63,7 +66,7 @@ public partial class MainWindow
 
     [Conditional("DEBUG")]
     private void TraceFileDrag(
-        DragEventArgs e,
+        WpfDragEventArgs e,
         FileDropDecision decision,
         bool hasFileDrop,
         bool copyAllowed)

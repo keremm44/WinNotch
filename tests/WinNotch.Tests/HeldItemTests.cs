@@ -1,3 +1,4 @@
+using System.IO;
 using WinNotch.Common;
 using Xunit;
 
