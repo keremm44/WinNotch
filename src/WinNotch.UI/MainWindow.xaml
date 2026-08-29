@@ -100,17 +100,25 @@
                 </Grid>
 
                 <ContentControl x:Name="CommandHubHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 Visibility="Collapsed"/>
 
                 <!-- Feature visual trees are materialized only when their module is
                      actually used; disabled modules retain no templates or timers. -->
                 <ContentControl x:Name="DropZoneHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 Visibility="Collapsed"/>
 
                 <ContentControl x:Name="MediaWidgetHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 Visibility="Collapsed"/>
 
                 <ContentControl x:Name="ClipboardToastHost"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 Visibility="Collapsed"/>
 
                 <!-- Lightweight material treatment: no blur/effect loop, only two
