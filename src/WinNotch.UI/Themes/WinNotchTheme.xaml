@@ -9,8 +9,9 @@
     <SolidColorBrush x:Key="Brush.Notch.AmbientGlow" Color="#182D7DFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientIcon" Color="#D8FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Notch.AmbientText" Color="#C8FFFFFF"/>
-    <SolidColorBrush x:Key="Brush.Notch.Highlight" Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.Highlight" Color="#20FFFFFF"/>
     <SolidColorBrush x:Key="Brush.Notch.InnerEdge" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Notch.BottomShade" Color="#52000000"/>
     <SolidColorBrush x:Key="Brush.Window.Base" Color="#FF101012"/>
     <SolidColorBrush x:Key="Brush.Window.BackdropTint" Color="#E8101012"/>
     <SolidColorBrush x:Key="Brush.Window.Header" Color="#FF141416"/>
