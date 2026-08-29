@@ -32,12 +32,14 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Notch.Base", palette.NotchBase);
         SetBrush(resources, "Brush.Notch.Handle", AppearanceResolver.ResolveNotchHandleColor(settings, palette));
         SetBrush(resources, "Brush.Notch.Edge", AppearanceResolver.ResolveNotchEdgeColor(settings, palette));
-        SetBrush(resources, "Brush.Notch.AmbientSurface", palette.IsLightTheme ? "#10000000" : "#18FFFFFF");
+        SetBrush(resources, "Brush.Notch.AmbientSurface", palette.SurfaceSoft);
         SetBrush(resources, "Brush.Notch.AmbientGlow", palette.AccentSubtle);
-        SetBrush(resources, "Brush.Notch.AmbientIcon", palette.IsLightTheme ? "#CC17181B" : "#D8FFFFFF");
-        SetBrush(resources, "Brush.Notch.AmbientText", palette.IsLightTheme ? "#B817181B" : "#C8FFFFFF");
-        SetBrush(resources, "Brush.Notch.Highlight", palette.IsLightTheme ? "#14000000" : "#22FFFFFF");
-        SetBrush(resources, "Brush.Notch.InnerEdge", palette.IsLightTheme ? "#18000000" : "#18FFFFFF");
+        SetBrush(resources, "Brush.Notch.AmbientIcon", palette.TextOnDarkPrimary);
+        SetBrush(resources, "Brush.Notch.AmbientText", palette.TextOnDarkSecondary);
+        SetBrush(resources, "Brush.Notch.Highlight", AppearanceResolver.ResolveNotchHighlightColor(settings, palette));
+        SetBrush(resources, "Brush.Notch.InnerEdge", AppearanceResolver.ResolveNotchInnerEdgeColor(settings, palette));
+        SetBrush(resources, "Brush.Notch.BottomShade",
+            palette.IsLightTheme ? WithAlpha(palette.TextPrimary, 0x12) : "#52000000");
 
         SetBrush(resources, "Brush.Window.Base", palette.WindowBase);
         SetBrush(resources, "Brush.Window.BackdropTint", WithAlpha(palette.WindowBase, palette.IsLightTheme ? (byte)0xE2 : (byte)0xEA));
@@ -170,6 +172,7 @@ public static class AppearanceThemeManager
         SetBrush(resources, "Brush.Accent.System", highlight);
         SetBrush(resources, "Brush.Accent.SystemForeground", highlightText);
         SetBrush(resources, "Brush.Notch.Highlight", "#00FFFFFF");
+        SetBrush(resources, "Brush.Notch.BottomShade", "#00000000");
         SetBrush(resources, "Brush.Surface.Highlight", "#00FFFFFF");
         SetBrush(resources, "Brush.Accent.Glow", "#00FFFFFF");
         SetBrush(resources, "Brush.Shadow", "#00000000");
